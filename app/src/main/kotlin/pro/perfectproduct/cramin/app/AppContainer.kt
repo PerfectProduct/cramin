@@ -24,7 +24,10 @@ import pro.perfectproduct.cramin.data.repo.DocumentFiles
 import pro.perfectproduct.cramin.data.repo.DocumentRepository
 import pro.perfectproduct.cramin.data.repo.StudyRepository
 import pro.perfectproduct.cramin.data.repo.UsageRepository
+import pro.perfectproduct.cramin.ingest.ArticleExtractor
+import pro.perfectproduct.cramin.ingest.PdfExtractor
 import pro.perfectproduct.cramin.ingest.PlainTextExtractor
+import pro.perfectproduct.cramin.ingest.YoutubeExtractor
 import pro.perfectproduct.cramin.ingest.SourceExtractor
 import pro.perfectproduct.cramin.llm.KeyChecker
 import pro.perfectproduct.cramin.llm.LlmClient
@@ -39,6 +42,8 @@ import pro.perfectproduct.cramin.pipeline.ProcessorDeps
 import pro.perfectproduct.cramin.pipeline.Segmenter
 import pro.perfectproduct.cramin.pipeline.Stoplists
 import pro.perfectproduct.cramin.transcribe.AudioSegmenter
+import pro.perfectproduct.cramin.transcribe.MediaAudioSegmenter
+import pro.perfectproduct.cramin.transcribe.OpenRouterSttTranscriber
 import pro.perfectproduct.cramin.transcribe.Transcriber
 import pro.perfectproduct.cramin.util.Clock
 import pro.perfectproduct.cramin.util.Lang
@@ -111,10 +116,17 @@ open class AppContainer(
     }
     val segmenter: Segmenter by lazy { Segmenter(AndroidSentenceBreaker()) }
 
-    /** Источники по типам; YouTube, статьи и PDF добавляются в фазе 4. */
-    open val extractors: Map<SourceType, SourceExtractor> by lazy { mapOf(SourceType.TEXT to PlainTextExtractor()) }
-    open val transcriber: Transcriber? by lazy { null }
-    open val audioSegmenter: AudioSegmenter? by lazy { null }
+    /** Источники по типам (SPEC §7). */
+    open val extractors: Map<SourceType, SourceExtractor> by lazy {
+        mapOf(
+            SourceType.TEXT to PlainTextExtractor(),
+            SourceType.URL to ArticleExtractor(httpClient),
+            SourceType.YOUTUBE to YoutubeExtractor(httpClient),
+            SourceType.PDF to PdfExtractor(appContext),
+        )
+    }
+    open val transcriber: Transcriber? by lazy { OpenRouterSttTranscriber(httpClient, keyProvider = { secretStore.getApiKey() }) }
+    open val audioSegmenter: AudioSegmenter? by lazy { MediaAudioSegmenter() }
 
     open fun processorDeps(): ProcessorDeps = ProcessorDeps(
         db = db,

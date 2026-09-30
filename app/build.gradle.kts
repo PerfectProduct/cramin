@@ -251,6 +251,8 @@ tasks.withType<Test>().configureEach {
         val debugApk = layout.buildDirectory.file("outputs/apk/debug/app-debug.apk").get().asFile
         val liveReportDir = layout.buildDirectory.dir("reports/live").get().asFile.absolutePath
         val bakeoffRequested = providers.gradleProperty("bakeoff").map { it == "true" }.getOrElse(false)
+        // -PytProbe=<url,url>: разведка субтитров/аудио YouTube без ключа (YoutubeProbeTest).
+        val ytProbe = providers.gradleProperty("ytProbe").getOrElse("")
         // ApkHasNoSecretsTest сканирует собранный debug-APK.
         dependsOn("assembleDebug")
         doFirst {
@@ -279,6 +281,7 @@ tasks.withType<Test>().configureEach {
             systemProperty("cramin.liveReportDir", liveReportDir)
             // -Pbakeoff=true: дорогой бейкофф моделей перевода (docs/model-bakeoff), отдельно от живых тестов.
             systemProperty("cramin.bakeoff", bakeoffRequested.toString())
+            systemProperty("cramin.ytProbe", ytProbe)
         }
     }
 }
