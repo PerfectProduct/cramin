@@ -1,0 +1,27 @@
+# --- Секреты: никогда не коммитятся (SPEC §12.3, §14.4) ---
+.env
+*.jks
+*.keystore
+*.p12
+local.properties
+keystore.properties
+/.cramin/
+
+# --- Сборка ---
+.gradle/
+build/
+/captures/
+.kotlin/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# --- IDE и ОС ---
+.idea/
+*.iml
+.DS_Store
+.vscode/
+
+# --- Локальные настройки агента ---
+.claude/settings.local.json
