@@ -80,8 +80,16 @@ class StudyViewModel(private val container: AppContainer, val deckKeyRaw: String
         }
         val ids = cards.map { it.id }
         val saved = container.studyRepository.load(key.key)?.let { SessionState.fromJson(it) }
-        // Сохранённая сессия годится, если её карточки ещё существуют в колоде.
-        val usable = saved?.takeIf { s -> s.order.isNotEmpty() && s.order.all { id -> id in _state.value.cards } && !s.finished && s.position > 0 }
+        // Сохранённая сессия продолжается по своему порядку, даже если часть карточек уже выучена
+        // и выпала из фильтра колоды; годится, пока все её карточки существуют.
+        val usable = saved?.takeIf { s -> s.order.isNotEmpty() && !s.finished && s.position > 0 }?.let { s ->
+            val missing = s.order.filter { id -> id !in _state.value.cards }
+            if (missing.isEmpty()) return@let s
+            val extra = container.cardRepository.cardsByIds(missing)
+            if (extra.size != missing.size) return@let null
+            _state.update { it.copy(cards = it.cards + extra.associateBy { c -> c.id }) }
+            s
+        }
         if (usable != null) {
             _state.update { it.copy(loading = false, resumeCandidate = usable) }
         } else {

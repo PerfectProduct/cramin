@@ -148,5 +148,26 @@ class UiFlowsTest {
         compose.onNodeWithTag("roundDone").performClick()
     }
 
+    @Test
+    fun leavingSessionMidwayOffersResumeEvenAfterCardsBecameKnown() = runBlocking<Unit> {
+        val id = seedDocument()
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithTag("play-$id").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("studyButton").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("flashCard").performTouchInput { swipeRight() }
+        compose.waitUntil(5_000) { runBlocking { container.cardRepository.getStatus(cardId(id, "bank")) } == CardStatus.KNOWN }
+        compose.onNodeWithTag("studyClose").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
+        // Колода «невыученные» теперь из одной карточки, но сессия продолжается со своих 2 (SPEC §9.6).
+        compose.onNodeWithTag("studyButton").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("resume")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("resume").assertTextContains("1/2", substring = true)
+        compose.onNodeWithTag("resume").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("counter")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("counter").assertTextContains("2 / 2")
+    }
+
     private suspend fun cardId(docId: Long, lemma: String): Long = container.db.cardDao().getByDocument(docId).first { it.lemma == lemma }.id
 }

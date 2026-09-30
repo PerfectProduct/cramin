@@ -69,6 +69,13 @@ class CardRepository(
         }
     }
 
+    /** Карточки сохранённой сессии по id — колода могла измениться (часть уже KNOWN), но сессия продолжается по своему порядку. */
+    suspend fun cardsByIds(ids: List<Long>): List<StudyCard> {
+        if (ids.isEmpty()) return emptyList()
+        val entities = ids.chunked(CHUNK).flatMap { cards.getCards(it) }.associateBy { it.id }
+        return build(ids.mapNotNull { entities[it] })
+    }
+
     suspend fun card(cardId: Long): StudyCard? {
         val entity = cards.getCard(cardId) ?: return null
         return build(listOf(entity)).firstOrNull()
