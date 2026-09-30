@@ -29,6 +29,8 @@ data class LlmRequest(
     val schema: JsonObject,
     val temperature: Double?,
     val maxTokens: Int?,
+    /** Объект `reasoning` OpenRouter как есть; null — не передавать. */
+    val reasoning: JsonObject? = null,
 )
 
 data class LlmUsage(

@@ -73,6 +73,9 @@ class DocumentRepository(
                 updatedAt = now,
             ),
         )
+        // Каталог нового документа должен быть пустым: остатки от прежнего id (тесты, восстановление
+        // резервной копии) иначе подхватятся как уже извлечённый текст.
+        files.deleteAll(id)
         when (request) {
             is NewDocument.Text -> files.inputText(id).writeText(request.text)
             is NewDocument.Pdf -> request.open().use { input -> files.inputPdf(id).outputStream().use { input.copyTo(it) } }

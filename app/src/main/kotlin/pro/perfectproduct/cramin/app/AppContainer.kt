@@ -85,7 +85,13 @@ open class AppContainer(
             .build()
     }
 
-    open val llmClient: LlmClient by lazy { OpenRouterClient(httpClient, keyProvider = { secretStore.getApiKey() }) }
+    open val llmClient: LlmClient by lazy {
+        OpenRouterClient(
+            httpClient,
+            keyProvider = { secretStore.getApiKey() },
+            paramSupport = { model -> modelCatalog.cached()?.find(model)?.supportedParameters?.toSet() },
+        )
+    }
     val keyChecker: KeyChecker by lazy { KeyChecker(httpClient) }
     val modelCatalog: ModelCatalog by lazy { ModelCatalog(httpClient, File(appContext.filesDir, "cache/${ModelCatalog.CACHE_FILE_NAME}"), clock) }
     val modelConfigRepository: ModelConfigRepository by lazy {

@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "updatedAt": "2026-09-30",
   "roles": {
-    "brief":       {"model": "PLACEHOLDER_UNTIL_PHASE_3", "temperature": 0.2, "maxTokens": 6000},
-    "translate":   {"model": "PLACEHOLDER_UNTIL_PHASE_3", "temperature": 0.3, "maxTokens": null},
-    "extract":     {"model": "PLACEHOLDER_UNTIL_PHASE_3", "temperature": 0.1, "maxTokens": 8000},
-    "consolidate": {"model": "PLACEHOLDER_UNTIL_PHASE_3", "temperature": 0.1, "maxTokens": 4000},
-    "stt":         {"model": "PLACEHOLDER_UNTIL_PHASE_3"}
+    "brief":       {"model": "openai/gpt-5.6-luna", "temperature": 0.2, "maxTokens": 6000, "reasoning": {"effort": "none"}},
+    "translate":   {"model": "openai/gpt-5.6-luna", "temperature": 0.3, "maxTokens": null, "reasoning": {"effort": "none"}},
+    "extract":     {"model": "google/gemini-3.8-flash", "temperature": 0.1, "maxTokens": 8000, "reasoning": {"effort": "low"}},
+    "consolidate": {"model": "google/gemini-3.1-flash-lite", "temperature": 0.1, "maxTokens": 4000, "reasoning": {"effort": "low"}},
+    "stt":         {"model": "openai/whisper-large-v3-turbo"}
   },
   "pipeline": {
     "brief.maxInputWords": 60000,

@@ -3,6 +3,7 @@ package pro.perfectproduct.cramin.llm
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 
 /**
  * Конфиг моделей `config/models.json` (SPEC §6.12): роли, параметры пайплайна, схема v1.
@@ -14,6 +15,11 @@ data class RoleConfig(
     val temperature: Double? = null,
     /** null — «брать max_completion_tokens из каталога». */
     val maxTokens: Int? = null,
+    /**
+     * Объект `reasoning` OpenRouter, передаётся в запрос как есть (например `{"effort":"low"}`),
+     * чтобы рассуждающие модели не тратили токены на размышления. Расширение схемы v1 (CRM-DL-012).
+     */
+    val reasoning: JsonObject? = null,
 )
 
 @Serializable
@@ -95,6 +101,7 @@ data class EffectiveRole(
     val maxTokens: Int?,
     /** Откуда взята модель: «своя» / «конфиг репозитория» / «встроенный» (SPEC §9.7). */
     val source: ConfigSource,
+    val reasoning: JsonObject? = null,
 )
 
 data class EffectiveConfig(
@@ -106,7 +113,7 @@ data class EffectiveConfig(
     fun role(role: ModelRole): EffectiveRole = roles[role] ?: error("role ${role.key} is not configured")
 
     /** Снимок ролей для Document.modelsSnapshotJson. */
-    fun snapshotJson(): String = Json.encodeToString(roles.values.associate { it.role.key to RoleConfig(it.model, it.temperature, it.maxTokens) })
+    fun snapshotJson(): String = Json.encodeToString(roles.values.associate { it.role.key to RoleConfig(it.model, it.temperature, it.maxTokens, it.reasoning) })
 }
 
 /** Минимальное представление каталога для валидации конфига. */
@@ -177,6 +184,8 @@ object ModelConfigResolver {
                 temperature = o?.temperature ?: base.temperature ?: fallback?.temperature,
                 maxTokens = o?.maxTokens ?: base.maxTokens ?: if (pick.first == ConfigSource.OVERRIDE) fallback?.maxTokens else null,
                 source = pick.first,
+                // Параметры рассуждения привязаны к модели: для своей модели их нет, если она не совпала с конфигом.
+                reasoning = if (pick.first == ConfigSource.OVERRIDE) fallback?.takeIf { it.model == pick.second }?.reasoning else base.reasoning,
             )
         }
         val pipeline = mergePipeline(remote?.pipeline, embedded.pipeline)

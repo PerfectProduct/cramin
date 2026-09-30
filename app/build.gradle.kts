@@ -234,24 +234,6 @@ tasks.withType<PackageApplication>().configureEach {
 // ---------------------------------------------------------------------------
 val liveRequested: Boolean = providers.gradleProperty("live").map { it == "true" }.getOrElse(false)
 
-fun parseDotEnv(file: File): Map<String, String> {
-    if (!file.isFile) return emptyMap()
-    val result = LinkedHashMap<String, String>()
-    file.readLines().forEach { raw ->
-        val line = raw.trim().removePrefix("export ").trim()
-        if (line.isEmpty() || line.startsWith("#")) return@forEach
-        val eq = line.indexOf('=')
-        if (eq <= 0) return@forEach
-        val key = line.substring(0, eq).trim()
-        var value = line.substring(eq + 1).trim()
-        if (value.length >= 2 && (value.startsWith('"') && value.endsWith('"') || value.startsWith('\'') && value.endsWith('\''))) {
-            value = value.substring(1, value.length - 1)
-        }
-        result[key] = value
-    }
-    return result
-}
-
 tasks.withType<Test>().configureEach {
     if (liveRequested) {
         filter.includeTestsMatching("pro.perfectproduct.cramin.live.*")
@@ -267,10 +249,26 @@ tasks.withType<Test>().configureEach {
     if (liveRequested) {
         val dotEnv = rootProject.file(".env")
         val debugApk = layout.buildDirectory.file("outputs/apk/debug/app-debug.apk").get().asFile
+        val liveReportDir = layout.buildDirectory.dir("reports/live").get().asFile.absolutePath
+        val bakeoffRequested = providers.gradleProperty("bakeoff").map { it == "true" }.getOrElse(false)
         // ApkHasNoSecretsTest сканирует собранный debug-APK.
         dependsOn("assembleDebug")
         doFirst {
-            val env = parseDotEnv(dotEnv)
+            // Разбор .env здесь, а не в функции скрипта: замыкание не должно ссылаться на объект скрипта
+            // (кэш конфигурации). Терпим к пробелам вокруг «=», кавычкам и префиксу export (CRM-DL-006).
+            val env = LinkedHashMap<String, String>()
+            if (dotEnv.isFile) {
+                dotEnv.readLines().forEach { raw ->
+                    val line = raw.trim().removePrefix("export ").trim()
+                    val eq = line.indexOf('=')
+                    if (line.isEmpty() || line.startsWith("#") || eq <= 0) return@forEach
+                    var value = line.substring(eq + 1).trim()
+                    if (value.length >= 2 && (value.startsWith('"') && value.endsWith('"') || value.startsWith('\'') && value.endsWith('\''))) {
+                        value = value.substring(1, value.length - 1)
+                    }
+                    env[line.substring(0, eq).trim()] = value
+                }
+            }
             val key = env["OPENROUTER_API_KEY"].orEmpty()
             if (key.isEmpty()) {
                 throw GradleException("Живые тесты запрошены (-Plive=true), но в .env нет OPENROUTER_API_KEY. Запустите scripts/setup-secrets.sh.")
@@ -278,7 +276,9 @@ tasks.withType<Test>().configureEach {
             environment("OPENROUTER_API_KEY", key)
             environment("LIVE_BUDGET_USD", env["LIVE_BUDGET_USD"]?.ifEmpty { null } ?: "1.00")
             systemProperty("cramin.debugApk", debugApk.absolutePath)
-            systemProperty("cramin.liveReportDir", layout.buildDirectory.dir("reports/live").get().asFile.absolutePath)
+            systemProperty("cramin.liveReportDir", liveReportDir)
+            // -Pbakeoff=true: дорогой бейкофф моделей перевода (docs/model-bakeoff), отдельно от живых тестов.
+            systemProperty("cramin.bakeoff", bakeoffRequested.toString())
         }
     }
 }
