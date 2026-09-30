@@ -145,6 +145,9 @@ open class AppContainer(
 
     fun newProcessor(): DocumentProcessor = DocumentProcessor(processorDeps())
 
+    /** TTS (SPEC §10.5); создаётся лениво при первом обращении из UI. */
+    open val tts: pro.perfectproduct.cramin.study.TtsController by lazy { pro.perfectproduct.cramin.study.TtsController(appContext) }
+
     val workManager: WorkManager by lazy { WorkManager.getInstance(appContext) }
     val processScheduler: ProcessScheduler by lazy { ProcessScheduler(workManager) }
 

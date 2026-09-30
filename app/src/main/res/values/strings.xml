@@ -4,6 +4,230 @@
     <string name="brand">Cramin</string>
     <string name="tagline">Зубрёжка слов из ваших текстов</string>
 
+    <!-- Общее -->
+    <string name="action_ok">ОК</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_retry">Повторить</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_rename">Переименовать</string>
+    <string name="action_reprocess">Обработать заново</string>
+    <string name="action_open_settings">Открыть настройки</string>
+    <string name="action_save">Сохранить</string>
+    <string name="action_back">Назад</string>
+    <string name="action_close">Закрыть</string>
+    <string name="action_more">Ещё</string>
+    <string name="action_continue">Продолжить</string>
+    <string name="action_choose_source_lang">Выбрать язык текста</string>
+    <string name="action_choose_target_lang">Выбрать другой язык перевода</string>
+    <string name="action_check_updates">Проверить обновления</string>
+    <string name="lang_en">Английский</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_he">Иврит</string>
+    <string name="lang_short_en">EN</string>
+    <string name="lang_short_ru">RU</string>
+    <string name="lang_short_he">HE</string>
+
+    <!-- Онбординг (U1) -->
+    <string name="onboarding_title">Учите слова из своих текстов</string>
+    <string name="onboarding_body">Дайте ссылку на статью, видео YouTube, PDF или вставьте текст. Cramin переведёт его и соберёт двусторонние карточки: слово в контексте — перевод. Изучение работает офлайн; для подготовки карточек нужен ключ OpenRouter.</string>
+    <string name="onboarding_key_hint">Ключ OpenRouter (sk-or-…)</string>
+    <string name="onboarding_check_key">Проверить ключ</string>
+    <string name="onboarding_models_title">Модели</string>
+    <string name="onboarding_models_hint">Модели по ролям заданы конфигом репозитория; поменять их можно в настройках.</string>
+    <string name="onboarding_skip">Позже, без ключа</string>
+    <string name="onboarding_start">Начать</string>
+
+    <!-- Библиотека (§9.1) -->
+    <string name="library_title">Cramin</string>
+    <string name="library_search">Поиск по заголовку</string>
+    <string name="library_settings">Настройки</string>
+    <string name="library_tab_all">Все</string>
+    <string name="library_tab_in_progress">В процессе</string>
+    <string name="library_tab_learned">Выученные</string>
+    <string name="library_all_unlearned">🗂 Все невыученные</string>
+    <string name="library_all_unlearned_subtitle">Карточки всех готовых документов</string>
+    <string name="library_create">+ Создать</string>
+    <string name="library_empty">Добавьте первый текст — статью, видео или PDF</string>
+    <string name="library_empty_filtered">Здесь пока пусто</string>
+    <string name="library_subtitle">%1$d слов · выучено %2$d · %3$s</string>
+    <string name="library_processing">Обработка… %1$d %%</string>
+    <string name="library_queued">В очереди</string>
+    <string name="library_error">Ошибка — нажмите, чтобы повторить</string>
+    <string name="library_play">Учить</string>
+    <string name="library_delete_confirm_title">Удалить документ?</string>
+    <string name="library_delete_confirm_body">«%1$s» вместе с карточками и прогрессом будет удалён. Это нельзя отменить.</string>
+    <string name="library_rename_title">Переименовать</string>
+    <string name="library_reprocess_confirm_title">Обработать заново?</string>
+    <string name="library_reprocess_confirm_body">Текст будет переведён и разобран заново с реальным ключом (это стоит денег). Статусы карточек сохранятся по леммам.</string>
+
+    <!-- Экран загрузки (§9.2) -->
+    <string name="create_title_1">Создать карточки</string>
+    <string name="create_title_2">из ваших текстов</string>
+    <string name="create_target">Перевод на:</string>
+    <string name="create_source_label">Загрузите источник</string>
+    <string name="create_pdf">📁 Файл PDF</string>
+    <string name="create_url">🔗 ▶ Сайт или YouTube</string>
+    <string name="create_text">📋 Скопированный текст</string>
+    <string name="create_no_key">Добавьте ключ OpenRouter в настройках</string>
+    <string name="create_url_dialog_title">Ссылка на статью или видео</string>
+    <string name="create_url_hint">https://…</string>
+    <string name="create_url_invalid">Это не похоже на ссылку</string>
+    <string name="create_text_title">Скопированный текст</string>
+    <string name="create_text_hint">Вставьте текст</string>
+    <string name="create_text_name_hint">Заголовок (необязательно)</string>
+    <string name="create_text_empty">Текст пустой</string>
+    <string name="create_same_language">Текст уже на языке перевода. Выберите другой язык.</string>
+    <string name="create_lang_unknown">Не удалось определить язык текста. Выберите его:</string>
+    <string name="create_submit">Создать карточки</string>
+    <string name="create_pdf_failed">Не удалось открыть файл</string>
+    <string name="create_pdf_large">Большой документ (%1$d слов): обработка займёт время и потратит кредит</string>
+
+    <!-- Экран документа (§9.3) -->
+    <string name="doc_tab_text">Текст</string>
+    <string name="doc_tab_cards">Карточки</string>
+    <string name="doc_header_stats">%1$d слов · выучено %2$d из %3$d · %4$s → %5$s</string>
+    <string name="doc_cost">Стоимость обработки: $%1$s · модели: %2$s</string>
+    <string name="doc_cost_unknown">Стоимость обработки пока неизвестна</string>
+    <string name="doc_processing_title">Документ обрабатывается</string>
+    <string name="doc_processing_body">%1$s — %2$d %%</string>
+    <string name="doc_big_warning">Большой документ: %1$d слов. Обработка может быть долгой и дорогой.</string>
+    <string name="doc_view_pairs">Пары</string>
+    <string name="doc_view_source">Только оригинал</string>
+    <string name="doc_view_target">Только перевод</string>
+    <string name="doc_text_empty">Текст появится после обработки</string>
+
+    <!-- Вкладка «Карточки» (§9.5) -->
+    <string name="cards_total">Всего</string>
+    <string name="cards_new">Новые</string>
+    <string name="cards_learning">Учу</string>
+    <string name="cards_known">Знаю</string>
+    <string name="cards_starred">Избранные</string>
+    <string name="cards_filter_unlearned">Все невыученные</string>
+    <string name="cards_filter_all">Все</string>
+    <string name="cards_filter_starred">Только избранные</string>
+    <string name="cards_study">Учить</string>
+    <string name="cards_shuffle">Перемешать</string>
+    <string name="cards_direction">Направление</string>
+    <string name="cards_empty_deck">В этой колоде нет карточек</string>
+    <string name="cards_all_learned">Все карточки выучены 🎉</string>
+
+    <!-- Мини-карточка слова -->
+    <string name="word_status_new">Новое</string>
+    <string name="word_status_learning">Учу</string>
+    <string name="word_status_known">Знаю</string>
+    <string name="word_star">Избранное</string>
+    <string name="word_speak">Озвучить</string>
+    <string name="pos_noun">существительное</string>
+    <string name="pos_verb">глагол</string>
+    <string name="pos_adj">прилагательное</string>
+    <string name="pos_adv">наречие</string>
+    <string name="pos_phrasal_verb">фразовый глагол</string>
+    <string name="pos_idiom">идиома</string>
+    <string name="pos_collocation">словосочетание</string>
+
+    <!-- Сессия (§9.6) -->
+    <string name="study_counter">%1$d / %2$d</string>
+    <string name="study_settings">Настройки сессии</string>
+    <string name="study_undo">Отменить последний свайп</string>
+    <string name="study_autoplay">Автопроигрывание</string>
+    <string name="study_pause">Пауза</string>
+    <string name="study_round_title">Вы знаете %1$d из %2$d</string>
+    <string name="study_repeat_learning">Повторить %1$d невыученных</string>
+    <string name="study_restart">Начать заново</string>
+    <string name="study_done">Готово</string>
+    <string name="study_resume_title">Продолжить сессию?</string>
+    <string name="study_resume_continue">Продолжить с %1$d/%2$d</string>
+    <string name="study_swipe_hint">← ещё учу · знаю →</string>
+    <string name="study_autospeak">Автоозвучка</string>
+    <string name="study_interval_front">Лицо, с</string>
+    <string name="study_interval_back">Оборот, с</string>
+    <string name="study_empty">Нет карточек для изучения</string>
+
+    <!-- Общая колода (§10.6) -->
+    <string name="alldeck_title">Все невыученные</string>
+    <string name="alldeck_count">%1$d карточек</string>
+    <string name="alldeck_empty">Нет невыученных карточек — добавьте документ или начните заново</string>
+
+    <!-- Настройки (§9.7) -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_openrouter">OpenRouter</string>
+    <string name="settings_key">Ключ API</string>
+    <string name="settings_key_hint">sk-or-…</string>
+    <string name="settings_key_saved">Сохранён ключ ····%1$s</string>
+    <string name="settings_key_none">Ключ не задан</string>
+    <string name="settings_key_check">Проверить ключ</string>
+    <string name="settings_key_valid">Ключ работает</string>
+    <string name="settings_key_valid_credit">Ключ работает · остаток $%1$s</string>
+    <string name="settings_key_invalid">Ключ отклонён OpenRouter</string>
+    <string name="settings_key_error">Не удалось проверить: %1$s</string>
+    <string name="settings_key_restore_note">После восстановления из резервной копии ключ нужно ввести заново: он хранится в зашифрованном виде только на этом устройстве.</string>
+    <string name="settings_key_remove">Удалить ключ</string>
+    <string name="settings_models">Модели</string>
+    <string name="settings_model_source_override">своя</string>
+    <string name="settings_model_source_remote">конфиг репозитория</string>
+    <string name="settings_model_source_embedded">встроенный</string>
+    <string name="settings_models_refresh">Обновить конфиг моделей</string>
+    <string name="settings_models_updated">Обновлено: %1$s</string>
+    <string name="settings_models_never">Ещё не обновлялось</string>
+    <string name="settings_models_reset">Сбросить к конфигу</string>
+    <string name="settings_model_manual">Ввести id вручную</string>
+    <string name="settings_model_search">Поиск модели</string>
+    <string name="settings_model_price">$%1$s / $%2$s за 1M</string>
+    <string name="role_brief">Бриф</string>
+    <string name="role_translate">Перевод</string>
+    <string name="role_extract">Извлечение</string>
+    <string name="role_consolidate">Консолидация</string>
+    <string name="role_stt">Транскрипция</string>
+    <string name="settings_study">Изучение</string>
+    <string name="settings_default_target">Язык перевода по умолчанию</string>
+    <string name="settings_default_direction">Направление по умолчанию</string>
+    <string name="settings_direction_src">Лицом слово оригинала</string>
+    <string name="settings_direction_tgt">Лицом перевод</string>
+    <string name="settings_autospeak">Автоозвучка карточек</string>
+    <string name="settings_tts_rate">Скорость речи</string>
+    <string name="settings_tts_missing">Голоса для %1$s нет — установите его в настройках синтеза речи Android</string>
+    <string name="settings_autoplay">Интервалы автопроигрывания</string>
+    <string name="settings_stats">Статистика</string>
+    <string name="settings_stats_body">Документов: %1$d · токены: %2$s / %3$s · стоимость: $%4$s</string>
+    <string name="settings_about">О приложении</string>
+    <string name="settings_version">Версия %1$s (%2$d)</string>
+    <string name="settings_repo">Репозиторий на GitHub</string>
+    <string name="settings_licenses">Лицензии открытых библиотек</string>
+    <string name="settings_notifications">Уведомления о готовых карточках</string>
+
+    <!-- Обновления (§12.4) -->
+    <string name="update_checking">Проверяю…</string>
+    <string name="update_latest">У вас последняя версия</string>
+    <string name="update_available_title">Доступна версия %1$s</string>
+    <string name="update_size">Размер: %1$s</string>
+    <string name="update_install">Скачать и установить</string>
+    <string name="update_downloading">Скачивание… %1$d %%</string>
+    <string name="update_verify_failed">Файл повреждён: контрольная сумма не совпала. Попробуйте ещё раз.</string>
+    <string name="update_error">Не удалось проверить обновления: %1$s</string>
+    <string name="update_permission_body">Android требует разрешить установку из этого источника. Откройте настройки, включите разрешение и вернитесь — установка продолжится.</string>
+    <string name="update_permission_open">Открыть настройки</string>
+    <string name="update_install_failed">Установка не удалась: %1$s</string>
+
+    <!-- Ошибки обработки (по кодам) -->
+    <string name="err_no_key">Нет ключа OpenRouter. Добавьте его в настройках.</string>
+    <string name="err_auth">OpenRouter отклонил ключ. Проверьте его в настройках.</string>
+    <string name="err_payment">На счёте OpenRouter закончился кредит.</string>
+    <string name="err_network">Нет связи с сервером. Проверьте интернет и повторите.</string>
+    <string name="err_rate_limit">OpenRouter временно ограничил запросы. Повторите через минуту.</string>
+    <string name="err_server">Ошибка на стороне OpenRouter. Повторите позже.</string>
+    <string name="err_bad_request">Модель не приняла запрос. Проверьте выбор моделей в настройках.</string>
+    <string name="err_invalid_response">Модель вернула невалидный ответ. Повторите или смените модель в настройках.</string>
+    <string name="err_lang_undetected">Не удалось определить язык текста</string>
+    <string name="err_same_language">Язык текста совпадает с языком перевода</string>
+    <string name="err_empty_text">В источнике нет текста</string>
+    <string name="err_article">Не удалось извлечь текст статьи. Попробуйте скопировать текст вручную</string>
+    <string name="err_pdf_no_text">PDF не содержит текстового слоя; OCR появится в следующей версии</string>
+    <string name="err_youtube_format">YouTube изменил формат. Проверьте обновления приложения</string>
+    <string name="err_youtube_no_lang">Не удалось определить язык видео. Выберите его для транскрипции.</string>
+    <string name="err_transcription">Не удалось расшифровать аудио. Повторите позже.</string>
+    <string name="err_storage">Не удалось прочитать файл документа.</string>
+    <string name="err_unknown">Что-то пошло не так. Повторите.</string>
+
     <!-- Уведомления -->
     <string name="notif_channel_progress">Обработка документов</string>
     <string name="notif_channel_results">Готовые карточки</string>

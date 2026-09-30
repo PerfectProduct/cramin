@@ -24,7 +24,10 @@ class CatalogSnapshot(val models: List<CatalogModel>, val fetchedAt: Long) : Cat
     override fun find(modelId: String): CatalogModel? = byId[modelId]
 
     /** Текстовые модели со structured outputs — для выбора модели роли в настройках (SPEC §9.7). */
-    fun structuredOutputModels(): List<CatalogModel> = models.filter { it.supportsStructuredOutputs && "text" in it.outputModalities }
+    fun structuredOutputModels(): List<CatalogModel> = models.filter {
+        // Роутеры вроде openrouter/auto публикуют отрицательную «цену»; в выборе роли им не место.
+        it.supportsStructuredOutputs && "text" in it.outputModalities && (it.promptPrice ?: 0.0) >= 0 && (it.completionPrice ?: 0.0) >= 0
+    }
 }
 
 /**
