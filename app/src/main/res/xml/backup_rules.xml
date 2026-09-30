@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Правила резервного копирования (API < 31). База и настройки копируются, но
+  DataStore с шифротекстом ключа исключён: на другом устройстве Keystore иной,
+  расшифровать его нельзя, а хранить бесполезный шифротекст в облаке незачем (SPEC §11).
+-->
+<full-backup-content>
+    <exclude domain="file" path="datastore/secrets.preferences_pb" />
+    <exclude domain="file" path="cache" />
+</full-backup-content>

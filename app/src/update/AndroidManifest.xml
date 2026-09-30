@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Фрагмент манифеста для самообновления (SPEC §12.4). Подключается к типам сборки
+  debug и release из app/build.gradle.kts. Будущий Play-flavor заменит его пустым
+  фрагментом, и разрешение на установку пакетов исчезнет вместе с пакетом update/.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <application>
+        <!-- Результат PackageInstaller приходит в этот ресивер (SPEC §12.4 п. 6). -->
+        <receiver
+            android:name="pro.perfectproduct.cramin.update.InstallResultReceiver"
+            android:exported="false" />
+    </application>
+
+</manifest>

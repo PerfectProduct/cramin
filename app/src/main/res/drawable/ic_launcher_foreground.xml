@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Две карточки со сдвигом: лицо и оборот. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#7FA6FF"
+        android:pathData="M36,30 h40 a6,6 0 0 1 6,6 v36 a6,6 0 0 1 -6,6 h-40 a6,6 0 0 1 -6,-6 v-36 a6,6 0 0 1 6,-6 z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,38 h40 a6,6 0 0 1 6,6 v36 a6,6 0 0 1 -6,6 h-40 a6,6 0 0 1 -6,-6 v-36 a6,6 0 0 1 6,-6 z" />
+    <path
+        android:fillColor="#1F2A44"
+        android:pathData="M36,52 h24 v4 h-24 z M36,60 h16 v4 h-16 z M36,68 h20 v4 h-20 z" />
+</vector>

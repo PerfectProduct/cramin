@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- app_name задаётся типом сборки: «Cramin» / «Cramin (debug)» (SPEC §12.1). -->
+    <string name="brand">Cramin</string>
+    <string name="tagline">Зубрёжка слов из ваших текстов</string>
+
+    <!-- Уведомления -->
+    <string name="notif_channel_progress">Обработка документов</string>
+    <string name="notif_channel_results">Готовые карточки</string>
+    <string name="notif_done_title">Карточки готовы: %1$d слов</string>
+    <string name="notif_failed_title">Обработка не удалась — откройте, чтобы повторить</string>
+
+    <!-- Статусы документа -->
+    <string name="status_queued">В очереди</string>
+    <string name="status_fetching">Получение текста…</string>
+    <string name="status_transcribing">Транскрипция…</string>
+    <string name="status_briefing">Бриф документа…</string>
+    <string name="status_translating">Перевод…</string>
+    <string name="status_extracting">Извлечение слов…</string>
+    <string name="status_consolidating">Смыслы и примеры…</string>
+    <string name="status_ready">Готово</string>
+    <string name="status_failed">Ошибка</string>
+</resources>

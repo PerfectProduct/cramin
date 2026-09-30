@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-30",
+  "roles": {
+    "brief":       {"model": "PLACEHOLDER_UNTIL_PHASE_3", "temperature": 0.2, "maxTokens": 6000},
+    "translate":   {"model": "PLACEHOLDER_UNTIL_PHASE_3", "temperature": 0.3, "maxTokens": null},
+    "extract":     {"model": "PLACEHOLDER_UNTIL_PHASE_3", "temperature": 0.1, "maxTokens": 8000},
+    "consolidate": {"model": "PLACEHOLDER_UNTIL_PHASE_3", "temperature": 0.1, "maxTokens": 4000},
+    "stt":         {"model": "PLACEHOLDER_UNTIL_PHASE_3"}
+  },
+  "pipeline": {
+    "brief.maxInputWords": 60000,
+    "translate.maxSectionWords": 4000,
+    "extract.chunkWords": 700,
+    "extract.concurrency": 3,
+    "tokensPerWord": {"en": 1.4, "ru": 2.6, "he": 2.6}
+  }
+}
