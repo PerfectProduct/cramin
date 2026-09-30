@@ -140,3 +140,19 @@ library-модуль — противоречит «один модуль `:app`
 **CRM-DL-029 — 2026-09-30 — Ссылка/текст из «Поделиться» проходят через аргументы навигации экрана загрузки; PDF копируется в кэш немедленно.**
 Почему: MainActivity — singleTask, `onNewIntent` кладёт вход в состояние и NavHost открывает экран загрузки с предзаполнением;
 права на `content://` живут только пока жива активность.
+
+**CRM-DL-030 — 2026-10-01 — Результат PackageInstaller доставляется через `MutableStateFlow` в объекте `ApkInstaller`.**
+Почему: ресивер объявлен в манифесте (изолированный фрагмент `src/update/AndroidManifest.xml`) и не имеет доступа
+к контейнеру; общий Flow — простейший канал в UI без EventBus. `STATUS_PENDING_USER_ACTION` открывает системный
+диалог подтверждения.
+
+**CRM-DL-031 — 2026-10-01 — Подпись release читается из `CRAMIN_KEYSTORE_PROPERTIES` (файл вне репозитория) или переменных CI `ANDROID_KEYSTORE_PATH/PASSWORD` и `ANDROID_KEY_ALIAS`; Gradle не читает `.env`.**
+Почему: SPEC §14.4 — Gradle трогает `.env` только в тестовых задачах; `scripts/build-release.sh` экспортирует
+одну переменную из `.env`. Без подписи `packageRelease` зависит от `checkReleaseSigning` и падает с инструкцией.
+
+**CRM-DL-032 — 2026-10-01 — GitHub Release создаётся через предустановленный `gh`, а не сторонним action.**
+Почему: меньше поверхности supply-chain; `permissions: contents: write` выдано только джобе release,
+у остальных workflow — `contents: read`.
+
+**CRM-DL-033 — 2026-10-01 — `release.yml` отказывает в сборке не из `main` и при уже существующем теге `v0.1.N`.**
+Почему: версия — счётчик коммитов; повторный запуск на той же истории создал бы конфликт тегов.

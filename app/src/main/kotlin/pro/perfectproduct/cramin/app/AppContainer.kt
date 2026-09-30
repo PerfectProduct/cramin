@@ -148,6 +148,17 @@ open class AppContainer(
     /** TTS (SPEC §10.5); создаётся лениво при первом обращении из UI. */
     open val tts: pro.perfectproduct.cramin.study.TtsController by lazy { pro.perfectproduct.cramin.study.TtsController(appContext) }
 
+    // --- Обновления (SPEC §12.4), изолированный пакет update/ ---------------------------------
+    val apkInstaller: pro.perfectproduct.cramin.update.ApkInstaller by lazy { pro.perfectproduct.cramin.update.ApkInstaller(appContext) }
+    open val updateManager: pro.perfectproduct.cramin.update.UpdateManager by lazy {
+        pro.perfectproduct.cramin.update.UpdateManager(
+            checker = pro.perfectproduct.cramin.update.UpdateChecker(httpClient, BuildConfig.VERSION_CODE),
+            downloader = pro.perfectproduct.cramin.update.ApkDownloader(httpClient, appContext.cacheDir),
+            installer = apkInstaller,
+            scope = appScope,
+        )
+    }
+
     val workManager: WorkManager by lazy { WorkManager.getInstance(appContext) }
     val processScheduler: ProcessScheduler by lazy { ProcessScheduler(workManager) }
 
