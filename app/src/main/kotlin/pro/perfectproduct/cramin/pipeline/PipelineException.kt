@@ -35,7 +35,7 @@ enum class ErrorCode {
 }
 
 /** Ошибка стадии или источника. `message` — техническая, без текстов документа. */
-class PipelineException(val code: ErrorCode, message: String, cause: Throwable? = null, val stage: FailureStage? = null) : Exception(message, cause) {
+class PipelineException(val code: ErrorCode, message: String, cause: Throwable? = null, val stage: FailureStage? = null, val retryAfterMs: Long? = null) : Exception(message, cause) {
     companion object {
         fun from(t: Throwable): PipelineException = when (t) {
             is PipelineException -> t

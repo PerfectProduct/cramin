@@ -1,5 +1,10 @@
 package pro.perfectproduct.cramin.ingest
 
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.asContextElement
+import kotlin.coroutines.coroutineContext
+import pro.perfectproduct.cramin.util.useCancellable
+import pro.perfectproduct.cramin.util.useWithJob
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -38,7 +43,7 @@ class YoutubeExtractor(private val http: OkHttpClient) : SourceExtractor {
         ensureInit(http)
     }
 
-    override suspend fun extract(document: DocumentEntity, files: DocumentFiles): Extracted = withContext(Dispatchers.IO) {
+    override suspend fun extract(document: DocumentEntity, files: DocumentFiles): Extracted = withContext(Dispatchers.IO + OkHttpDownloader.activeJob.asContextElement(coroutineContext[Job])) {
         val url = document.sourceRef.trim()
         val extractor: StreamExtractor = try {
             ServiceList.YouTube.getStreamExtractor(url).also { it.fetchPage() }
@@ -85,8 +90,8 @@ class YoutubeExtractor(private val http: OkHttpClient) : SourceExtractor {
         Extracted.Audio(file = target, title = title, langHint = videoLang, durationSeconds = duration)
     }
 
-    private fun download(url: String): String = try {
-        http.newCall(Request.Builder().url(url).build()).execute().use { resp ->
+    private suspend fun download(url: String): String = try {
+        http.newCall(Request.Builder().url(url).build()).useCancellable { resp ->
             if (!resp.isSuccessful) throw PipelineException(ErrorCode.YOUTUBE_FORMAT, "subtitles HTTP ${resp.code}")
             resp.body.string()
         }
@@ -94,15 +99,18 @@ class YoutubeExtractor(private val http: OkHttpClient) : SourceExtractor {
         throw PipelineException(ErrorCode.NETWORK, e.javaClass.simpleName, e)
     }
 
-    private fun downloadToFile(url: String, target: File) {
+    private suspend fun downloadToFile(url: String, target: File) {
         try {
-            http.newCall(Request.Builder().url(url).build()).execute().use { resp ->
+            http.newCall(Request.Builder().url(url).build()).useCancellable { resp ->
                 if (!resp.isSuccessful) throw PipelineException(ErrorCode.YOUTUBE_FORMAT, "audio HTTP ${resp.code}")
                 target.outputStream().use { out -> resp.body.byteStream().copyTo(out) }
             }
         } catch (e: IOException) {
             target.delete()
             throw PipelineException(ErrorCode.NETWORK, e.javaClass.simpleName, e)
+        } catch (e: Throwable) {
+            target.delete()
+            throw e
         }
     }
 
@@ -149,7 +157,7 @@ class OkHttpDownloader(http: OkHttpClient) : Downloader() {
             builder.removeHeader(name)
             for (v in values) builder.addHeader(name, v)
         }
-        client.newCall(builder.build()).execute().use { resp ->
+        client.newCall(builder.build()).useWithJob(activeJob.get()) { resp ->
             if (resp.code == 429) throw ReCaptchaException("reCaptcha Challenge requested", request.url())
             val text = resp.body.string()
             return Response(resp.code, resp.message, resp.headers.toMultimap(), text, resp.request.url.toString())
@@ -157,6 +165,7 @@ class OkHttpDownloader(http: OkHttpClient) : Downloader() {
     }
 
     companion object {
+        internal val activeJob = ThreadLocal<Job?>()
         /** Тот же UA, что у клиента NewPipe: серверы YouTube отвечают на него стабильно. */
         const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0"
     }

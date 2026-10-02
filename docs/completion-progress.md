@@ -52,3 +52,7 @@ prompt hash failed; SPEC/контракт/hash согласованы. Полн�
 UI: регрессионные ExactSpanTest до исправления 2 failed/2; исправлена компиляционная ошибка дублированного OptIn. Полный JVM после первого исправления прошёл. Дополнительно проверяются повторные вхождения и реальные касания autoplay (ui-checks.log).
 
 Третий пакет: `ui-checks.log` — 116 JVM и 7 UI passed, 0 failed/skipped на отдельном API34. UI включает отменённое касание, физические Play/Pause и accessibility click; существующие Undo/resume/границы раундов прошли. Следующий шаг: cancellation HTTP и retries, затем snapshot конфигурации.
+
+Сеть/AUD-009/013: cancel-before.log — 2/2 regression failed (~2955/2960ms). После bridge полный JVM passed (network-checks.log); network-length-checks.log полный JVM passed. length-before.log — 1 из 3 failed (два сценария затем усилены: корректный JSON с length и последовательный extract). length-strict.log — 3 passed. stt-retry.log — 1 passed, локальный MockWebServer, НЕ реальный STT. Последний review добавил явный проброс CancellationException в KeyChecker/ModelCatalog; повтор полной проверки ниже.
+
+Итог сетевого пакета: network-final.log, 123 JVM passed, 0 failed/skipped. AUD-009 и AUD-013 реализованы; реальное поведение провайдеров без платных вызовов не проверялось. Следующий шаг — immutable config snapshot (AUD-010).

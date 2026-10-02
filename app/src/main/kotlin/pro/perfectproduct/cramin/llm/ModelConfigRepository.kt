@@ -1,5 +1,6 @@
 package pro.perfectproduct.cramin.llm
 
+import pro.perfectproduct.cramin.util.useCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,7 +69,7 @@ class ModelConfigRepository(
         try {
             val builder = Request.Builder().url(remoteUrl)
             s.remoteModelsEtag?.let { builder.header("If-None-Match", it) }
-            http.newCall(builder.build()).execute().use { resp ->
+            http.newCall(builder.build()).useCancellable { resp ->
                 when {
                     resp.code == 304 -> {
                         settings.setRemoteModels(s.remoteModelsJson, s.remoteModelsEtag, clock.now())

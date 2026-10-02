@@ -336,7 +336,22 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         }
     }
 
+    private class TruncatedResponse : Exception()
+
     private suspend fun translateRange(ctx: Ctx, job: JobEntity, range: IntRange, context: List<ContextLine>, maxCompletion: Int): List<TranslatedSegment> {
+        return try { translateRangeAttempt(ctx, job, range, context, maxCompletion) }
+        catch (_: TruncatedResponse) {
+            val halves = SectionPlanner.splitHalf(ctx.sentences, range)
+                ?: throw LlmException.InvalidResponse("length on a single sentence")
+            val first = translateRange(ctx, job, halves.first, context, maxCompletion)
+            val nextContext = first.takeLast(CONTEXT_SENTENCES).map { segment ->
+                ContextLine(segment.from, segment.to, (segment.from..segment.to).mapNotNull { ctx.sentence(it) }.joinToString(" "), segment.t)
+            }
+            first + translateRange(ctx, job, halves.second, nextContext, maxCompletion)
+        }
+    }
+
+    private suspend fun translateRangeAttempt(ctx: Ctx, job: JobEntity, range: IntRange, context: List<ContextLine>, maxCompletion: Int): List<TranslatedSegment> {
         val role = ctx.config.role(ModelRole.TRANSLATE)
         val sentences = ctx.sentences.filter { it.idx in range }
         val glossary = glossaryFor(ctx, ctx.text(range))
@@ -414,6 +429,15 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
     }
 
     private suspend fun extractRange(ctx: Ctx, job: JobEntity, segments: List<SegmentEntity>, spans: List<SegmentSpan>, range: IntRange): List<ExtractedUnit> {
+        return try { extractRangeAttempt(ctx, job, segments, spans, range) }
+        catch (_: TruncatedResponse) {
+            val halves = ChunkPlanner.splitHalf(spans, range)
+                ?: throw LlmException.InvalidResponse("length on a single segment")
+            extractRange(ctx, job, segments, spans, halves.first) + extractRange(ctx, job, segments, spans, halves.second)
+        }
+    }
+
+    private suspend fun extractRangeAttempt(ctx: Ctx, job: JobEntity, segments: List<SegmentEntity>, spans: List<SegmentSpan>, range: IntRange): List<ExtractedUnit> {
         val role = ctx.config.role(ModelRole.EXTRACT)
         val pairs = segments.filter { it.firstSentenceIdx >= range.first && it.lastSentenceIdx <= range.last }
             .map { s -> SegmentPair(ctx.sentences.filter { it.idx in s.firstSentenceIdx..s.lastSentenceIdx }, s.translation) }
@@ -581,9 +605,11 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
 
     /** Разбор JSON по схеме; невалидный ответ — один повтор запроса, затем InvalidResponse (SPEC §6.3). */
     private suspend inline fun <reified T> parseOrRetry(job: JobEntity, request: LlmRequest, first: LlmResponse): Pair<T, String> {
+        if (first.truncated) throw TruncatedResponse()
         runCatching { LlmJson.parse<T>(first.content) }.getOrNull()?.let { return it to first.content }
         Log.w(TAG, "job=${job.id} invalid JSON; retrying once")
         val second = callRaw(job, request)
+        if (second.truncated) throw TruncatedResponse()
         val parsed = runCatching { LlmJson.parse<T>(second.content) }.getOrNull()
             ?: throw LlmException.InvalidResponse("schema violation after retry")
         return parsed to second.content
@@ -591,10 +617,12 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
 
     private suspend inline fun <reified T> callParsed(job: JobEntity, request: LlmRequest, check: (T) -> T): T {
         val first = callRaw(job, request)
+        if (first.truncated) throw LlmException.InvalidResponse("length in ${request.role}")
         val parsed = runCatching { check(LlmJson.parse<T>(first.content)) }.getOrNull()
         if (parsed != null) return parsed
         Log.w(TAG, "job=${job.id} invalid response; retrying once")
         val second = callRaw(job, request)
+        if (second.truncated) throw LlmException.InvalidResponse("length in ${request.role} retry")
         return runCatching { check(LlmJson.parse<T>(second.content)) }.getOrNull()
             ?: throw LlmException.InvalidResponse("schema violation after retry")
     }

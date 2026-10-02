@@ -182,6 +182,40 @@ class PipelineEndToEndTest {
         }
     }
 
+    @Test fun invalidJsonThenLengthSplitsTranslation() = retryLength(ModelRole.TRANSLATE, false)
+    @Test fun invalidJsonThenLengthSplitsExtraction() = retryLength(ModelRole.EXTRACT, false)
+    @Test fun holeFillLengthSplitsWithoutLosingCoverage() = retryLength(ModelRole.TRANSLATE, true)
+
+    private fun retryLength(role: ModelRole, hole: Boolean) = runTest {
+        val fake = FakeLlmClient()
+        var calls = 0
+        fake.interceptor = { req, _ ->
+            if (req.role == role) synchronized(fake) {
+                calls++
+                when (calls) {
+                    1 -> if (hole) {
+                        val base = kotlinx.coroutines.runBlocking { FakeLlmClient().complete(req) }
+                        val segments = LlmJson.parse<TranslateResponse>(base.content).seg.dropLast(1)
+                        base.copy(content = kotlinx.serialization.json.Json.encodeToString(TranslateResponse(segments)))
+                    } else LlmResponse("invalid", "stop", LlmUsage(1, 1, 0.0001), req.model)
+                    2 -> kotlinx.coroutines.runBlocking { FakeLlmClient().complete(req) }.copy(finishReason = "length")
+                    else -> null
+                }
+            } else null
+        }
+        TestPipeline(tmp.newFolder(), fake, config = TestPipeline.FAKE_CONFIG.copy(pipeline = TestPipeline.FAKE_CONFIG.pipeline!!.copy(extractConcurrency = 1))).use { p ->
+            val id = p.importText(Lang.EN, Lang.RU)
+            val result = p.processor().process(id)
+            assertTrue("$result", result is ProcessOutcome.Ready)
+            val kind = if (role == ModelRole.TRANSLATE) JobKind.TRANSLATE else JobKind.EXTRACT
+            assertTrue(p.db.jobDao().getByKind(id, kind).first().attempts >= 4)
+            val sentences = p.db.sentenceDao().getByDocument(id)
+            assertTrue(sentences.all { it.segmentId != null })
+            assertTrue(p.db.jobDao().getByDocument(id).all { it.status == JobStatus.DONE })
+            assertTrue(p.cards.deckCards(id, DeckFilter.ALL).size >= 40)
+        }
+    }
+
     @Test
     fun truncatedTranslationIsSplitInHalves() = runTest {
         val fake = FakeLlmClient()

@@ -1,5 +1,6 @@
 package pro.perfectproduct.cramin.update
 
+import pro.perfectproduct.cramin.util.useCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -27,7 +28,7 @@ class ApkDownloader(private val http: OkHttpClient, private val cacheDir: File) 
             ?: throw DownloadException("no checksum")
         if (target.isFile && Hashing.sha256Hex(target) == expected) return@withContext target
         try {
-            http.newCall(Request.Builder().url(release.apkUrl).header("User-Agent", "Cramin").build()).execute().use { resp ->
+            http.newCall(Request.Builder().url(release.apkUrl).header("User-Agent", "Cramin").build()).useCancellable { resp ->
                 if (!resp.isSuccessful) throw DownloadException("HTTP ${resp.code}")
                 val total = resp.body.contentLength().takeIf { it > 0 } ?: release.apkSize
                 var done = 0L
@@ -48,7 +49,7 @@ class ApkDownloader(private val http: OkHttpClient, private val cacheDir: File) 
         } catch (e: IOException) {
             target.delete()
             throw DownloadException(e.javaClass.simpleName)
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: Throwable) {
             target.delete()
             throw e
         }
@@ -61,8 +62,8 @@ class ApkDownloader(private val http: OkHttpClient, private val cacheDir: File) 
         target
     }
 
-    private fun fetchText(url: String): String? = try {
-        http.newCall(Request.Builder().url(url).header("User-Agent", "Cramin").build()).execute().use { if (it.isSuccessful) it.body.string() else null }
+    private suspend fun fetchText(url: String): String? = try {
+        http.newCall(Request.Builder().url(url).header("User-Agent", "Cramin").build()).useCancellable { if (it.isSuccessful) it.body.string() else null }
     } catch (e: IOException) {
         null
     }

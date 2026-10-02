@@ -1,5 +1,6 @@
 package pro.perfectproduct.cramin.update
 
+import pro.perfectproduct.cramin.util.useCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -45,7 +46,7 @@ class UpdateChecker(
     suspend fun check(): UpdateCheck = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder().url(url).header("Accept", "application/vnd.github+json").header("User-Agent", "Cramin").build()
-            http.newCall(request).execute().use { resp ->
+            http.newCall(request).useCancellable { resp ->
                 if (resp.code == 404) return@withContext UpdateCheck.UpToDate(currentVersionCode)
                 if (!resp.isSuccessful) return@withContext UpdateCheck.Error("HTTP ${resp.code}")
                 val info = parse(resp.body.string()) ?: return@withContext UpdateCheck.Error("bad release JSON")

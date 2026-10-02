@@ -1,5 +1,6 @@
 package pro.perfectproduct.cramin.llm
 
+import pro.perfectproduct.cramin.util.useCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -63,7 +64,7 @@ class ModelCatalog(
     private suspend fun fetch(): CatalogSnapshot? = withContext(Dispatchers.IO) {
         try {
             val req = Request.Builder().url("$baseUrl/models").header("HTTP-Referer", OpenRouterClient.REFERER).header("X-Title", OpenRouterClient.TITLE).build()
-            http.newCall(req).execute().use { resp ->
+            http.newCall(req).useCancellable { resp ->
                 if (!resp.isSuccessful) {
                     Log.w(TAG, "catalog HTTP ${resp.code}")
                     return@withContext null
@@ -81,6 +82,8 @@ class ModelCatalog(
         } catch (e: IOException) {
             Log.w(TAG, "catalog fetch failed: ${e.javaClass.simpleName}")
             null
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: IllegalStateException) {
             Log.w(TAG, "catalog parse failed")
             null

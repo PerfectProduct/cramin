@@ -1,5 +1,6 @@
 package pro.perfectproduct.cramin.llm
 
+import pro.perfectproduct.cramin.util.useCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.booleanOrNull
@@ -30,7 +31,7 @@ class KeyChecker(
                 .header("HTTP-Referer", OpenRouterClient.REFERER)
                 .header("X-Title", OpenRouterClient.TITLE)
                 .build()
-            http.newCall(req).execute().use { resp ->
+            http.newCall(req).useCancellable { resp ->
                 val text = resp.body.string()
                 when {
                     resp.code == 401 || resp.code == 403 -> KeyCheck.Invalid
@@ -49,6 +50,8 @@ class KeyChecker(
         } catch (e: IOException) {
             Log.w(TAG, "key check failed: ${e.javaClass.simpleName}")
             KeyCheck.Error(e.javaClass.simpleName)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: IllegalStateException) {
             KeyCheck.Error("bad response")
         }

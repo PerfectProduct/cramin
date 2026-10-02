@@ -1,5 +1,6 @@
 package pro.perfectproduct.cramin.llm
 
+import pro.perfectproduct.cramin.util.useCancellable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -86,7 +87,7 @@ class OpenRouterClient(
             .header("X-Title", TITLE)
             .post(body.toRequestBody(JSON_MEDIA))
             .build()
-        http.newCall(req).execute().use { resp ->
+        http.newCall(req).useCancellable { resp ->
             val text = resp.body.string()
             when {
                 resp.isSuccessful -> parseSuccess(text)
@@ -178,8 +179,8 @@ class OpenRouterClient(
         private const val MAX_RETRY_AFTER_MS = 60_000L
         private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
 
-        /** `Retry-After` в секундах (HTTP-дату не разбираем: ждём по экспоненте). */
-        fun retryAfterMs(header: String?): Long? = header?.trim()?.toLongOrNull()?.let { it * 1000L }
+        /** Delta-seconds and HTTP-date; bounded to avoid overflow and unbounded waits. */
+        fun retryAfterMs(header: String?): Long? = pro.perfectproduct.cramin.util.RetryAfter.milliseconds(header)
 
         fun isCancellation(t: Throwable): Boolean = t is CancellationException
     }

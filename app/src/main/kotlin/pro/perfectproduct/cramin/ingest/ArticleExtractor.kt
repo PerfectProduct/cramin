@@ -1,5 +1,6 @@
 package pro.perfectproduct.cramin.ingest
 
+import pro.perfectproduct.cramin.util.useCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.dankito.readability4j.Readability4J
@@ -36,7 +37,7 @@ class ArticleExtractor(http: OkHttpClient) : SourceExtractor {
                 .header("Accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8")
                 .header("Accept-Language", "en,ru;q=0.8,he;q=0.7")
                 .build()
-            http.newCall(request).execute().use { resp ->
+            http.newCall(request).useCancellable { resp ->
                 if (!resp.isSuccessful) throw PipelineException(ErrorCode.ARTICLE_EXTRACT, "HTTP ${resp.code}")
                 resp.body.string()
             }

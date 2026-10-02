@@ -1,5 +1,6 @@
 package pro.perfectproduct.cramin.transcribe
 
+import pro.perfectproduct.cramin.util.useCancellable
 import android.util.Base64
 import android.util.Base64OutputStream
 import kotlinx.coroutines.Dispatchers
@@ -45,13 +46,13 @@ class OpenRouterSttTranscriber(
                 if (e.code != ErrorCode.NETWORK && e.code != ErrorCode.SERVER && e.code != ErrorCode.RATE_LIMIT) throw e
                 last = e
                 Log.w(TAG, "attempt $attempt failed: ${e.code}")
-                if (attempt < MAX_ATTEMPTS) sleeper(BACKOFF_MS[attempt - 1])
+                if (attempt < MAX_ATTEMPTS) sleeper(maxOf(BACKOFF_MS[attempt - 1], e.retryAfterMs ?: 0))
             }
         }
         throw last ?: PipelineException(ErrorCode.TRANSCRIPTION, "exhausted")
     }
 
-    private fun once(key: String, part: AudioPart, lang: Lang?, model: String): Transcript {
+    private suspend fun once(key: String, part: AudioPart, lang: Lang?, model: String): Transcript {
         val body = object : RequestBody() {
             override fun contentType() = JSON
             override fun writeTo(sink: BufferedSink) {
@@ -71,13 +72,13 @@ class OpenRouterSttTranscriber(
             .post(body)
             .build()
         try {
-            http.newCall(request).execute().use { resp ->
+            http.newCall(request).useCancellable { resp ->
                 val text = resp.body.string()
                 when {
                     resp.code == 401 || resp.code == 403 -> throw PipelineException(ErrorCode.AUTH, "HTTP ${resp.code}")
                     resp.code == 402 -> throw PipelineException(ErrorCode.PAYMENT, "HTTP 402")
-                    resp.code == 429 -> throw PipelineException(ErrorCode.RATE_LIMIT, "HTTP 429")
-                    resp.code >= 500 -> throw PipelineException(ErrorCode.SERVER, "HTTP ${resp.code}")
+                    resp.code == 429 -> throw PipelineException(ErrorCode.RATE_LIMIT, "HTTP 429", retryAfterMs = pro.perfectproduct.cramin.util.RetryAfter.milliseconds(resp.header("Retry-After")))
+                    resp.code >= 500 -> throw PipelineException(ErrorCode.SERVER, "HTTP ${resp.code}", retryAfterMs = pro.perfectproduct.cramin.util.RetryAfter.milliseconds(resp.header("Retry-After")))
                     !resp.isSuccessful -> throw PipelineException(ErrorCode.TRANSCRIPTION, "HTTP ${resp.code}")
                 }
                 val root = runCatching { LlmJson.lenient.parseToJsonElement(text).jsonObject }.getOrNull()
