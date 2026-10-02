@@ -21,6 +21,8 @@ class DownloadException(message: String, val checksumMismatch: Boolean = false) 
 class ApkDownloader(private val http: OkHttpClient, private val cacheDir: File) {
 
     suspend fun download(release: ReleaseInfo, onProgress: (Long, Long) -> Unit = { _, _ -> }): File = withContext(Dispatchers.IO) {
+        if (release.apkName != File(release.apkName).name || !release.apkName.endsWith(".apk"))
+            throw DownloadException("invalid APK name")
         val dir = File(cacheDir, "updates").apply { mkdirs() }
         dir.listFiles()?.forEach { if (it.name != release.apkName) it.delete() }
         val target = File(dir, release.apkName)

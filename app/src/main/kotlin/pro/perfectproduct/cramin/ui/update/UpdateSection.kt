@@ -1,5 +1,11 @@
 package pro.perfectproduct.cramin.ui.update
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -32,6 +38,14 @@ fun UpdateSection() {
     val state by manager.state.collectAsState()
     val installResult by ApkInstaller.resultFlow.collectAsState()
     val context = LocalContext.current
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { manager.resumePending() }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, manager) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) manager.resumePending() }
+        lifecycle.addObserver(observer)
+        manager.resumePending()
+        onDispose { lifecycle.removeObserver(observer) }
+    }
 
     TextButton(onClick = { manager.check() }, modifier = Modifier.testTag("checkUpdates")) { Text(stringResource(R.string.action_check_updates)) }
     when (val s = state) {
@@ -60,7 +74,7 @@ fun UpdateSection() {
             onDismissRequest = { manager.reset() },
             title = { Text(stringResource(R.string.update_install)) },
             text = { Text(stringResource(R.string.update_permission_body)) },
-            confirmButton = { TextButton(onClick = { context.startActivity(container.apkInstaller.unknownSourcesIntent()); manager.install(s.apk) }) { Text(stringResource(R.string.update_permission_open)) } },
+            confirmButton = { TextButton(onClick = { permission.launch(container.apkInstaller.unknownSourcesIntent()) }) { Text(stringResource(R.string.update_permission_open)) } },
             dismissButton = { TextButton(onClick = { manager.install(s.apk) }) { Text(stringResource(R.string.action_retry)) } },
         )
         is UpdateUi.Installing -> {
@@ -73,10 +87,11 @@ fun UpdateSection() {
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        is UpdateUi.Error -> Text(
-            if (s.checksum) stringResource(R.string.update_verify_failed) else stringResource(R.string.update_error, s.message),
-            color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall,
-        )
+        is UpdateUi.Error -> Column {
+            Text(if (s.checksum) stringResource(R.string.update_verify_failed) else stringResource(R.string.update_error, s.message),
+                color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = manager::resumePending) { Text(stringResource(R.string.action_retry)) }
+        }
     }
 }
 

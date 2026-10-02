@@ -26,14 +26,35 @@ sealed interface InstallResult {
  * Установка через PackageInstaller session API (SPEC §12.4 п. 5–6). Без разрешения на установку
  * из этого источника открываются системные настройки; результат приходит в [InstallResultReceiver].
  */
-class ApkInstaller(private val context: Context) {
+interface UpdateInstaller {
+    fun canInstall(): Boolean
+    fun validate(apk: File): Boolean
+    suspend fun install(apk: File)
+}
 
-    fun canInstall(): Boolean = context.packageManager.canRequestPackageInstalls()
+class ApkInstaller(private val context: Context) : UpdateInstaller {
+
+    override fun canInstall(): Boolean = context.packageManager.canRequestPackageInstalls()
+
+    @Suppress("DEPRECATION")
+    override fun validate(apk: File): Boolean = runCatching {
+        val pm = context.packageManager
+        val flags = android.content.pm.PackageManager.GET_SIGNATURES
+        val candidate = pm.getPackageArchiveInfo(apk.path, flags) ?: return false
+        val current = pm.getPackageInfo(context.packageName, flags)
+        fun version(info: android.content.pm.PackageInfo): Long =
+            if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
+        fun signatures(info: android.content.pm.PackageInfo) = info.signatures.orEmpty()
+            .map { pro.perfectproduct.cramin.util.Hashing.sha256Hex(it.toByteArray()) }.toSet()
+        candidate.packageName == context.packageName && version(candidate) > version(current) &&
+            signatures(candidate).isNotEmpty() && signatures(candidate) == signatures(current)
+    }.getOrDefault(false)
 
     fun unknownSourcesIntent(): Intent =
         Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
 
-    suspend fun install(apk: File): Unit = withContext(Dispatchers.IO) {
+    override suspend fun install(apk: File): Unit = withContext(Dispatchers.IO) {
+        require(validate(apk)) { "invalid update package" }
         results.value = InstallResult.Pending
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
@@ -67,7 +88,6 @@ class ApkInstaller(private val context: Context) {
 class InstallResultReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
-        val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE).orEmpty()
         when (status) {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                 // Система просит подтверждение: показываем её диалог.
@@ -76,7 +96,7 @@ class InstallResultReceiver : BroadcastReceiver() {
                 ApkInstaller.results.value = InstallResult.Pending
             }
             PackageInstaller.STATUS_SUCCESS -> ApkInstaller.results.value = InstallResult.Success
-            else -> ApkInstaller.results.value = InstallResult.Failure(message.ifEmpty { "status $status" })
+            else -> ApkInstaller.results.value = InstallResult.Failure("status $status")
         }
         Log.i("Update", "install result status=$status")
     }

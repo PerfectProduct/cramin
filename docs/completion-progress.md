@@ -18,7 +18,7 @@
 | Учебная единица, миграция, reprocess, Undo | Проверено:112 JVM,6 UI; миграция API34 |
 | Оформление, ft, AUD-011/014 | 116 JVM и 7 UI passed; расширенный font/RTL smoke и снимки впереди |
 | Отмена HTTP, snapshot, retries AUD-009/010/013 | 0267a6b: сеть; snapshot и STT resume проверены |
-| Обновление и release workflow AUD-005/006 | Ожидает |
+| Обновление и release workflow AUD-005/006 | 131 JVM и assembleDebug passed; реальный installer впереди |
 | Положительные источники | Ожидает |
 | Лицензии AUD-007 | Ожидает; возможен выбор владельца о распространении |
 | Сценарии AUD-012, API34/26/36, финальные артефакты | Ожидает |
@@ -60,3 +60,7 @@ UI: регрессионные ExactSpanTest до исправления 2 faile
 Коммит сети `0267a6b`. Конфигурация: config-before.log — 1 regression failed; config-checks.log — полный JVM passed. STT получает ту же конфигурацию; добавлен отдельный resume-тест fake STT.
 
 AUD-010: config-checks.log — 127 JVM passed; config-stt-final.log — 2 passed (retry/reprocess и STT resume). Промежуточный STT-тест failed из-за неверного NewDocument.Url вместо Youtube; models=[] подтвердило отсутствие STT-вызова, фикстура исправлена. Старые неполные параметры явно отмечаются. Следующий шаг: pending update, возврат из разрешения установки и exact-SHA release workflow.
+
+Коммит snapshot: `6fa1b28`. Updater реализован: pending basename/digest, проверка пакета/версии/cert, ActivityResult/ON_RESUME, идемпотентное продолжение. update-unit.log: целевые JVM passed; реальный N→N+1 installer ещё предстоит. Release workflow локально проверен по YAML и порядку gates/target/concurrency; GitHub не запускался.
+
+Updater: update-checks.log — assembleDebug и 131 JVM passed, 0 failed/skipped. Pending update проверен пересозданием менеджера (моделирование, не смерть процесса). Следующий шаг: build baseline из updater-коммита, затем реальные источники и lifecycle/installer на API34.

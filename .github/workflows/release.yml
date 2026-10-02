@@ -8,6 +8,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: cramin-release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -24,6 +28,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ github.sha }}
 
       - uses: actions/setup-java@v6
         with:
@@ -31,6 +36,15 @@ jobs:
           java-version: "21"
 
       - uses: gradle/actions/setup-gradle@v6
+
+      - name: Verify exact checkout and run required gates
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          ./gradlew assembleDebug testDebugUnitTest lintDebug -Plive=false --no-daemon > "$RUNNER_TEMP/release-gates.log" 2>&1
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test -z "$(git status --porcelain)"
 
       - name: Compute version
         id: version
@@ -55,7 +69,7 @@ jobs:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.p12
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon > "$RUNNER_TEMP/release-build.log" 2>&1
 
       - name: Verify signature fingerprint
         run: python3 scripts/verify_release_signature.py app/build/outputs/apk/release/app-release.apk
@@ -84,11 +98,27 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.sha }}
         run: |
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test -z "$(git ls-remote --tags origin refs/tags/${{ steps.version.outputs.tag }})"
           gh release create "${{ steps.version.outputs.tag }}" \
+            --target "$RELEASE_SHA" \
             --title "Cramin ${{ steps.version.outputs.tag }}" \
             --notes-file notes.md \
             "${{ steps.assets.outputs.apk }}" "${{ steps.assets.outputs.sha }}"
+
+      - name: Preserve gate reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-verification-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/release-gates.log
+            ${{ runner.temp }}/release-build.log
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
 
       - name: Remove keystore
         if: always()

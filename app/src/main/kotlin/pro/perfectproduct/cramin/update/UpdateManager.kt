@@ -22,12 +22,36 @@ sealed interface UpdateUi {
 class UpdateManager(
     private val checker: UpdateChecker,
     private val downloader: ApkDownloader,
-    private val installer: ApkInstaller,
+    private val installer: UpdateInstaller,
     private val scope: CoroutineScope,
+    private val pending: PendingUpdateStore? = null,
 ) {
     private val _state = MutableStateFlow<UpdateUi>(UpdateUi.Idle)
     val state: StateFlow<UpdateUi> = _state
     private var job: Job? = null
+    private var installJob: Job? = null
+
+    init {
+        scope.launch {
+            ApkInstaller.resultFlow.collect { result ->
+                when (result) {
+                    InstallResult.Success -> { pending?.clear(); _state.value = UpdateUi.Idle }
+                    is InstallResult.Failure -> _state.value = UpdateUi.Error(result.message)
+                    else -> Unit
+                }
+            }
+        }
+    }
+
+    /** Called after Settings returns, and whenever the update UI is recreated/resumed. */
+    fun resumePending() {
+        if (installJob?.isActive == true || _state.value is UpdateUi.Installing) return
+        installJob = scope.launch {
+            val apk = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { pending?.load() }
+                ?: return@launch
+            installPrepared(apk, save = false)
+        }
+    }
 
     fun check() {
         job?.cancel()
@@ -55,24 +79,43 @@ class UpdateManager(
         }
     }
 
-    /** После возврата из системных настроек установка продолжается (SPEC §12.4 п. 5). */
     fun install(apk: File) {
-        if (!installer.canInstall()) {
-            _state.value = UpdateUi.NeedsPermission(apk)
-            return
-        }
-        scope.launch {
+        if (installJob?.isActive == true) return
+        installJob = scope.launch { installPrepared(apk, save = true) }
+    }
+
+    private suspend fun installPrepared(apk: File, save: Boolean) {
+        try {
+            val valid = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                if (!installer.validate(apk)) false else {
+                    if (save) pending?.save(apk)
+                    true
+                }
+            }
+            if (!valid) {
+                pending?.clear()
+                _state.value = UpdateUi.Error("invalid update package")
+                return
+            }
+            if (!installer.canInstall()) {
+                _state.value = UpdateUi.NeedsPermission(apk)
+                return
+            }
             _state.value = UpdateUi.Installing(apk)
-            runCatching { installer.install(apk) }.onFailure { _state.value = UpdateUi.Error(it.javaClass.simpleName) }
-        }
+            installer.install(apk)
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (e: Exception) { _state.value = UpdateUi.Error(e.javaClass.simpleName) }
     }
 
     fun cancel() {
         job?.cancel()
+        installJob?.cancel()
+        pending?.clear()
         _state.value = UpdateUi.Idle
     }
 
     fun reset() {
+        pending?.clear()
         _state.value = UpdateUi.Idle
     }
 }
