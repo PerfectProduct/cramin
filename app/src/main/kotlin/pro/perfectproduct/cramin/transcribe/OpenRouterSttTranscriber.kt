@@ -78,11 +78,11 @@ class OpenRouterSttTranscriber(
                     resp.code == 402 -> throw PipelineException(ErrorCode.PAYMENT, "HTTP 402")
                     resp.code == 429 -> throw PipelineException(ErrorCode.RATE_LIMIT, "HTTP 429")
                     resp.code >= 500 -> throw PipelineException(ErrorCode.SERVER, "HTTP ${resp.code}")
-                    !resp.isSuccessful -> throw PipelineException(ErrorCode.TRANSCRIPTION, "HTTP ${resp.code}: ${detail(text)}")
+                    !resp.isSuccessful -> throw PipelineException(ErrorCode.TRANSCRIPTION, "HTTP ${resp.code}")
                 }
                 val root = runCatching { LlmJson.lenient.parseToJsonElement(text).jsonObject }.getOrNull()
                     ?: throw PipelineException(ErrorCode.TRANSCRIPTION, "bad response")
-                root["error"]?.jsonObject?.let { throw PipelineException(ErrorCode.TRANSCRIPTION, it["message"]?.jsonPrimitive?.contentOrNull?.take(200) ?: "provider error") }
+                root["error"]?.jsonObject?.let { throw PipelineException(ErrorCode.TRANSCRIPTION, "provider error") }
                 val transcript = root["text"]?.jsonPrimitive?.contentOrNull ?: throw PipelineException(ErrorCode.TRANSCRIPTION, "no text")
                 val cost = root["usage"]?.jsonObject?.get("cost")?.jsonPrimitive?.doubleOrNull
                 Log.i(TAG, "transcribed ${part.durationSeconds}s → ${transcript.length} chars, cost=$cost")
@@ -92,10 +92,6 @@ class OpenRouterSttTranscriber(
             throw PipelineException(ErrorCode.NETWORK, e.javaClass.simpleName, e)
         }
     }
-
-    private fun detail(text: String): String = runCatching {
-        LlmJson.lenient.parseToJsonElement(text).jsonObject["error"]?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
-    }.getOrNull()?.take(200) ?: "error"
 
     private fun quote(s: String): String = "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 

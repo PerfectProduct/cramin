@@ -3,6 +3,8 @@ package pro.perfectproduct.cramin.ui.document
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -201,8 +203,29 @@ private fun DocumentHeader(doc: DocumentEntity, total: Int, known: Int) {
 }
 
 /** Обработка и ошибки с действием (SPEC: «Ошибка — повторить», конкретные сообщения по коду). */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun StatusBanner(doc: DocumentEntity, onRetry: () -> Unit, onOpenSettings: () -> Unit, onChooseLang: (ErrorAction) -> Unit, onCheckUpdates: () -> Unit) {
+    val diagnostic = pro.perfectproduct.cramin.pipeline.FailureDiagnostic.forDocument(doc)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    if (diagnostic != null) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)) {
+            val stageLabel = when (diagnostic.stage) {
+                pro.perfectproduct.cramin.pipeline.FailureStage.CONFIG -> stringResource(R.string.diagnostic_config)
+                pro.perfectproduct.cramin.pipeline.FailureStage.LANGUAGE -> stringResource(R.string.diagnostic_language)
+                pro.perfectproduct.cramin.pipeline.FailureStage.UNKNOWN -> stringResource(R.string.diagnostic_unknown)
+                else -> statusLabel(DocStatus.valueOf(diagnostic.stage.name))
+            }
+            Text(stringResource(R.string.diagnostic_previous, stageLabel, diagnostic.code.name), style = MaterialTheme.typography.bodyMedium)
+            if (diagnostic.stage == pro.perfectproduct.cramin.pipeline.FailureStage.UNKNOWN) {
+                Text(stringResource(R.string.diagnostic_unknown_stage), style = MaterialTheme.typography.bodySmall)
+            }
+            TextButton(onClick = {
+                val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Cramin", diagnostic.copyText(pro.perfectproduct.cramin.BuildConfig.VERSION_NAME, android.os.Build.VERSION.SDK_INT)))
+            }) { Text(stringResource(R.string.diagnostic_copy)) }
+        }
+    }
     when {
         doc.status == DocStatus.FAILED -> {
             val code = ErrorCode.fromName(doc.errorCode)
@@ -213,7 +236,7 @@ private fun StatusBanner(doc: DocumentEntity, onRetry: () -> Unit, onOpenSetting
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text(stringResource(errorMessageRes(code)), color = MaterialTheme.colorScheme.onErrorContainer)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
                         for (action in errorActions(code)) {
                             OutlinedButton(
                                 onClick = {

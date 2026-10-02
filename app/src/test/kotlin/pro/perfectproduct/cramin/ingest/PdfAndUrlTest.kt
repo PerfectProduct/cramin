@@ -76,7 +76,7 @@ class PdfAndUrlTest {
             PdfExtractor(ApplicationProvider.getApplicationContext()).extract(doc(8), files)
             fail()
         } catch (e: PipelineException) {
-            assertEquals(ErrorCode.PDF_NO_TEXT, e.code)
+            assertEquals(ErrorCode.PDF_INVALID, e.code)
         }
     }
 

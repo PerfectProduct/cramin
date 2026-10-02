@@ -52,7 +52,7 @@
     <string name="library_subtitle">%1$d слов · выучено %2$d · %3$s</string>
     <string name="library_processing">Обработка… %1$d %%</string>
     <string name="library_queued">В очереди</string>
-    <string name="library_error">Ошибка — нажмите, чтобы повторить</string>
+    <string name="library_error">Ошибка — открыть подробности</string>
     <string name="library_play">Учить</string>
     <string name="library_delete_confirm_title">Удалить документ?</string>
     <string name="library_delete_confirm_body">«%1$s» вместе с карточками и прогрессом будет удалён. Это нельзя отменить.</string>
@@ -221,8 +221,8 @@
     <string name="err_same_language">Язык текста совпадает с языком перевода</string>
     <string name="err_empty_text">В источнике нет текста</string>
     <string name="err_article">Не удалось извлечь текст статьи. Попробуйте скопировать текст вручную</string>
-    <string name="err_pdf_no_text">PDF не содержит текстового слоя; OCR появится в следующей версии</string>
-    <string name="err_youtube_format">YouTube изменил формат. Проверьте обновления приложения</string>
+    <string name="err_pdf_no_text">Не удалось извлечь достаточно текста из PDF. Для скана вставьте распознанный текст вручную.</string>
+    <string name="err_youtube_format">Не удалось получить данные YouTube. Проверьте доступность видео и сеть.</string>
     <string name="err_youtube_no_lang">Не удалось определить язык видео. Выберите его для транскрипции.</string>
     <string name="err_transcription">Не удалось расшифровать аудио. Повторите позже.</string>
     <string name="err_storage">Не удалось прочитать файл документа.</string>
@@ -244,4 +244,12 @@
     <string name="status_consolidating">Смыслы и примеры…</string>
     <string name="status_ready">Готово</string>
     <string name="status_failed">Ошибка</string>
+    <string name="err_pdf_invalid">Не удалось прочитать PDF. Проверьте файл или выберите другой.</string>
+    <string name="err_pdf_encrypted">PDF защищён. Выберите копию без защиты.</string>
+    <string name="diagnostic_copy">Скопировать диагностику</string>
+    <string name="diagnostic_previous">Последний отказ: %1$s · %2$s</string>
+    <string name="diagnostic_unknown_stage">Стадия старой ошибки не сохранена</string>
+    <string name="diagnostic_config">Конфигурация обработки</string>
+    <string name="diagnostic_language">Определение языка</string>
+    <string name="diagnostic_unknown">Стадия неизвестна</string>
 </resources>

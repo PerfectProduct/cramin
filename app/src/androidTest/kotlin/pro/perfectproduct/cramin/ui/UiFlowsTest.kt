@@ -88,6 +88,19 @@ class UiFlowsTest {
     }
 
     @Test
+    fun failedRowOpensReasonAndLanguageActionWithoutRetry() = runBlocking<Unit> {
+        val id = seedDocument()
+        container.db.documentDao().setStatus(id, DocStatus.FAILED, .1f, "SAME_LANGUAGE", "PRIVATE", 2)
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithText("Riverside Library").performClick()
+        compose.onNodeWithTag("errorBanner").assertIsDisplayed()
+        compose.onNodeWithText("Скопировать диагностику").assertIsDisplayed()
+        assertEquals(DocStatus.FAILED, container.documentRepository.get(id)?.status)
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.action_choose_target_lang)).performClick()
+        compose.onNodeWithText("EN").assertIsDisplayed()
+    }
+
+    @Test
     fun libraryShowsDocumentAndPlayOpensCardsTab() = runBlocking<Unit> {
         val id = seedDocument()
         scenario = ActivityScenario.launch(MainActivity::class.java)

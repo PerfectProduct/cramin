@@ -94,7 +94,7 @@ class OpenRouterClient(
                 resp.code == 402 -> Attempt.Fail(LlmException.Payment())
                 resp.code == 429 -> Attempt.Retry(retryAfterMs(resp.header("Retry-After")), LlmException.RateLimited())
                 resp.code >= 500 -> Attempt.Retry(retryAfterMs(resp.header("Retry-After")), LlmException.Server(resp.code))
-                else -> Attempt.Fail(LlmException.BadRequest(resp.code, errorDetail(text)))
+                else -> Attempt.Fail(LlmException.BadRequest(resp.code, "HTTP error"))
             }
         }
     }
@@ -108,7 +108,7 @@ class OpenRouterClient(
         // OpenRouter может вернуть 200 с телом {"error": {...}} (например, провайдер отказал).
         root["error"]?.jsonObject?.let { err ->
             val code = err["code"]?.jsonPrimitive?.intOrNull ?: 0
-            val msg = err["message"]?.jsonPrimitive?.contentOrNull ?: "provider error"
+            val msg = "provider error"
             return when (code) {
                 429 -> Attempt.Retry(null, LlmException.RateLimited())
                 in 500..599 -> Attempt.Retry(null, LlmException.Server(code))
@@ -167,10 +167,6 @@ class OpenRouterClient(
             put("provider", buildJsonObject { put("require_parameters", true) })
         }
     }
-
-    private fun errorDetail(text: String): String = runCatching {
-        LlmJson.lenient.parseToJsonElement(text).jsonObject["error"]?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
-    }.getOrNull()?.take(200) ?: "HTTP error"
 
     companion object {
         private const val TAG = "OpenRouter"

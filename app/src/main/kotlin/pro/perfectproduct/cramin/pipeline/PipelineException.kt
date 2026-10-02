@@ -20,6 +20,8 @@ enum class ErrorCode {
     EMPTY_TEXT,
     ARTICLE_EXTRACT,
     PDF_NO_TEXT,
+    PDF_INVALID,
+    PDF_ENCRYPTED,
     YOUTUBE_FORMAT,
     YOUTUBE_NO_LANG,
     TRANSCRIPTION,
@@ -33,20 +35,20 @@ enum class ErrorCode {
 }
 
 /** Ошибка стадии или источника. `message` — техническая, без текстов документа. */
-class PipelineException(val code: ErrorCode, message: String, cause: Throwable? = null) : Exception(message, cause) {
+class PipelineException(val code: ErrorCode, message: String, cause: Throwable? = null, val stage: FailureStage? = null) : Exception(message, cause) {
     companion object {
         fun from(t: Throwable): PipelineException = when (t) {
             is PipelineException -> t
-            is LlmException.Auth -> PipelineException(if (t.status == 0) ErrorCode.NO_KEY else ErrorCode.AUTH, t.message.orEmpty(), t)
-            is LlmException.Payment -> PipelineException(ErrorCode.PAYMENT, t.message.orEmpty(), t)
-            is LlmException.Network -> PipelineException(ErrorCode.NETWORK, t.message.orEmpty(), t)
-            is LlmException.RateLimited -> PipelineException(ErrorCode.RATE_LIMIT, t.message.orEmpty(), t)
-            is LlmException.Server -> PipelineException(ErrorCode.SERVER, t.message.orEmpty(), t)
-            is LlmException.BadRequest -> PipelineException(ErrorCode.BAD_REQUEST, t.message.orEmpty(), t)
-            is LlmException.InvalidResponse -> PipelineException(ErrorCode.INVALID_RESPONSE, t.message.orEmpty(), t)
-            is LlmException.BudgetExceeded -> PipelineException(ErrorCode.PAYMENT, t.message.orEmpty(), t)
+            is LlmException.Auth -> PipelineException(if (t.status == 0) ErrorCode.NO_KEY else ErrorCode.AUTH, t.javaClass.simpleName, t)
+            is LlmException.Payment -> PipelineException(ErrorCode.PAYMENT, t.javaClass.simpleName, t)
+            is LlmException.Network -> PipelineException(ErrorCode.NETWORK, t.javaClass.simpleName, t)
+            is LlmException.RateLimited -> PipelineException(ErrorCode.RATE_LIMIT, t.javaClass.simpleName, t)
+            is LlmException.Server -> PipelineException(ErrorCode.SERVER, t.javaClass.simpleName, t)
+            is LlmException.BadRequest -> PipelineException(ErrorCode.BAD_REQUEST, t.javaClass.simpleName, t)
+            is LlmException.InvalidResponse -> PipelineException(ErrorCode.INVALID_RESPONSE, t.javaClass.simpleName, t)
+            is LlmException.BudgetExceeded -> PipelineException(ErrorCode.PAYMENT, t.javaClass.simpleName, t)
             is java.io.IOException -> PipelineException(ErrorCode.NETWORK, t.javaClass.simpleName, t)
-            else -> PipelineException(ErrorCode.UNKNOWN, t.javaClass.simpleName + (t.message?.let { ": ${it.take(120)}" } ?: ""), t)
+            else -> PipelineException(ErrorCode.UNKNOWN, "unexpected error", t)
         }
     }
 }

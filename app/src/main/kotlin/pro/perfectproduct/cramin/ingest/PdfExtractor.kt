@@ -34,7 +34,7 @@ class PdfExtractor(context: Context) : SourceExtractor {
 
     private fun readPages(file: File): Pair<List<List<String>>, String?> = try {
         PDDocument.load(file).use { doc ->
-            if (doc.isEncrypted) throw PipelineException(ErrorCode.PDF_NO_TEXT, "encrypted")
+            if (doc.isEncrypted) throw PipelineException(ErrorCode.PDF_ENCRYPTED, "encrypted")
             val stripper = PDFTextStripper().apply { sortByPosition = true }
             val pages = (1..doc.numberOfPages).map { i ->
                 stripper.startPage = i
@@ -45,8 +45,10 @@ class PdfExtractor(context: Context) : SourceExtractor {
         }
     } catch (e: PipelineException) {
         throw e
+    } catch (e: com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException) {
+        throw PipelineException(ErrorCode.PDF_ENCRYPTED, "password required", e)
     } catch (e: Exception) {
-        throw PipelineException(ErrorCode.PDF_NO_TEXT, "pdf parse failed: ${e.javaClass.simpleName}", e)
+        throw PipelineException(ErrorCode.PDF_INVALID, "pdf parse failed: ${e.javaClass.simpleName}", e)
     }
 
     companion object {

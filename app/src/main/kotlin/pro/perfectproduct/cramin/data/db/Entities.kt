@@ -52,6 +52,7 @@ data class DocumentEntity(
     val wordCount: Int,
     val createdAt: Long,
     val updatedAt: Long,
+    val failureJson: String? = null,
 )
 
 @Entity(

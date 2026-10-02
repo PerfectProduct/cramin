@@ -64,6 +64,8 @@ fun errorMessageRes(code: ErrorCode): Int = when (code) {
     ErrorCode.SAME_LANGUAGE -> R.string.err_same_language
     ErrorCode.EMPTY_TEXT -> R.string.err_empty_text
     ErrorCode.ARTICLE_EXTRACT -> R.string.err_article
+    ErrorCode.PDF_INVALID -> R.string.err_pdf_invalid
+    ErrorCode.PDF_ENCRYPTED -> R.string.err_pdf_encrypted
     ErrorCode.PDF_NO_TEXT -> R.string.err_pdf_no_text
     ErrorCode.YOUTUBE_FORMAT -> R.string.err_youtube_format
     ErrorCode.YOUTUBE_NO_LANG -> R.string.err_youtube_no_lang

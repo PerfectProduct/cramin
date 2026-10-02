@@ -131,7 +131,7 @@ fun LibraryScreen(
                         DocumentRow(
                             row = row,
                             onClick = {
-                                if (row.document.status == DocStatus.FAILED) vm.retry(row.document.id) else onOpenDocument(row.document.id, "text")
+                                onOpenDocument(row.document.id, "text")
                             },
                             onPlay = { onOpenDocument(row.document.id, "cards") },
                             onLongClick = { menuFor = row },

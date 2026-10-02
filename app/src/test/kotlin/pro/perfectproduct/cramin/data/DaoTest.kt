@@ -60,6 +60,23 @@ class DaoTest {
     )
 
     @Test
+    fun retryPreservesSafeLegacyDiagnosticWithoutCopyingMessage() = runTest {
+        val id = db.documentDao().insert(doc("private title", DocStatus.FAILED).copy(errorCode = "ARTICLE_EXTRACT", errorMessage = "PRIVATE secret URL"))
+        val root = java.nio.file.Files.createTempDirectory("diagnostic").toFile()
+        try {
+            val repo = pro.perfectproduct.cramin.data.repo.DocumentRepository(db, pro.perfectproduct.cramin.data.repo.DocumentFiles(root), clock)
+            repo.requeue(id)
+            repo.requeue(id)
+            val saved = requireNotNull(db.documentDao().getById(id))
+            assertEquals(DocStatus.QUEUED, saved.status)
+            val diagnostic = requireNotNull(pro.perfectproduct.cramin.pipeline.FailureDiagnostic.forDocument(saved))
+            assertEquals(pro.perfectproduct.cramin.pipeline.ErrorCode.ARTICLE_EXTRACT, diagnostic.code)
+            assertEquals(pro.perfectproduct.cramin.pipeline.FailureStage.UNKNOWN, diagnostic.stage)
+            assertTrue(!diagnostic.copyText("test",34).contains("PRIVATE"))
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
     fun libraryCountsAggregateCards() = runTest {
         val d1 = db.documentDao().insert(doc("one"))
         db.cardDao().insertCard(card(d1, "apple", CardStatus.KNOWN))

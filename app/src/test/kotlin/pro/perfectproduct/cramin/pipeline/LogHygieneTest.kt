@@ -59,6 +59,7 @@ class LogHygieneTest {
             assertFalse("текст документа в логе: $probe", joined.contains(probe))
         }
         assertFalse("перевод в логе", joined.contains("tr_library"))
-        assertTrue("HTTP-лог уровня BASIC присутствует", lines.any { it.contains("--> POST") })
+        assertTrue("Безопасный HTTP-лог присутствует", lines.any { it.contains("response status=200") })
+        assertFalse("URL в логе", joined.contains(server.baseUrl))
     }
 }

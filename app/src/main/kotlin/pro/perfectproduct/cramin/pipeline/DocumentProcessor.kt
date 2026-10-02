@@ -97,10 +97,14 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         val doc = db.documentDao().getById(documentId) ?: return ProcessOutcome.Skipped
         if (doc.status == DocStatus.READY) return ProcessOutcome.Skipped
         Log.i(TAG, "process doc=$documentId status=${doc.status} type=${doc.sourceType}")
+        var stage = FailureStage.CONFIG
         return try {
             // Imports surviving v1 snapshots, or captures cards restored before an old crash.
             db.withTransaction { ReprocessProgress(db, deps.files).capture(documentId) }
-            val count = run(doc, onProgress)
+            val count = run(doc) { status, progress ->
+                stage = runCatching { FailureStage.valueOf(status.name) }.getOrDefault(stage)
+                onProgress(status, progress)
+            }
             ProcessOutcome.Ready(count)
         } catch (e: CancellationException) {
             Log.i(TAG, "doc=$documentId cancelled")
@@ -111,9 +115,13 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             if (current?.status == DocStatus.READY)
                 return ProcessOutcome.Ready(db.cardDao().getByDocument(documentId).size)
             val pe = PipelineException.from(t)
-            Log.w(TAG, "doc=$documentId failed: ${pe.code} ${pe.message}", if (pe.code == ErrorCode.UNKNOWN) t else null)
-            db.documentDao().setStatus(documentId, DocStatus.FAILED, current?.progress ?: 0f, pe.code.name, pe.message?.take(200), now)
-            ProcessOutcome.Failed(pe.code, pe.message.orEmpty())
+            val failure = FailureDiagnostic(doc.sourceType, pe.stage ?: stage, pe.code)
+            Log.w(TAG, "doc=$documentId failed: ${failure.stage} ${pe.code}")
+            db.withTransaction {
+                db.documentDao().setFailure(documentId, failure.encode())
+                db.documentDao().setStatus(documentId, DocStatus.FAILED, current?.progress ?: 0f, pe.code.name, pe.code.name, now)
+            }
+            ProcessOutcome.Failed(pe.code, pe.code.name)
         }
     }
 
@@ -192,8 +200,8 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         }
         val text = sourceFile.readText()
         val lang = storedLang ?: langHint ?: LangDetector.detect(text)
-            ?: throw PipelineException(ErrorCode.LANG_UNDETECTED, "script share below threshold")
-        if (lang == targetLang) throw PipelineException(ErrorCode.SAME_LANGUAGE, "source == target (${lang.code})")
+            ?: throw PipelineException(ErrorCode.LANG_UNDETECTED, "script share below threshold", stage = FailureStage.LANGUAGE)
+        if (lang == targetLang) throw PipelineException(ErrorCode.SAME_LANGUAGE, "source == target (${lang.code})", stage = FailureStage.LANGUAGE)
         val sentences = deps.segmenter.segment(text, lang, pdfMode = doc.sourceType == SourceType.PDF)
         if (sentences.isEmpty()) throw PipelineException(ErrorCode.EMPTY_TEXT, "no sentences")
         db.withTransaction {

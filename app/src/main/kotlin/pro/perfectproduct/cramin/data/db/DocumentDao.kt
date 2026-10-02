@@ -70,6 +70,9 @@ interface DocumentDao {
     )
     suspend fun setStatus(id: Long, status: DocStatus, progress: Float, errorCode: String?, errorMessage: String?, now: Long)
 
+    @Query("UPDATE Document SET failureJson = :json WHERE id = :id")
+    suspend fun setFailure(id: Long, json: String?)
+
     @Query("UPDATE Document SET progress = :progress, updatedAt = :now WHERE id = :id")
     suspend fun setProgress(id: Long, progress: Float, now: Long)
 

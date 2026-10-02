@@ -107,7 +107,12 @@ class DocumentRepository(
 
     /** Возвращает документ в очередь (повтор после ошибки). Продолжение с места сбоя обеспечивает пайплайн. */
     suspend fun requeue(id: Long) {
-        documents.setStatus(id, DocStatus.QUEUED, 0f, null, null, clock.now())
+        db.withTransaction {
+            documents.getById(id)?.let { doc ->
+                pro.perfectproduct.cramin.pipeline.FailureDiagnostic.forDocument(doc)?.let { documents.setFailure(id, it.encode()) }
+            }
+            documents.setStatus(id, DocStatus.QUEUED, 0f, null, null, clock.now())
+        }
     }
 
     /**
@@ -131,7 +136,7 @@ class DocumentRepository(
                     documents.setUsage(id, 0, 0, null, clock.now())
                 }
                 checkpoint("deleted")
-                documents.setStatus(id, DocStatus.QUEUED, 0f, null, null, clock.now())
+                requeue(id)
                 snapshot
             }.also { checkpoint("prepared") }
         }

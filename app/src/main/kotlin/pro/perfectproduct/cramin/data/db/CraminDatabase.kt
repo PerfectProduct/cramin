@@ -40,13 +40,17 @@ abstract class CraminDatabase : RoomDatabase() {
     abstract fun studySessionDao(): StudySessionDao
 
     companion object {
-        const val VERSION = 2
+        const val VERSION = 3
         const val NAME = "cramin.db"
 
         /** Аддитивная миграция: существующие данные v1 не меняются. */
         val MIGRATIONS: Array<Migration> = arrayOf(object : Migration(1, 2) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS `ReprocessState` (`documentId` INTEGER NOT NULL, `snapshotJson` TEXT NOT NULL, `pending` INTEGER NOT NULL, PRIMARY KEY(`documentId`), FOREIGN KEY(`documentId`) REFERENCES `Document`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+            }
+        }, object : Migration(2, 3) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE Document ADD COLUMN failureJson TEXT")
             }
         })
 
