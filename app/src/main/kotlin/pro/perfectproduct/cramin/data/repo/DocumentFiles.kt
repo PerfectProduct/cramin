@@ -12,6 +12,20 @@ class DocumentFiles(private val filesRoot: File) {
     /** Извлечённый текст источника (после транскрипции — её результат). */
     fun sourceText(documentId: Long): File = File(dir(documentId), "source.txt")
 
+    /** A killed writer must never leave a partial file that resume mistakes for a completed source. */
+    fun writeSourceText(documentId: Long, text: String) {
+        val target = sourceText(documentId)
+        val temporary = File(target.path + ".part")
+        try {
+            java.io.FileOutputStream(temporary).use { out ->
+                out.write(text.toByteArray(Charsets.UTF_8))
+                out.fd.sync()
+            }
+            java.nio.file.Files.move(temporary.toPath(), target.toPath(),
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        } finally { temporary.delete() }
+    }
+
     /** Вставленный пользователем текст (SourceType.TEXT). */
     fun inputText(documentId: Long): File = File(dir(documentId), "input.txt")
 

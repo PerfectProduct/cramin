@@ -47,8 +47,10 @@ class YoutubeExtractor(private val http: OkHttpClient) : SourceExtractor {
         val url = document.sourceRef.trim()
         val extractor: StreamExtractor = try {
             ServiceList.YouTube.getStreamExtractor(url).also { it.fetchPage() }
+        } catch (e: org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException) {
+            throw PipelineException(ErrorCode.YOUTUBE_RESTRICTED, "source access restriction", e)
         } catch (e: ReCaptchaException) {
-            throw PipelineException(ErrorCode.YOUTUBE_FORMAT, "recaptcha", e)
+            throw PipelineException(ErrorCode.YOUTUBE_RESTRICTED, "source access restriction", e)
         } catch (e: ExtractionException) {
             throw PipelineException(ErrorCode.YOUTUBE_FORMAT, e.javaClass.simpleName, e)
         } catch (e: IOException) {

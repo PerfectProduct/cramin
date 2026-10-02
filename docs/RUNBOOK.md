@@ -120,3 +120,22 @@ Pending basename/SHA-256 сохраняются в приватном файле
 Release workflow проверяет собственный checkout SHA через build/unit/lint до подписи,
 публикует тег только с явным target этого SHA и сериализует публикации. Это не заменяет
 проверки на устройстве и не означает, что workflow уже был выполнен в GitHub.
+
+## Настоящая смерть процесса без платных API
+
+На отдельном тестовом AVD (никогда не телефоне):
+
+```bash
+adb start-server
+./gradlew assembleDebug -PlifecycleProbe=true -Plive=false > /permanent/path/probe-build.log 2>&1
+adb -s emulator-5580 install -r app/build/outputs/apk/debug/app-debug.apk
+adb -s emulator-5580 shell pm revoke pro.perfectproduct.cramin.debug android.permission.POST_NOTIFICATIONS
+python3 scripts/lifecycle-probe.py --serial emulator-5580 --output /permanent/path/lifecycle > /permanent/path/lifecycle.log 2>&1
+```
+
+Режим подключает только debug source set `src/probe`, имеет экспортированный контрольный
+receiver и fake LLM: такой APK не передавать владельцу и не распространять. Скрипт проверяет
+qemu и наличие receiver, создаёт новый синтетический документ, сверяет progress fingerprint
+после шести SIGKILL и отдельного force-stop. Затем собрать обычный APK **без** свойства probe.
+При финальной упаковке проверить отсутствие ProbeApp/ProbeReceiver/FakeLlmClient в APK.
+PublicSourceTest запускается отдельно с `-e freeSources true`; это бесплатная сеть, не live LLM.

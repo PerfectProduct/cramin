@@ -113,6 +113,11 @@ android {
         getByName("test").kotlin.directories += "src/sharedTest/kotlin"
         getByName("androidTest").kotlin.directories += "src/sharedTest/kotlin"
         getByName("androidTest").resources.directories += "src/test/resources"
+        // Explicit lifecycle fixture only. Ordinary debug and every release exclude these classes.
+        if (providers.gradleProperty("lifecycleProbe").orNull == "true") {
+            getByName("debug").kotlin.directories += listOf("src/probe/kotlin", "src/sharedTest/kotlin")
+            getByName("debug").manifest.srcFile("src/probe/AndroidManifest.xml")
+        }
     }
 
     compileOptions {

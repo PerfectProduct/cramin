@@ -192,7 +192,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             val extractor = deps.extractors[doc.sourceType] ?: throw PipelineException(ErrorCode.UNKNOWN, "no extractor for ${doc.sourceType}")
             when (val extracted = extractor.extract(doc, deps.files)) {
                 is Extracted.Text -> {
-                    sourceFile.writeText(extracted.text)
+                    deps.files.writeSourceText(id, extracted.text)
                     title = extracted.title
                     langHint = langHint ?: extracted.langHint
                 }
@@ -200,7 +200,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                     title = extracted.title
                     langHint = langHint ?: extracted.langHint
                     val text = transcribeStage(doc, extracted, langHint, config, progress, onProgress)
-                    sourceFile.writeText(text)
+                    deps.files.writeSourceText(id, text)
                 }
             }
             onProgress(DocStatus.FETCHING, progress.within(DocStatus.FETCHING, 1f))

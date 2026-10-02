@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Opt-in fixture APK only; never part of ordinary debug or release. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <application android:name="pro.perfectproduct.cramin.probe.ProbeApp" tools:replace="android:name">
+        <receiver android:name="pro.perfectproduct.cramin.update.InstallResultReceiver" android:exported="false" />
+        <receiver android:name="pro.perfectproduct.cramin.probe.ProbeReceiver" android:exported="true" />
+    </application>
+</manifest>

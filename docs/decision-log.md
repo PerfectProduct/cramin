@@ -308,3 +308,25 @@ Release workflow checkout закреплён за github.sha, gates assembleDebu
 Перед публикацией HEAD сверяется снова, существующий удалённый тег отклоняется, новый тег
 создаётся с явным --target точного SHA. Одна concurrency group сериализует публикации.
 Локальная проверка YAML не является запуском GitHub CI. Публикация в этом проходе запрещена.
+
+## CRM-DL-045 — Реальные источники и изолированная lifecycle-фикстура
+
+PublicSourceTest — отдельный opt-in ExternalSource набор: реальный HTTP/NewPipe, fake LLM,
+никакого STT. Не смешиваем его с детерминированными тестами или успехом исходных документов
+владельца. NASA-статья прошла, два YouTube-кандидата вернули SignInConfirmNotBotException;
+добавлена точная категория YOUTUBE_RESTRICTED без обхода входа/cookies/автосубтитров.
+
+PDF scenario использует Android PdfDocument, настоящий picker и share, удаление URI после
+копирования и настоящий WorkManager с fake LLM. WorkerFactory делегирует текущему контейнеру,
+что позволяет честно подменить зависимости до работы без подмены самого планировщика.
+
+Только `-PlifecycleProbe=true assembleDebug` подключает src/probe и fake LLM, постоянную Room,
+синтетический документ и контрольные точки. Обычный debug и release не содержат этих классов
+и экспортированного ProbeReceiver. CraminApp имеет обычную переопределяемую фабрику контейнера;
+в production она всегда создаёт AppContainer. Извлечённый source.txt записывается атомарным
+rename после fsync, чтобы resume не принял частичный файл за готовый источник.
+
+API34: шесть SIGKILL (repo-snapshot, repo-prepared, replacementDeleted, restored, ready,
+committed) сохранили per-meaning status/starred; fingerprint одинаков. Force-stop проверен
+отдельно со stopped=true и явным запуском Activity. Это настоящая смерть процесса, не
+моделируемое исключение; платные клиенты в фикстуре отсутствуют. Уведомления были запрещены.

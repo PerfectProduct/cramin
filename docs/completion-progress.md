@@ -19,7 +19,7 @@
 | Оформление, ft, AUD-011/014 | 116 JVM и 7 UI passed; расширенный font/RTL smoke и снимки впереди |
 | Отмена HTTP, snapshot, retries AUD-009/010/013 | 0267a6b: сеть; snapshot и STT resume проверены |
 | Обновление и release workflow AUD-005/006 | 131 JVM и assembleDebug passed; реальный installer впереди |
-| Положительные источники | Ожидает |
+| Положительные источники | PDF picker/share и NASA HTTP→fake READY passed; YouTube blocked (SignInConfirmNotBotException) |
 | Лицензии AUD-007 | Ожидает; возможен выбор владельца о распространении |
 | Сценарии AUD-012, API34/26/36, финальные артефакты | Ожидает |
 
@@ -64,3 +64,7 @@ AUD-010: config-checks.log — 127 JVM passed; config-stt-final.log — 2 passed
 Коммит snapshot: `6fa1b28`. Updater реализован: pending basename/digest, проверка пакета/версии/cert, ActivityResult/ON_RESUME, идемпотентное продолжение. update-unit.log: целевые JVM passed; реальный N→N+1 installer ещё предстоит. Release workflow локально проверен по YAML и порядку gates/target/concurrency; GitHub не запускался.
 
 Updater: update-checks.log — assembleDebug и 131 JVM passed, 0 failed/skipped. Pending update проверен пересозданием менеджера (моделирование, не смерть процесса). Следующий шаг: build baseline из updater-коммита, затем реальные источники и lifecycle/installer на API34.
+
+Источники/lifecycle: pdf-entry2.log — настоящий picker/share + WorkManager, 1 сценарий/2 PDF passed. public-sources-classified.log — 1 passed/2 failed (доступ YouTube заблокирован сервисом), исходные случаи владельца неизвестны. evidence/sources/device-proof сохранены. lifecycle-process.log / evidence/lifecycle/process-death.json: 6 SIGKILL + отдельный force-stop passed, status/starred fingerprint совпал, уведомления запрещены, fake LLM. Harness APK только opt-in, не для владельца. Next: коммит пакета и кандидат N20, встроенная установка N19→N20; лицензии, увеличенный шрифт, финальные артефакты.
+
+Пакет источники/lifecycle: source-lifecycle-checks.log — обычный assembleDebug (без probe) и 131 JVM passed. Baseline updater: 98d9a58, 0.1.19-debug, сохранён в apks/update-baseline-98d9a58. Следующий коммит даст кандидат 0.1.20-debug для встроенной установки N→N+1. API26/36: официальные AOSP архивы 474/844 МБ; места достаточно, RAM ~10 ГБ требует последовательных AVD. Установка запущена, результат пока не заявлен.
