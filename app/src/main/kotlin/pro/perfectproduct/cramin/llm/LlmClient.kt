@@ -31,6 +31,8 @@ data class LlmRequest(
     val maxTokens: Int?,
     /** Объект `reasoning` OpenRouter как есть; null — не передавать. */
     val reasoning: JsonObject? = null,
+    val supportedParameters: Set<String>? = null,
+    val parametersFrozen: Boolean = false,
 )
 
 data class LlmUsage(

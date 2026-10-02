@@ -134,6 +134,7 @@ class DocumentRepository(
                     db.sentenceDao().deleteByDocument(id)
                     db.studySessionDao().deleteByPrefix("doc:$id:")
                     documents.setUsage(id, 0, 0, null, clock.now())
+                    documents.setPipelineSnapshot(id, null, 0, clock.now())
                 }
                 checkpoint("deleted")
                 requeue(id)

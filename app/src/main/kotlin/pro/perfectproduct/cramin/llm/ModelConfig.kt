@@ -80,6 +80,7 @@ data class ModelOverrides(val roles: Map<String, RoleOverride> = emptyMap()) {
 
 enum class ConfigSource { OVERRIDE, REMOTE, EMBEDDED }
 
+@Serializable
 data class PipelineParams(
     val briefMaxInputWords: Int = 60_000,
     val translateMaxSectionWords: Int = 4_000,
@@ -94,6 +95,7 @@ data class PipelineParams(
     }
 }
 
+@Serializable
 data class EffectiveRole(
     val role: ModelRole,
     val model: String,
@@ -104,6 +106,7 @@ data class EffectiveRole(
     val reasoning: JsonObject? = null,
 )
 
+@Serializable
 data class EffectiveConfig(
     val roles: Map<ModelRole, EffectiveRole>,
     val pipeline: PipelineParams,
@@ -121,6 +124,7 @@ interface CatalogView {
     fun find(modelId: String): CatalogModel?
 }
 
+@Serializable
 data class CatalogModel(
     val id: String,
     val name: String,

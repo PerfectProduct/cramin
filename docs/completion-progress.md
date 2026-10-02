@@ -17,7 +17,7 @@
 | Диагностика AUD-004/008 + промежуточный APK | Завершено, 12a283a, APK 0.1.14-debug передан |
 | Учебная единица, миграция, reprocess, Undo | Проверено:112 JVM,6 UI; миграция API34 |
 | Оформление, ft, AUD-011/014 | 116 JVM и 7 UI passed; расширенный font/RTL smoke и снимки впереди |
-| Отмена HTTP, snapshot, retries AUD-009/010/013 | Ожидает |
+| Отмена HTTP, snapshot, retries AUD-009/010/013 | 0267a6b: сеть; snapshot и STT resume проверены |
 | Обновление и release workflow AUD-005/006 | Ожидает |
 | Положительные источники | Ожидает |
 | Лицензии AUD-007 | Ожидает; возможен выбор владельца о распространении |
@@ -56,3 +56,7 @@ UI: регрессионные ExactSpanTest до исправления 2 faile
 Сеть/AUD-009/013: cancel-before.log — 2/2 regression failed (~2955/2960ms). После bridge полный JVM passed (network-checks.log); network-length-checks.log полный JVM passed. length-before.log — 1 из 3 failed (два сценария затем усилены: корректный JSON с length и последовательный extract). length-strict.log — 3 passed. stt-retry.log — 1 passed, локальный MockWebServer, НЕ реальный STT. Последний review добавил явный проброс CancellationException в KeyChecker/ModelCatalog; повтор полной проверки ниже.
 
 Итог сетевого пакета: network-final.log, 123 JVM passed, 0 failed/skipped. AUD-009 и AUD-013 реализованы; реальное поведение провайдеров без платных вызовов не проверялось. Следующий шаг — immutable config snapshot (AUD-010).
+
+Коммит сети `0267a6b`. Конфигурация: config-before.log — 1 regression failed; config-checks.log — полный JVM passed. STT получает ту же конфигурацию; добавлен отдельный resume-тест fake STT.
+
+AUD-010: config-checks.log — 127 JVM passed; config-stt-final.log — 2 passed (retry/reprocess и STT resume). Промежуточный STT-тест failed из-за неверного NewDocument.Url вместо Youtube; models=[] подтвердило отсутствие STT-вызова, фикстура исправлена. Старые неполные параметры явно отмечаются. Следующий шаг: pending update, возврат из разрешения установки и exact-SHA release workflow.

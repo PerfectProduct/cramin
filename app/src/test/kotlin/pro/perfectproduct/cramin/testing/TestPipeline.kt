@@ -45,7 +45,7 @@ class TestPipeline(
     val documents = DocumentRepository(db, files, clock)
     val cards = CardRepository(db, clock)
     val usage = UsageRepository(db, clock)
-    val effective: EffectiveConfig = ModelConfigResolver.resolve(null, null, config, catalog)
+    var effective: EffectiveConfig = ModelConfigResolver.resolve(null, null, config, catalog)
 
     val deps = ProcessorDeps(
         db = db,

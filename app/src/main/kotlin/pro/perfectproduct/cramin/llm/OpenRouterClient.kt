@@ -46,7 +46,7 @@ class OpenRouterClient(
 
     override suspend fun complete(request: LlmRequest): LlmResponse {
         val key = keyProvider()?.takeIf { it.isNotBlank() } ?: throw LlmException.Auth(0)
-        val supported = paramSupport(request.model)
+        val supported = if (request.parametersFrozen) request.supportedParameters else paramSupport(request.model)
         val body = buildBody(request, supported).toString()
         var lastError: LlmException? = null
         for (attempt in 1..maxAttempts) {

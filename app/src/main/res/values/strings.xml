@@ -86,7 +86,7 @@
     <string name="doc_tab_text">Текст</string>
     <string name="doc_tab_cards">Карточки</string>
     <string name="doc_header_stats">%1$d карточек · выучено %2$d из %3$d · %4$s → %5$s</string>
-    <string name="doc_cost">Стоимость обработки: $%1$s · модели: %2$s</string>
+    <string name="doc_cost">Учтено: $%1$s · модели: %2$s. Это нижняя граница: часть расходов провайдер мог не передать.</string>
     <string name="doc_cost_unknown">Стоимость обработки пока неизвестна</string>
     <string name="doc_processing_title">Документ обрабатывается</string>
     <string name="doc_processing_body">%1$s — %2$d %%</string>
@@ -188,7 +188,7 @@
     <string name="settings_tts_missing">Голоса для %1$s нет — установите его в настройках синтеза речи Android</string>
     <string name="settings_autoplay">Интервалы автопроигрывания</string>
     <string name="settings_stats">Статистика</string>
-    <string name="settings_stats_body">Документов: %1$d · токены: %2$s / %3$s · стоимость: $%4$s</string>
+    <string name="settings_stats_body">Документов: %1$d · токены: %2$s / %3$s · учтено: $%4$s (нижняя граница расходов)</string>
     <string name="settings_about">О приложении</string>
     <string name="settings_version">Версия %1$s (%2$d)</string>
     <string name="settings_repo">Репозиторий на GitHub</string>
@@ -254,4 +254,5 @@
     <string name="diagnostic_unknown">Стадия неизвестна</string>
     <string name="study_migration_notice">Карточки теперь разделены по значениям. Несовместимая сессия сброшена, сохранённый прогресс не обнулён. При повторной обработке прогресс переносится только на однозначно совпавшие значения; остальные требуют проверки.</string>
     <string name="action_speak">Озвучить</string>
+    <string name="config_legacy_notice">Старая версия сохранила модели, но не все параметры обработки. Продолжение использует прежние модели и стандартные параметры. Для применения текущих настроек выберите «Обработать заново».</string>
 </resources>

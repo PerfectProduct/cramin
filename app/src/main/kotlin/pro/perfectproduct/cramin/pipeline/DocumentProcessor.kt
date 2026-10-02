@@ -27,6 +27,7 @@ import pro.perfectproduct.cramin.ingest.SourceExtractor
 import pro.perfectproduct.cramin.llm.Brief
 import pro.perfectproduct.cramin.llm.CatalogView
 import pro.perfectproduct.cramin.llm.ConsolidateResponse
+import pro.perfectproduct.cramin.llm.ProcessingSnapshot
 import pro.perfectproduct.cramin.llm.EffectiveConfig
 import pro.perfectproduct.cramin.llm.ExtractResponse
 import pro.perfectproduct.cramin.llm.ExtractedUnit
@@ -144,13 +145,19 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
 
     private suspend fun run(doc0: DocumentEntity, onProgress: suspend (DocStatus, Float) -> Unit): Int {
         val id = doc0.id
-        val config = deps.configProvider()
-        val catalog = deps.catalogProvider()
-        db.documentDao().setPipelineSnapshot(id, config.snapshotJson(), PIPELINE_VERSION, now)
+        val snapshot = doc0.modelsSnapshotJson?.let { ProcessingSnapshot.decode(it) }
+            ?: ProcessingSnapshot.capture(deps.configProvider(), deps.catalogProvider()).also {
+                db.documentDao().setPipelineSnapshot(id, it.encode(), PIPELINE_VERSION, now)
+            }
+        if (doc0.modelsSnapshotJson != null && snapshot.legacyParametersUnknown && doc0.modelsSnapshotJson != snapshot.encode())
+            db.documentDao().setPipelineSnapshot(id, snapshot.encode(), PIPELINE_VERSION, now)
+        val config = snapshot.config
+        val catalog: CatalogView = snapshot
+
 
         // --- FETCHING / TRANSCRIBING -------------------------------------------------------
         val progressGuess = Progress(hasTranscription = doc0.sourceType == SourceType.YOUTUBE)
-        val (lang, targetLang, sentences) = fetchStage(doc0, progressGuess, onProgress)
+        val (lang, targetLang, sentences) = fetchStage(doc0, config, progressGuess, onProgress)
         val doc = db.documentDao().getById(id) ?: error("document vanished")
         val progress = Progress(hasTranscription = doc.audioSeconds > 0)
         val sentenceIds = db.sentenceDao().getByDocument(id).associate { it.idx to it.id }
@@ -169,7 +176,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
     // ---------------------------------------------------------------------------------------
     // Стадия получения текста: extractor → (транскрипция) → source.txt → язык → предложения.
     // ---------------------------------------------------------------------------------------
-    private suspend fun fetchStage(doc: DocumentEntity, progress: Progress, onProgress: suspend (DocStatus, Float) -> Unit): Triple<Lang, Lang, List<SentenceDraft>> {
+    private suspend fun fetchStage(doc: DocumentEntity, config: EffectiveConfig, progress: Progress, onProgress: suspend (DocStatus, Float) -> Unit): Triple<Lang, Lang, List<SentenceDraft>> {
         val id = doc.id
         val targetLang = Lang.fromCode(doc.targetLang) ?: throw PipelineException(ErrorCode.UNKNOWN, "bad target lang")
         val existing = db.sentenceDao().getByDocument(id)
@@ -192,7 +199,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                 is Extracted.Audio -> {
                     title = extracted.title
                     langHint = langHint ?: extracted.langHint
-                    val text = transcribeStage(doc, extracted, langHint, progress, onProgress)
+                    val text = transcribeStage(doc, extracted, langHint, config, progress, onProgress)
                     sourceFile.writeText(text)
                 }
             }
@@ -215,7 +222,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         return Triple(lang, targetLang, sentences)
     }
 
-    private suspend fun transcribeStage(doc: DocumentEntity, audio: Extracted.Audio, langHint: Lang?, progress: Progress, onProgress: suspend (DocStatus, Float) -> Unit): String {
+    private suspend fun transcribeStage(doc: DocumentEntity, audio: Extracted.Audio, langHint: Lang?, config: EffectiveConfig, progress: Progress, onProgress: suspend (DocStatus, Float) -> Unit): String {
         val id = doc.id
         val transcriber = deps.transcriber ?: throw PipelineException(ErrorCode.TRANSCRIPTION, "transcriber unavailable")
         val segmenter = deps.audioSegmenter ?: throw PipelineException(ErrorCode.TRANSCRIPTION, "audio segmenter unavailable")
@@ -223,7 +230,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         setStatus(id, DocStatus.TRANSCRIBING, progress.start(DocStatus.TRANSCRIBING), onProgress)
         val parts = segmenter.split(audio.file, deps.files.audioDir(id))
         if (parts.isEmpty()) throw PipelineException(ErrorCode.TRANSCRIPTION, "no audio parts")
-        val model = deps.configProvider().role(ModelRole.STT).model
+        val model = config.role(ModelRole.STT).model
         val texts = ArrayList<String>()
         for ((i, part) in parts.withIndex()) {
             val job = ensureJob(id, JobKind.STT, i, part.durationSeconds, null, model)
@@ -586,7 +593,11 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
 
     /** Один HTTP-вызов с учётом токенов и стоимости в Job и Document. */
     private suspend fun callRaw(job: JobEntity, request: LlmRequest): LlmResponse {
-        val response = deps.llm.complete(request)
+        val saved = db.documentDao().getById(job.documentId)?.modelsSnapshotJson?.let { ProcessingSnapshot.decode(it) }
+        val frozenRequest = request.copy(parametersFrozen = saved != null,
+            supportedParameters = saved?.find(request.model)?.supportedParameters?.toSet())
+        val response = deps.llm.complete(frozenRequest)
+        db.withTransaction {
         val fresh = db.jobDao().getById(job.id) ?: job
         db.jobDao().update(
             fresh.copy(
@@ -600,6 +611,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             ),
         )
         deps.usage.refreshDocumentTotals(job.documentId)
+        }
         return response
     }
 

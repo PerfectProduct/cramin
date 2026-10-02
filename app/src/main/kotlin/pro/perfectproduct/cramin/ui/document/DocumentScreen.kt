@@ -206,6 +206,10 @@ private fun DocumentHeader(doc: DocumentEntity, total: Int, known: Int) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun StatusBanner(doc: DocumentEntity, onRetry: () -> Unit, onOpenSettings: () -> Unit, onChooseLang: (ErrorAction) -> Unit, onCheckUpdates: () -> Unit) {
+    val oldParameters = doc.modelsSnapshotJson?.let {
+        runCatching { pro.perfectproduct.cramin.llm.ProcessingSnapshot.decode(it).legacyParametersUnknown }.getOrDefault(false)
+    } == true
+    if (oldParameters) Text(stringResource(R.string.config_legacy_notice), modifier = Modifier.padding(20.dp), style = MaterialTheme.typography.bodyMedium)
     if (doc.studyNotice) {
         Text(stringResource(R.string.study_migration_notice), modifier = Modifier.padding(20.dp), style = MaterialTheme.typography.bodyMedium)
     }
