@@ -49,12 +49,13 @@ data class StudyCard(
     val senses: List<StudySense>,
     /** Идентификаторы карточек-дубликатов в других документах (общая колода); пусто для колоды документа. */
     val duplicateIds: List<Long> = emptyList(),
+    val meaningKey: String = "",
 ) {
-    /** Не больше четырёх смыслов на карточке; хвост остаётся в БД (SPEC §6.8). */
-    val visibleSenses: List<StudySense> get() = senses.take(MAX_VISIBLE_SENSES)
+    /** Одна учебная единица — один контекстный смысл. */
+    val visibleSenses: List<StudySense> get() = senses.take(1)
 
     companion object {
-        const val MAX_VISIBLE_SENSES = 4
+        const val MAX_VISIBLE_SENSES = 1
     }
 }
 

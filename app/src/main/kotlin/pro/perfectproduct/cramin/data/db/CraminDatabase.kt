@@ -40,7 +40,7 @@ abstract class CraminDatabase : RoomDatabase() {
     abstract fun studySessionDao(): StudySessionDao
 
     companion object {
-        const val VERSION = 3
+        const val VERSION = 4
         const val NAME = "cramin.db"
 
         /** Аддитивная миграция: существующие данные v1 не меняются. */
@@ -52,7 +52,7 @@ abstract class CraminDatabase : RoomDatabase() {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE Document ADD COLUMN failureJson TEXT")
             }
-        })
+        }, MeaningMigration)
 
         fun build(context: Context): CraminDatabase =
             Room.databaseBuilder(context.applicationContext, CraminDatabase::class.java, NAME)

@@ -121,6 +121,8 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
             if (sentences.isEmpty()) return emptyList()
             val spansBySentence = HashMap<Long, MutableList<WordSpan>>()
             for (o in occurrences) {
+                // Legacy unassigned occurrences are retained, but cannot claim a particular meaning.
+                if (o.occurrence.senseId == null) continue
                 val s = o.occurrence.start ?: continue
                 val e = o.occurrence.end ?: continue
                 spansBySentence.getOrPut(o.occurrence.sentenceId) { mutableListOf() }.add(WordSpan(s, e, o.occurrence.cardId))

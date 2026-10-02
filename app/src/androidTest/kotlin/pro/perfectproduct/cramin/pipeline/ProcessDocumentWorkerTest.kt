@@ -38,8 +38,9 @@ class ProcessDocumentWorkerTest {
         assertEquals(1f, doc.progress)
         val cards = container.cardRepository.deckCards(id, DeckFilter.ALL)
         assertTrue("cards=${cards.size}", cards.size >= 40)
-        val bank = cards.first { it.lemmaKey == "bank|NOUN" }
-        assertEquals(2, bank.senses.size)
+        val bank = cards.filter { it.lemmaKey == "bank|NOUN" }
+        assertEquals(2, bank.size)
+        assertTrue(bank.all { it.senses.size == 1 })
         assertTrue(container.fakeLlm.requests.size >= 6)
         container.db.close()
     }

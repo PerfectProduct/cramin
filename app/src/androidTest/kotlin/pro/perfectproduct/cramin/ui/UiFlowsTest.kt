@@ -78,7 +78,7 @@ class UiFlowsTest {
         db.sentenceDao().assignSegment(docId, 0, 0, seg)
         for ((i, pair) in listOf("bank" to "банк", "closed" to "закрытый").withIndex()) {
             val cardId = db.cardDao().insertCard(
-                CardEntity(documentId = docId, lemmaKey = "${pair.first}|NOUN", lemma = pair.first, lemmaVocalized = null, pos = Pos.NOUN, lang = "en", targetLang = "ru", status = CardStatus.NEW, starred = false, firstSentenceIdx = i, updatedAt = 0L),
+                CardEntity(documentId = docId, lemmaKey = "${pair.first}|NOUN", meaningKey = pair.second, lemma = pair.first, lemmaVocalized = null, pos = Pos.NOUN, lang = "en", targetLang = "ru", status = CardStatus.NEW, starred = false, firstSentenceIdx = i, updatedAt = 0L),
             )
             val senseId = db.cardDao().insertSense(SenseEntity(cardId = cardId, idx = 0, translation = pair.second, exampleOccurrenceId = null))
             val occ = db.cardDao().insertOccurrence(OccurrenceEntity(cardId = cardId, senseId = senseId, sentenceId = sIds[0], surface = pair.first, targetSurface = null, start = 4, end = 8, targetStart = null, targetEnd = null, isExample = true))
@@ -191,13 +191,12 @@ class UiFlowsTest {
     }
 
     @Test
-    fun completedSharedSessionResumesWithMergedExamplesAndExactUndo() = runBlocking<Unit> {
-        val banks = CardStatus.entries.mapIndexed { i, status ->
+    fun completedSharedMeaningSessionResumesWithExampleAndExactUndo() = runBlocking<Unit> {
+        val banks = CardStatus.entries.map { status ->
             val doc = seedDocument()
             val bank = cardId(doc, "bank")
             container.cardRepository.setStatus(bank, status)
             container.cardRepository.setStatus(cardId(doc, "closed"), CardStatus.KNOWN)
-            container.db.openHelper.writableDatabase.execSQL("UPDATE Sense SET translation = ? WHERE cardId = ?", arrayOf<Any>("смысл $i", bank))
             bank
         }
         val original = banks.associateWith { container.cardRepository.getStatus(it) }
@@ -222,7 +221,8 @@ class UiFlowsTest {
         assertEquals(before.senses, after.senses)
         compose.onNodeWithTag("flashCard").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("cardBack")).fetchSemanticsNodes().isNotEmpty() }
-        repeat(3) { compose.onNodeWithText("смысл $it").assertIsDisplayed() }
+        compose.onNodeWithText("банк").assertIsDisplayed()
+        compose.onNodeWithText("The bank was closed.").assertIsDisplayed()
     }
 
     private suspend fun cardId(docId: Long, lemma: String): Long = container.db.cardDao().getByDocument(docId).first { it.lemma == lemma }.id

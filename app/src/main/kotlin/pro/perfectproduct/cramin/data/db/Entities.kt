@@ -53,6 +53,7 @@ data class DocumentEntity(
     val createdAt: Long,
     val updatedAt: Long,
     val failureJson: String? = null,
+    @androidx.room.ColumnInfo(defaultValue = "0") val studyNotice: Boolean = false,
 )
 
 @Entity(
@@ -118,8 +119,8 @@ data class JobEntity(
         ForeignKey(entity = DocumentEntity::class, parentColumns = ["id"], childColumns = ["documentId"], onDelete = ForeignKey.CASCADE),
     ],
     indices = [
-        Index(value = ["documentId", "lemmaKey"], unique = true),
-        Index(value = ["lang", "targetLang", "lemmaKey"]),
+        Index(value = ["documentId", "lemmaKey", "meaningKey"], unique = true),
+        Index(value = ["lang", "targetLang", "lemmaKey", "meaningKey"]),
         Index("status"),
     ],
 )
@@ -142,6 +143,7 @@ data class CardEntity(
     val ease: Double? = null,
     val reps: Int? = null,
     val lapses: Int? = null,
+    @androidx.room.ColumnInfo(defaultValue = "''") val meaningKey: String = "",
 )
 
 @Entity(

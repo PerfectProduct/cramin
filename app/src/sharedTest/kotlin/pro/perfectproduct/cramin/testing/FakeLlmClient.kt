@@ -121,7 +121,7 @@ class FakeLlmClient(
                     }
                     if (lemma.length < minLen || lemma in STOP_PROBE) continue
                     val g = polysemy[lemma]?.let { p -> if (p.cues.any { s.text.contains(it, ignoreCase = true) }) p.cueTranslation else p.defaultTranslation } ?: "tr_$lemma"
-                    if (!seen.add(lemma to g)) continue
+
                     val pos = if (source == "en" && (lemma.endsWith("ing") || lemma.endsWith("ed"))) "VERB" else "NOUN"
                     units += ExtractedUnit(
                         i = s.idx, f = token, l = lemma,

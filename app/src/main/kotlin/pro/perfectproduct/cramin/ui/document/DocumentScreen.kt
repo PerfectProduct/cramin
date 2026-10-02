@@ -206,6 +206,9 @@ private fun DocumentHeader(doc: DocumentEntity, total: Int, known: Int) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun StatusBanner(doc: DocumentEntity, onRetry: () -> Unit, onOpenSettings: () -> Unit, onChooseLang: (ErrorAction) -> Unit, onCheckUpdates: () -> Unit) {
+    if (doc.studyNotice) {
+        Text(stringResource(R.string.study_migration_notice), modifier = Modifier.padding(20.dp), style = MaterialTheme.typography.bodyMedium)
+    }
     val diagnostic = pro.perfectproduct.cramin.pipeline.FailureDiagnostic.forDocument(doc)
     val context = androidx.compose.ui.platform.LocalContext.current
     if (diagnostic != null) {

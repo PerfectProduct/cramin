@@ -37,7 +37,7 @@ object UnitMerger {
         return groups.map { (key, list) ->
             val translations = LinkedHashMap<String, MutableList<Int>>()
             list.forEachIndexed { i, u ->
-                translations.getOrPut(TextNormalizer.translationKey(u.translation, targetLang)) { mutableListOf() }.add(i)
+                translations.getOrPut(MeaningKey.of(u.translation)) { mutableListOf() }.add(i)
             }
             MergedCard(
                 lemmaKey = key,

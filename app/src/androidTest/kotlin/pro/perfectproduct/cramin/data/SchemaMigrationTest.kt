@@ -66,12 +66,31 @@ class SchemaMigrationTest {
             }
             db.query("SELECT stateJson FROM StudySession").use {
                 assertTrue(it.moveToFirst())
-                assertEquals("{legacy}", it.getString(0))
+                assertTrue(it.getString(0).contains("meaning-model-v4"))
             }
             db.query("SELECT COUNT(*) FROM ReprocessState").use {
                 assertTrue(it.moveToFirst())
                 assertEquals(0, it.getInt(0))
             }
+        }
+    }
+
+    @Test
+    fun v3SplitsMeaningsWithoutLosingProgressOrOccurrences() {
+        helper.createDatabase(TEST_DB, 3).use { db ->
+            db.execSQL("INSERT INTO Document(id,title,emoji,sourceType,sourceRef,sourceLang,targetLang,status,progress,pipelineVersion,promptTokens,completionTokens,audioSeconds,wordCount,createdAt,updatedAt) VALUES(1,'synthetic','','TEXT','','en','ru','READY',1,1,0,0,0,16,1,1)")
+            db.execSQL("INSERT INTO Card(id,documentId,lemmaKey,lemma,pos,lang,targetLang,status,starred,firstSentenceIdx,updatedAt) VALUES(7,1,'bank|NOUN','bank','NOUN','en','ru','KNOWN',1,0,1)")
+            db.execSQL("INSERT INTO Sentence(id,documentId,idx,paragraphIdx,text) VALUES(1,1,0,0,'bank')")
+            for ((i,g) in listOf("банк","берег","крен").withIndex()) {
+                db.execSQL("INSERT INTO Sense(id,cardId,idx,translation,exampleOccurrenceId) VALUES(?,7,?,?,?)",arrayOf<Any>(i+1,i,g,i+1))
+                db.execSQL("INSERT INTO Occurrence(id,cardId,senseId,sentenceId,surface,isExample) VALUES(?,7,?,1,'bank',1)",arrayOf<Any>(i+1,i+1))
+            }
+        }
+        helper.runMigrationsAndValidate(TEST_DB,4,true,*CraminDatabase.MIGRATIONS).use { db ->
+            db.query("SELECT COUNT(*),SUM(starred),SUM(status='KNOWN') FROM Card").use { c ->
+                assertTrue(c.moveToFirst());assertEquals(3,c.getInt(0));assertEquals(3,c.getInt(1));assertEquals(3,c.getInt(2))
+            }
+            db.query("SELECT COUNT(*) FROM Occurrence o JOIN Sense s ON s.id=o.senseId WHERE o.cardId=s.cardId").use { c -> assertTrue(c.moveToFirst());assertEquals(3,c.getInt(0)) }
         }
     }
 

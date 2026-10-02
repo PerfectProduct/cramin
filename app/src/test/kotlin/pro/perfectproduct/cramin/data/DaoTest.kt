@@ -114,31 +114,32 @@ class DaoTest {
     }
 
     @Test
-    fun sharedDeckDeduplicatesByLemmaKeyPreferringNewestDocument() = runTest {
+    fun sharedDeckDeduplicatesOnlySameMeaningPreferringNewestDocument() = runTest {
         val repo = CardRepository(db, clock)
         val old = db.documentDao().insert(doc("old", createdAt = 1L))
         val new = db.documentDao().insert(doc("new", createdAt = 2L))
         val processing = db.documentDao().insert(doc("processing", status = DocStatus.TRANSLATING, createdAt = 3L))
-        val oldApple = db.cardDao().insertCard(card(old, "apple", CardStatus.LEARNING))
+        val oldApple = db.cardDao().insertCard(card(old, "apple", CardStatus.LEARNING).copy(meaningKey = "яблоко"))
         db.cardDao().insertSense(SenseEntity(cardId = oldApple, idx = 0, translation = "яблоко", exampleOccurrenceId = null))
-        db.cardDao().insertSense(SenseEntity(cardId = oldApple, idx = 1, translation = "яблоня", exampleOccurrenceId = null))
-        val newApple = db.cardDao().insertCard(card(new, "apple", CardStatus.NEW))
+        val tree = db.cardDao().insertCard(card(old, "apple", CardStatus.NEW).copy(meaningKey = "яблоня"))
+        db.cardDao().insertSense(SenseEntity(cardId = tree, idx = 0, translation = "яблоня", exampleOccurrenceId = null))
+        val newApple = db.cardDao().insertCard(card(new, "apple", CardStatus.NEW).copy(meaningKey = "яблоко"))
         db.cardDao().insertSense(SenseEntity(cardId = newApple, idx = 0, translation = "Яблоко", exampleOccurrenceId = null))
         db.cardDao().insertCard(card(new, "known", CardStatus.KNOWN))
         db.cardDao().insertCard(card(processing, "pear", CardStatus.NEW))
 
         val deck = repo.sharedDeckCards(Lang.EN, Lang.RU)
-        assertEquals(1, deck.size)
-        val apple = deck[0]
+        assertEquals(2, deck.size)
+        val apple = deck.single { it.meaningKey == "яблоко" }
         assertEquals(newApple, apple.id)
         assertEquals(listOf(oldApple), apple.duplicateIds)
-        assertEquals(listOf("Яблоко", "яблоня"), apple.senses.map { it.translation })
+        assertEquals(listOf("Яблоко"), apple.senses.map { it.translation })
 
-        repo.setStatusForLemma(Lang.EN, Lang.RU, apple.lemmaKey, CardStatus.KNOWN)
+        repo.setStatusForMeaning(Lang.EN, Lang.RU, apple.lemmaKey, apple.meaningKey, CardStatus.KNOWN)
         assertEquals(CardStatus.KNOWN, db.cardDao().getStatus(oldApple))
         assertEquals(CardStatus.KNOWN, db.cardDao().getStatus(newApple))
-        assertTrue(repo.sharedDeckCards(Lang.EN, Lang.RU).isEmpty())
-        assertEquals(0, repo.observeUnlearnedCountForPair(Lang.EN, Lang.RU).first())
+        assertEquals(listOf(tree), repo.sharedDeckCards(Lang.EN, Lang.RU).map { it.id })
+        assertEquals(1, repo.observeUnlearnedCountForPair(Lang.EN, Lang.RU).first())
     }
 
     @Test
@@ -174,14 +175,14 @@ class DaoTest {
         assertEquals(0, ex?.targetStart)
     }
     @Test
-    fun sharedUndoSurvivesResumeAndMembershipChangesWithMergedExamples() = runTest {
+    fun sharedMeaningUndoSurvivesResumeAndMembershipChangesWithExample() = runTest {
         val repo = CardRepository(db, clock)
         val study = StudyRepository(db, clock)
         val ids = CardStatus.entries.mapIndexed { i, status ->
             val d = db.documentDao().insert(doc("synthetic-$i", createdAt = i.toLong()))
             val id = db.cardDao().insertCard(card(d, "bank", status))
             val sentence = db.sentenceDao().insertAll(listOf(SentenceEntity(documentId = d, idx = 0, paragraphIdx = 0, text = "bank $i", segmentId = null))).single()
-            val sense = db.cardDao().insertSense(SenseEntity(cardId = id, idx = 0, translation = "sense $i", exampleOccurrenceId = null))
+            val sense = db.cardDao().insertSense(SenseEntity(cardId = id, idx = 0, translation = "банк", exampleOccurrenceId = null))
             val occurrence = db.cardDao().insertOccurrence(OccurrenceEntity(cardId = id, senseId = sense, sentenceId = sentence, surface = "bank", targetSurface = null, start = 0, end = 4, targetStart = null, targetEnd = null, isExample = true))
             db.cardDao().setSenseExample(sense, occurrence)
             id

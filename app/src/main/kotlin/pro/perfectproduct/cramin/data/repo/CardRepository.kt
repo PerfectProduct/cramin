@@ -40,30 +40,22 @@ class CardRepository(
 
     /**
      * Общая колода «Все невыученные» (SPEC §10.6): карточки со статусом не KNOWN из готовых документов,
-     * дедупликация по (srcLang, tgtLang, lemmaKey) — остаётся карточка из самого свежего документа,
-     * смыслы объединяются без дубликатов переводов.
+     * дедупликация по (srcLang, tgtLang, lemmaKey, meaningKey) — остаётся карточка из самого свежего документа,
+     * один смысл и его пример берутся у представителя группы.
      */
     suspend fun sharedDeckCards(lang: Lang, targetLang: Lang, requiredIds: List<Long> = emptyList(), originalGroups: Map<Long, List<Long>> = emptyMap()): List<StudyCard> = db.withTransaction {
         val all = cards.getCardsForPair(lang.code, targetLang.code)
         val byKey = LinkedHashMap<String, MutableList<CardEntity>>()
-        for (c in all) byKey.getOrPut(c.lemmaKey) { mutableListOf() }.add(c)
+        for (c in all) byKey.getOrPut(c.lemmaKey + "\u0000" + c.meaningKey) { mutableListOf() }.add(c)
         // Карточка считается невыученной, если хотя бы один дубликат не KNOWN (свайп ставит статус всем).
         val groups = byKey.values.filter { g -> g.any { it.status != CardStatus.KNOWN || it.id in requiredIds || originalGroups.values.any { ids -> it.id in ids } } }
         val primaries = groups.map { it.first() }
         val built = build(primaries + groups.flatMap { it.drop(1) }).associateBy { it.id }
         val merged = groups.mapNotNull { group ->
             val primary = built[group.first().id] ?: return@mapNotNull null
-            val seen = LinkedHashMap<String, StudySense>()
-            for (card in group) {
-                val sc = built[card.id] ?: continue
-                for (s in sc.senses) {
-                    val k = TextNormalizer.translationKey(s.translation, targetLang)
-                    if (k !in seen) seen[k] = s
-                }
-            }
             primary.copy(
                 status = if (group.all { it.status == CardStatus.KNOWN }) CardStatus.KNOWN else primary.status,
-                senses = seen.values.toList(),
+                senses = primary.senses.take(1),
                 duplicateIds = group.drop(1).map { it.id },
             )
         }
@@ -91,14 +83,14 @@ class CardRepository(
         override suspend fun snapshot(cardId: Long): Map<Long, CardStatus> {
             val group = if (shared) sharedCard(cardId) else null
             return if (group == null) statusSnapshot(cardId, shared)
-            else cards.getLemmaCards(group.lang.code, group.targetLang.code, group.lemmaKey).associate { it.id to it.status }
+            else cards.getMeaningCards(group.lang.code, group.targetLang.code, group.lemmaKey, group.meaningKey).associate { it.id to it.status }
         }
         override suspend fun set(cardId: Long, status: CardStatus) { setStatus(cardId, status) }
     }
 
     suspend fun statusSnapshot(cardId: Long, shared: Boolean): Map<Long, CardStatus> {
         val card = cards.getCard(cardId) ?: return emptyMap()
-        return (if (shared) cards.getLemmaCards(card.lang, card.targetLang, card.lemmaKey) else listOf(card))
+        return (if (shared) cards.getMeaningCards(card.lang, card.targetLang, card.lemmaKey, card.meaningKey) else listOf(card))
             .associate { it.id to it.status }
     }
 
@@ -107,8 +99,8 @@ class CardRepository(
     suspend fun setStatus(cardId: Long, status: CardStatus) = cards.setStatus(cardId, status, clock.now())
 
     /** Свайп в общей колоде меняет статус у всех дубликатов (SPEC §10.6). */
-    suspend fun setStatusForLemma(lang: Lang, targetLang: Lang, lemmaKey: String, status: CardStatus) =
-        cards.setStatusForLemma(lang.code, targetLang.code, lemmaKey, status, clock.now())
+    suspend fun setStatusForMeaning(lang: Lang, targetLang: Lang, lemmaKey: String, meaningKey: String, status: CardStatus) =
+        cards.setStatusForMeaning(lang.code, targetLang.code, lemmaKey, meaningKey, status, clock.now())
 
     suspend fun setStarred(cardId: Long, starred: Boolean) = cards.setStarred(cardId, starred, clock.now())
 
@@ -128,6 +120,7 @@ class CardRepository(
                 id = c.id,
                 documentId = c.documentId,
                 lemmaKey = c.lemmaKey,
+                meaningKey = c.meaningKey,
                 lemma = c.lemma,
                 lemmaVocalized = c.lemmaVocalized,
                 pos = c.pos,

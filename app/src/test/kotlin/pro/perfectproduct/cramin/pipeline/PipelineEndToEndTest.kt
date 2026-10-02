@@ -88,9 +88,9 @@ class PipelineEndToEndTest {
             val cards = p.cards.deckCards(id, DeckFilter.ALL)
             assertTrue("cards=${cards.size}", cards.size >= 40)
             assertTrue(cards.none { it.lemma == "the" })
-            val bank = cards.first { it.lemmaKey == "bank|NOUN" }
-            assertEquals(setOf("берег", "банк"), bank.senses.map { it.translation }.toSet())
-            for (sense in bank.senses) {
+            val bank = cards.filter { it.lemmaKey == "bank|NOUN" }
+            assertEquals(setOf("берег", "банк"), bank.flatMap { it.senses }.map { it.translation }.toSet())
+            for (sense in bank.flatMap { it.senses }) {
                 val ex = sense.example
                 assertNotNull("example for ${sense.translation}", ex)
                 assertTrue(ex!!.sentence.contains("bank", ignoreCase = true))
@@ -125,9 +125,10 @@ class PipelineEndToEndTest {
                     Lang.HE -> "רשת|NOUN"
                     Lang.EN -> "bank|NOUN"
                 }
-                val card = cards.first { it.lemmaKey == poly }
-                assertEquals(2, card.senses.size)
-                if (src == Lang.HE) assertNotNull(card.lemmaVocalized)
+                val meanings = cards.filter { it.lemmaKey == poly }
+                assertEquals(2, meanings.size)
+                assertTrue(meanings.all { it.senses.size == 1 })
+                if (src == Lang.HE) assertTrue(meanings.all { it.lemmaVocalized != null })
                 assertEquals(src.code, p.documents.get(id)!!.sourceLang)
             }
         }

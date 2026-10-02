@@ -49,7 +49,7 @@
     <string name="library_create">+ Создать</string>
     <string name="library_empty">Добавьте первый текст — статью, видео или PDF</string>
     <string name="library_empty_filtered">Здесь пока пусто</string>
-    <string name="library_subtitle">%1$d слов · выучено %2$d · %3$s</string>
+    <string name="library_subtitle">%1$d карточек · выучено %2$d · %3$s</string>
     <string name="library_processing">Обработка… %1$d %%</string>
     <string name="library_queued">В очереди</string>
     <string name="library_error">Ошибка — открыть подробности</string>
@@ -85,7 +85,7 @@
     <!-- Экран документа (§9.3) -->
     <string name="doc_tab_text">Текст</string>
     <string name="doc_tab_cards">Карточки</string>
-    <string name="doc_header_stats">%1$d слов · выучено %2$d из %3$d · %4$s → %5$s</string>
+    <string name="doc_header_stats">%1$d карточек · выучено %2$d из %3$d · %4$s → %5$s</string>
     <string name="doc_cost">Стоимость обработки: $%1$s · модели: %2$s</string>
     <string name="doc_cost_unknown">Стоимость обработки пока неизвестна</string>
     <string name="doc_processing_title">Документ обрабатывается</string>
@@ -231,7 +231,7 @@
     <!-- Уведомления -->
     <string name="notif_channel_progress">Обработка документов</string>
     <string name="notif_channel_results">Готовые карточки</string>
-    <string name="notif_done_title">Карточки готовы: %1$d слов</string>
+    <string name="notif_done_title">Карточки готовы: %1$d</string>
     <string name="notif_failed_title">Обработка не удалась — откройте, чтобы повторить</string>
 
     <!-- Статусы документа -->
@@ -252,4 +252,5 @@
     <string name="diagnostic_config">Конфигурация обработки</string>
     <string name="diagnostic_language">Определение языка</string>
     <string name="diagnostic_unknown">Стадия неизвестна</string>
+    <string name="study_migration_notice">Карточки теперь разделены по значениям. Несовместимая сессия сброшена, сохранённый прогресс не обнулён. При повторной обработке прогресс переносится только на однозначно совпавшие значения; остальные требуют проверки.</string>
 </resources>

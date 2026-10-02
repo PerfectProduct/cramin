@@ -16,13 +16,14 @@ class ReprocessProgress(private val db: CraminDatabase, private val files: Docum
         // Invalid legacy files fail closed, before any deletion, rather than silently losing progress.
         val legacy: List<CardStatusSnapshot> = if (existing == null && legacyFile.isFile && db.documentDao().getById(id)?.status != pro.perfectproduct.cramin.data.db.DocStatus.READY)
             Json.decodeFromString(legacyFile.readText()) else emptyList()
-        val snapshot = (current.associateBy { it.lemmaKey } + legacy.associateBy { it.lemmaKey }).values.toList()
+        val unresolved: List<CardStatusSnapshot> = existing?.let { Json.decodeFromString(it.snapshotJson) } ?: emptyList()
+        val snapshot = (unresolved.associateBy { it.lemmaKey to it.meaningKey } + current.associateBy { it.lemmaKey to it.meaningKey } + legacy.associateBy { it.lemmaKey to it.meaningKey }).values.toList()
         db.reprocessDao().put(ReprocessState(id, Json.encodeToString(snapshot), true))
         return snapshot
     }
 
-    suspend fun complete(id: Long) {
-        db.reprocessDao().put(ReprocessState(id, "[]", false))
+    suspend fun complete(id: Long, unmatched: List<CardStatusSnapshot> = emptyList()) {
+        db.reprocessDao().put(ReprocessState(id, Json.encodeToString(unmatched), false))
     }
 
     companion object { const val LEGACY_FILE = "status-snapshot.json" }

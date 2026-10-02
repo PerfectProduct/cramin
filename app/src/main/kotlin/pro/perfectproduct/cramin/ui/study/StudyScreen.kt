@@ -58,6 +58,12 @@ fun StudyScreen(
     val session = state.session
     var settingsOpen by remember { mutableStateOf(false) }
 
+    if (state.migrationReset) {
+        AlertDialog(onDismissRequest = vm::acknowledgeMigration,
+            text = { Text(stringResource(R.string.study_migration_notice)) },
+            confirmButton = { TextButton(onClick = vm::acknowledgeMigration) { Text(stringResource(R.string.action_ok)) } })
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

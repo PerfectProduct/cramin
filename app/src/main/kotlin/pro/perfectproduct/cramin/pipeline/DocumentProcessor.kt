@@ -480,77 +480,62 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             ctx.onProgress(DocStatus.CONSOLIDATING, ctx.progress.within(DocStatus.CONSOLIDATING, (i + 1f) / (batches.size + 1)))
         }
 
-        val snapshot = db.withTransaction { ReprocessProgress(db, deps.files).capture(id) }.associateBy { it.lemmaKey }
+        val snapshot = db.withTransaction { ReprocessProgress(db, deps.files).capture(id) }
         val count = writeCards(ctx, cards, senses, snapshot)
         return count
     }
 
-    private suspend fun writeCards(ctx: Ctx, cards: List<MergedCard>, senses: Map<String, List<SenseDraft>>, snapshot: Map<String, CardStatusSnapshot>): Int {
+    private suspend fun writeCards(ctx: Ctx, cards: List<MergedCard>, senses: Map<String, List<SenseDraft>>, snapshot: List<CardStatusSnapshot>): Int {
         val id = ctx.doc.id
         val t = now
+        var count = 0
+        val unmatched = snapshot.toMutableList()
         db.withTransaction {
             db.cardDao().deleteByDocument(id)
             deps.checkpoint("replacementDeleted")
             for (card in cards) {
-                val drafts = senses[card.lemmaKey] ?: Consolidation.fallback(card)
-                val cardId = db.cardDao().insertCard(
-                    CardEntity(
-                        documentId = id, lemmaKey = card.lemmaKey, lemma = card.lemma, lemmaVocalized = card.lemmaVocalized, pos = card.pos,
-                        lang = ctx.lang.code, targetLang = ctx.targetLang.code, status = CardStatus.NEW, starred = false,
-                        firstSentenceIdx = card.firstSentenceIdx, updatedAt = t,
-                    ),
-                )
-                val senseOfUnit = HashMap<Int, Long>()
-                val exampleUnitOfSense = HashMap<Long, Int>()
-                for ((si, draft) in drafts.withIndex()) {
-                    val senseId = db.cardDao().insertSense(pro.perfectproduct.cramin.data.db.SenseEntity(cardId = cardId, idx = si, translation = draft.translation, exampleOccurrenceId = null))
-                    for (ui in draft.unitIndices) senseOfUnit[ui] = senseId
-                    exampleUnitOfSense[senseId] = ExamplePicker.pick(card, draft) { ctx.sentence(it) }
-                }
-                val occupied = HashMap<Int, MutableList<IntRange>>()
-                for ((ui, u) in card.units.withIndex()) {
-                    val sentenceId = ctx.sentenceIds[u.sentenceIdx] ?: continue
-                    val senseId = senseOfUnit[ui]
-                    val isExample = senseId != null && exampleUnitOfSense[senseId] == ui
-                    val occId = db.cardDao().insertOccurrence(
-                        OccurrenceEntity(
-                            cardId = cardId, senseId = senseId, sentenceId = sentenceId, surface = u.surface, targetSurface = u.targetSurface,
-                            start = u.start, end = u.end, targetStart = u.targetStart, targetEnd = u.targetEnd, isExample = isExample,
-                        ),
-                    )
-                    if (isExample && senseId != null) db.cardDao().setSenseExample(senseId, occId)
-                    if (u.start != null && u.end != null) occupied.getOrPut(u.sentenceIdx) { mutableListOf() }.add(u.start until u.end)
-                }
-                // Все вхождения поверхностных форм для подчёркивания (SPEC §6.9); лемма — тоже известная форма.
-                val surfaces = (card.units.map { it.surface } + card.lemma).toSet()
-                val matches = SurfaceMatcher.findAll(surfaces, ctx.sentences, ctx.lang).filter { m ->
-                    occupied[m.sentenceIdx].orEmpty().none { r -> r.first < m.end && m.start < r.last + 1 }
-                }
-                if (matches.isNotEmpty()) {
-                    db.cardDao().insertOccurrences(
-                        matches.mapNotNull { m ->
-                            val sentenceId = ctx.sentenceIds[m.sentenceIdx] ?: return@mapNotNull null
-                            OccurrenceEntity(cardId = cardId, senseId = null, sentenceId = sentenceId, surface = m.surface, targetSurface = null, start = m.start, end = m.end, targetStart = null, targetEnd = null, isExample = false)
-                        },
-                    )
-                }
-                snapshot[card.lemmaKey]?.let { s ->
-                    db.cardDao().restoreSnapshot(id, card.lemmaKey, s.status, s.starred, s.dueAt, s.intervalDays, s.ease, s.reps, s.lapses, t)
+                val drafts = (senses[card.lemmaKey] ?: Consolidation.fallback(card))
+                    .groupBy { MeaningKey.of(it.translation) }.values.map { same ->
+                        SenseDraft(same.first().translation, same.flatMap { it.unitIndices }.distinct())
+                    }
+                for (draft in drafts) {
+                    val key = MeaningKey.of(draft.translation)
+                    val progress = snapshot.filter { it.lemmaKey == card.lemmaKey && it.meaningKey == key }.singleOrNull()
+                    val cardId = db.cardDao().insertCard(CardEntity(
+                        documentId = id, lemmaKey = card.lemmaKey, meaningKey = key, lemma = card.lemma,
+                        lemmaVocalized = card.lemmaVocalized, pos = card.pos, lang = ctx.lang.code, targetLang = ctx.targetLang.code,
+                        status = progress?.status ?: CardStatus.NEW, starred = progress?.starred ?: false,
+                        firstSentenceIdx = draft.unitIndices.minOf { card.units[it].sentenceIdx }, updatedAt = t,
+                        dueAt = progress?.dueAt, intervalDays = progress?.intervalDays, ease = progress?.ease,
+                        reps = progress?.reps, lapses = progress?.lapses,
+                    ))
+                    if (progress != null) unmatched.remove(progress)
+                    val senseId = db.cardDao().insertSense(pro.perfectproduct.cramin.data.db.SenseEntity(cardId = cardId, idx = 0, translation = draft.translation, exampleOccurrenceId = null))
+                    val example = ExamplePicker.pick(card, draft) { ctx.sentence(it) }
+                    for (ui in draft.unitIndices) {
+                        val u = card.units[ui]
+                        val sentenceId = ctx.sentenceIds[u.sentenceIdx] ?: continue
+                        val occurrence = db.cardDao().insertOccurrence(OccurrenceEntity(
+                            cardId = cardId, senseId = senseId, sentenceId = sentenceId, surface = u.surface,
+                            targetSurface = u.targetSurface, start = u.start, end = u.end, targetStart = u.targetStart,
+                            targetEnd = u.targetEnd, isExample = ui == example,
+                        ))
+                        if (ui == example) db.cardDao().setSenseExample(senseId, occurrence)
+                    }
+                    count++
                 }
             }
             deps.checkpoint("restored")
+            if (unmatched.isNotEmpty()) db.documentDao().setStudyNotice(id, true)
             db.documentDao().setStatus(id, DocStatus.READY, 1f, null, null, now)
-            ReprocessProgress(db, deps.files).complete(id)
+            ReprocessProgress(db, deps.files).complete(id, unmatched)
             deps.checkpoint("ready")
         }
         deps.checkpoint("committed")
         deps.files.dir(id).resolve(STATUS_SNAPSHOT_FILE).delete()
-        return cards.size
+        return count
     }
 
-    // ---------------------------------------------------------------------------------------
-    // Вспомогательное.
-    // ---------------------------------------------------------------------------------------
     private fun glossaryFor(ctx: Ctx, text: String): List<GlossaryEntry> =
         ctx.brief?.let { GlossaryFilter.filter(it.glossary, text, ctx.lang) }.orEmpty()
 
@@ -624,6 +609,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         val ease: Double? = null,
         val reps: Int? = null,
         val lapses: Int? = null,
+        val meaningKey: String? = null,
     )
 
     companion object {
@@ -637,7 +623,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
 
         /** Снимок статусов для «Обработать заново» пишет вызывающий (репозиторий) в файл документа. */
         fun writeStatusSnapshot(files: DocumentFiles, id: Long, snapshot: List<CardStatusSnapshot>) {
-            val rows = snapshot.map { StatusSnapshotRow(it.lemmaKey, it.status.name, it.starred, it.dueAt, it.intervalDays, it.ease, it.reps, it.lapses) }
+            val rows = snapshot.map { StatusSnapshotRow(it.lemmaKey, it.status.name, it.starred, it.dueAt, it.intervalDays, it.ease, it.reps, it.lapses, it.meaningKey) }
             files.dir(id).resolve(STATUS_SNAPSHOT_FILE).writeText(Json.encodeToString(rows))
         }
     }

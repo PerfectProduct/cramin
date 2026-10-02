@@ -36,6 +36,7 @@ data class CardStatusSnapshot(
     val ease: Double? = null,
     val reps: Int? = null,
     val lapses: Int? = null,
+    val meaningKey: String? = null,
 )
 
 data class LangPair(val lang: String, val targetLang: String)
@@ -65,10 +66,10 @@ interface CardDao {
     @Query(
         """
         UPDATE Card SET status = :status, updatedAt = :now
-        WHERE lang = :lang AND targetLang = :targetLang AND lemmaKey = :lemmaKey
+        WHERE lang = :lang AND targetLang = :targetLang AND lemmaKey = :lemmaKey AND meaningKey = :meaningKey
         """,
     )
-    suspend fun setStatusForLemma(lang: String, targetLang: String, lemmaKey: String, status: CardStatus, now: Long)
+    suspend fun setStatusForMeaning(lang: String, targetLang: String, lemmaKey: String, meaningKey: String, status: CardStatus, now: Long)
 
     @Query("UPDATE Card SET starred = :starred, updatedAt = :now WHERE id = :cardId")
     suspend fun setStarred(cardId: Long, starred: Boolean, now: Long)
@@ -77,7 +78,7 @@ interface CardDao {
         """
         UPDATE Card SET status = :status, starred = :starred, dueAt = :dueAt, intervalDays = :intervalDays,
             ease = :ease, reps = :reps, lapses = :lapses, updatedAt = :now
-        WHERE documentId = :documentId AND lemmaKey = :lemmaKey
+        WHERE documentId = :documentId AND lemmaKey = :lemmaKey AND meaningKey = :meaningKey
         """,
     )
     suspend fun restoreSnapshot(
@@ -91,6 +92,7 @@ interface CardDao {
         reps: Int?,
         lapses: Int?,
         now: Long,
+        meaningKey: String = "",
     )
 
     @Query("DELETE FROM Card WHERE documentId = :documentId")
@@ -100,6 +102,9 @@ interface CardDao {
 
     @Query("SELECT * FROM Card WHERE lang = :lang AND targetLang = :targetLang AND lemmaKey = :lemmaKey")
     suspend fun getLemmaCards(lang: String, targetLang: String, lemmaKey: String): List<CardEntity>
+
+    @Query("SELECT * FROM Card WHERE lang = :lang AND targetLang = :targetLang AND lemmaKey = :lemmaKey AND meaningKey = :meaningKey")
+    suspend fun getMeaningCards(lang: String, targetLang: String, lemmaKey: String, meaningKey: String): List<CardEntity>
 
     @Query("SELECT * FROM Card WHERE id = :cardId")
     suspend fun getCard(cardId: Long): CardEntity?
@@ -128,7 +133,7 @@ interface CardDao {
     )
     fun observeCounts(documentId: Long): Flow<CardCounts>
 
-    @Query("SELECT lemmaKey, status, starred, dueAt, intervalDays, ease, reps, lapses FROM Card WHERE documentId = :documentId")
+    @Query("SELECT lemmaKey, status, starred, dueAt, intervalDays, ease, reps, lapses, meaningKey FROM Card WHERE documentId = :documentId")
     suspend fun snapshotStatuses(documentId: Long): List<CardStatusSnapshot>
 
     @Query("SELECT * FROM Sense WHERE cardId = :cardId ORDER BY idx")
@@ -185,7 +190,7 @@ interface CardDao {
 
     @Query(
         """
-        SELECT COUNT(DISTINCT c.lemmaKey) FROM Card c JOIN Document d ON d.id = c.documentId
+        SELECT COUNT(DISTINCT c.lemmaKey || char(0) || c.meaningKey) FROM Card c JOIN Document d ON d.id = c.documentId
         WHERE d.status = 'READY' AND c.status != 'KNOWN' AND c.lang = :lang AND c.targetLang = :targetLang
         """,
     )

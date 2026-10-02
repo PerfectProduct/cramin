@@ -13,7 +13,7 @@ class PromptsTest {
     private val expected = mapOf(
         "brief" to "d0a9a2b3098f9ed469f07a044d7ce5a6e36d83d7aad7157591f392e0405aaee0",
         "translate" to "be8427039874e354fd4cb9552424b57aa71f4fbe0762f290afc8f9adc5f99f77",
-        "extract" to "b71e64343aec5e5eb914d17e6c1cf0aa00769d5edbb13c9b97099ca03ab76f55",
+        "extract" to "f9e5a3104f05148b2efa7018307746c5c204ae78aa51503f9fc1db225e258eb1",
         "consolidate" to "54e2286fbe81f47f4e224879db44a5338bd91d88eb988d73101fbad2f7ac7e39",
     )
 

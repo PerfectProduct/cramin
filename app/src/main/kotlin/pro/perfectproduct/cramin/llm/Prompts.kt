@@ -42,7 +42,7 @@ Extract lexical units worth learning from the SOURCE sentences:
 Do NOT extract: pronouns, articles, determiners, numerals, prepositions, conjunctions, particles,
 auxiliary/modal verbs, interjections, proper names, abbreviations, numbers, URLs.
 For each unit give:
-- i: sentence id where it occurs (choose the clearest example if it occurs several times in this batch);
+- i: sentence id of this occurrence;
 - f: the exact span from that SOURCE sentence as written (for discontinuous phrasal verbs, the full span);
 - l: the lemma in SOURCE language, dictionary form
      (en: base form; ru: nominative singular / infinitive, use ё where standard;
@@ -52,7 +52,13 @@ For each unit give:
 - g: TARGET translation of the lemma in dictionary form, with the meaning it has IN THIS CONTEXT,
      consistent with the given translation and the glossary (he TARGET: without niqqud);
 - ft: the exact span in the GIVEN translation segment that renders this unit, or null if it is not rendered explicitly.
-List each (lemma, meaning) pair at most once per batch.
+List EVERY occurrence, in sentence order and left-to-right within each sentence. Repeated mentions
+must remain separate occurrences; they will be grouped into one study card per meaning later.
+Use the same dictionary-form g for inflected variants of the same meaning.
+ft must cover only the actual translated lexical unit, not neighbouring context words:
+bank -> берег in берег реки, банк in банк семян, крен in крен влево;
+use the actual inflected span (берега, крена). For a genuine multiword unit include its full translation.
+Never shorten a span mechanically to its first word. If the exact correspondence is uncertain, use null.
 Output only JSON matching the schema.
 """.trim()
 

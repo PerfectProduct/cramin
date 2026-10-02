@@ -243,7 +243,7 @@ Extract lexical units worth learning from the SOURCE sentences:
 Do NOT extract: pronouns, articles, determiners, numerals, prepositions, conjunctions, particles,
 auxiliary/modal verbs, interjections, proper names, abbreviations, numbers, URLs.
 For each unit give:
-- i: sentence id where it occurs (choose the clearest example if it occurs several times in this batch);
+- i: sentence id of this occurrence;
 - f: the exact span from that SOURCE sentence as written (for discontinuous phrasal verbs, the full span);
 - l: the lemma in SOURCE language, dictionary form
      (en: base form; ru: nominative singular / infinitive, use ё where standard;
@@ -253,7 +253,13 @@ For each unit give:
 - g: TARGET translation of the lemma in dictionary form, with the meaning it has IN THIS CONTEXT,
      consistent with the given translation and the glossary (he TARGET: without niqqud);
 - ft: the exact span in the GIVEN translation segment that renders this unit, or null if it is not rendered explicitly.
-List each (lemma, meaning) pair at most once per batch.
+List EVERY occurrence, in sentence order and left-to-right within each sentence. Repeated mentions
+must remain separate occurrences; they will be grouped into one study card per meaning later.
+Use the same dictionary-form g for inflected variants of the same meaning.
+ft must cover only the actual translated lexical unit, not neighbouring context words:
+bank -> берег in берег реки, банк in банк семян, крен in крен влево;
+use the actual inflected span (берега, крена). For a genuine multiword unit include its full translation.
+Never shorten a span mechanically to its first word. If the exact correspondence is uncertain, use null.
 Output only JSON matching the schema.
 ```
 
@@ -288,7 +294,7 @@ Output only JSON matching the schema.
 ### 6.7. Слияние единиц (`UnitMerger`)
 
 - Ключ карточки: `lemmaKey = normalize(l) + "|" + p`. Нормализация: NFC, нижний регистр, обрезка пунктуации по краям, для `ru` замена ё→е, для `he` удаление огласовок.
-- Все единицы документа с одинаковым ключом собираются в одну карточку.
+- Все единицы документа с одинаковым lemmaKey сначала собираются для консолидации. Учебная карточка создаётся отдельно для каждого контекстного значения: `(documentId, lemmaKey, meaningKey)`. `meaningKey` — NFC, нижний регистр и нормализованные пробелы канонического перевода; без стемминга и угадывания синонимов.
 - Переводы `g` нормализуются так же и дедуплицируются.
 - Один различный перевод — один смысл. Два и больше — ключ ставится в очередь консолидации (§6.8).
 
@@ -314,12 +320,12 @@ Every occurrence id must appear exactly once. Output only JSON.
 {"items":[{"k":"string","senses":[{"g":"string","ids":[1,2]}]}]}
 ```
 
-**Валидация:** каждое `id` ровно в одном смысле. При нарушении — фолбэк: каждый различный перевод становится отдельным смыслом. Смыслы сортируются по числу вхождений. Больше 4 смыслов на карточку не выводится; хвост сохраняется в БД.
+**Валидация:** каждое `id` ровно в одном смысле. При нарушении — фолбэк: каждый различный перевод становится отдельным смыслом. Смыслы сортируются по числу вхождений. Каждый итоговый смысл становится самостоятельной карточкой с независимыми status/starred; ограничение четырьмя смыслами отменено.
 
 ### 6.9. Пример и все вхождения
 
 - **Пример смысла.** Предпочтение предложениям длиной 40–220 символов, затем самому раннему. Пример — исходное предложение и сегмент перевода, в который оно входит.
-- **`SurfaceMatcher`.** Все известные поверхностные формы (`f`) каждой карточки ищутся во всех предложениях документа. Поиск регистронезависимый, по границам слов. Для `he` допускаются префиксы ו/ה/ב/ל/מ/ש/כ. Найденное пишется в `Occurrence` с `isExample = false`. LLM не используется.
+- **Вхождения.** Извлечение возвращает каждое упоминание с его контекстным значением. Поиск одинаковой формы по всему документу не назначает ей значение автоматически. Старые нераспределённые вхождения сохраняются в БД; неоднозначная связь не выдаётся за достоверную подсветку.
 
 ### 6.10. Заголовок и эмодзи
 
@@ -334,7 +340,7 @@ Every occurrence id must appear exactly once. Output only JSON.
 - В начале обработки загружается эффективный конфиг моделей (§6.12), и снимок ролей пишется в документ.
 - Извлечённый текст хранится в `files/docs/{id}/source.txt`.
 - Повтор после `FAILED` продолжает с первой незавершённой стадии и незавершённых `Job`.
-- Версия пайплайна `PIPELINE_VERSION` пишется в документ. «Обработать заново» перезапускает обработку с сохранением статусов карточек: сопоставление по `lemmaKey`.
+- Версия пайплайна `PIPELINE_VERSION` пишется в документ. «Обработать заново» перезапускает обработку с сохранением статусов карточек: сопоставление по `(lemmaKey, meaningKey)`. Неоднозначный старый snapshot сохраняется отдельно и не назначает KNOWN новому значению.
 
 ### 6.12. Роли моделей и конфиг (`ModelConfig`)
 
@@ -474,10 +480,10 @@ OkHttp GET (User-Agent обычного мобильного браузера, �
 - Карточка на весь центр экрана, скруглённая, с 🔊 в левом верхнем углу и ☆ в правом.
 - **Лицо при `SRC_FRONT`:** лемма крупно по центру, под ней мелко часть речи. Для `he` — огласованная форма мелко над леммой.
 - **Оборот при `SRC_FRONT`:**
-  - переводы смыслов, каждый с новой строки, крупно;
+  - один перевод изучаемого значения, крупно;
   - пример: исходное предложение с выделенной поверхностной формой, под ним перевод предложения с выделенным `ft`;
-  - если смыслов несколько, у каждого свой пример; оборот прокручивается.
-- **При `TGT_FRONT`:** лицо — переводы смыслов через `;`, оборот — лемма, часть речи и примеры.
+  - ровно один пример этого значения с переводом сегмента; он виден сразу. Длинный оборот прокручивается в доступной высоте экрана.
+- **При `TGT_FRONT`:** лицо — перевод одного значения, оборот — лемма, часть речи и один пример.
 - **Жесты:**
   - тап — переворот с 3D-анимацией по оси Y (300 мс);
   - горизонтальный свайп с порогом 30 % ширины или быстрым флингом: вправо «знаю», влево «ещё учу»;
@@ -535,8 +541,8 @@ OkHttp GET (User-Agent обычного мобильного браузера, �
 ### 10.6. Общая колода «Все невыученные»
 
 - Карточки со статусом не `KNOWN` из всех документов в `READY`.
-- Дедупликация по `(srcLang, tgtLang, lemmaKey)`: показывается карточка из самого свежего документа, с объединёнными смыслами без дубликатов переводов.
-- Свайп в общей колоде меняет статус у всех дубликатов.
+- Дедупликация по `(srcLang, tgtLang, lemmaKey, meaningKey)`: показывается карточка одного значения из самого свежего документа с его примером. Разные значения не объединяются.
+- Свайп в общей колоде меняет статус только у дубликатов этого значения; Undo восстанавливает индивидуальные прежние статусы по ID.
 - Направление общей колоды хранится отдельно; колоды с разными парами языков разделены чипами над кнопкой «Учить».
 
 ## 11. Ключ, модели, приватность
@@ -616,10 +622,10 @@ Job(id PK, documentId FK CASCADE, kind[BRIEF|TRANSLATE|EXTRACT|CONSOLIDATE|STT],
   responseJson NULL, finishReason NULL, promptTokens, completionTokens, costUsd NULL, updatedAt)
   INDEX(documentId, kind, idx) UNIQUE
 
-Card(id PK, documentId FK CASCADE, lemmaKey, lemma, lemmaVocalized NULL, pos, lang, targetLang,
+Card(id PK, documentId FK CASCADE, lemmaKey, meaningKey, lemma, lemmaVocalized NULL, pos, lang, targetLang,
   status[NEW|LEARNING|KNOWN], starred BOOL, firstSentenceIdx, updatedAt,
   dueAt NULL, intervalDays NULL, ease NULL, reps NULL, lapses NULL)
-  INDEX(documentId, lemmaKey) UNIQUE; INDEX(lang, targetLang, lemmaKey); INDEX(status)
+  INDEX(documentId, lemmaKey, meaningKey) UNIQUE; INDEX(lang, targetLang, lemmaKey, meaningKey); INDEX(status)
 
 Sense(id PK, cardId FK CASCADE, idx, translation, exampleOccurrenceId NULL)
 
@@ -698,3 +704,27 @@ StudySession(deckKey PK, stateJson, updatedAt)
 ## 16. Вне v1 (бэклог)
 
 Фото с OCR, EPUB, интервальное повторение (поля уже в схеме), глобальный словарь «я это знаю», экспорт в Anki/CSV, OAuth Gemini и Codex как провайдеры, Play-flavor без апдейтера, синхронизация между устройствами, оценка стоимости до запуска обработки.
+
+
+## Решения владельца от 2026-10-03 (приоритет над прежними формулировками)
+
+Одна учебная карточка — одна лемма/POS и один контекстный перевод в документе. 10 упоминаний
+«банк», 4 «берег», 2 «крен» дают3 карточки и16 вхождений. Формы и равнозначные варианты одного
+значения объединяет стадия консолидации; локальный код не угадывает синонимы. Общая колода
+объединяет только одинаковые языковую пару, lemmaKey и meaningKey. Разные значения никогда
+не участвуют в одном свайпе/Undo. Resume использует тот же builder, включая KNOWN-группы.
+
+Room 3→4 разделяет Card, сохраняя status/starred на всех получившихся значениях, Sense/Occurrence
+и тексты. Несовместимые старые сессии сбрасываются с уведомлением; их Undo не переносится.
+Reprocess атомарно заменяет карточки и восстанавливает только точные значения. Неопределённые
+старые snapshots остаются в ReprocessState для разбора, без назначения их прогресса другому смыслу.
+
+`ft` — точная словоформа перевода изучаемой единицы: «берега», «банк», «крена», без соседнего
+«реки/семян/влево». Настоящая многословная единица требует полного соответствия. Механическое
+обрезание по первому пробелу запрещено; при недостоверном соответствии ft=null. Смещения —
+UTF-16 в оригинальном предложении/сегменте, с сохранением Unicode/огласовок.
+
+Ошибки доступны из библиотеки, retry отдельный. Последняя безопасная диагностика переживает
+retry; копирование только allowlist, без сообщений провайдера и личного содержимого. Неизвестные
+стадии старых ошибок не угадываются. Простой онбординг сохранён, модели выбираются в настройках
+(AUD-016, принятое в этом проходе упрощение).

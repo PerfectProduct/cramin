@@ -34,6 +34,7 @@ data class StudyUiState(
     /** Есть сохранённая сессия: спросить «Продолжить с 35/96» или «Начать заново» (SPEC §9.6). */
     val resumeCandidate: SessionState? = null,
     val empty: Boolean = false,
+    val migrationReset: Boolean = false,
 ) {
     val currentCard: StudyCard? get() = session?.currentCardId?.let { cards[it] }
     val srcLang: Lang? get() = cards.values.firstOrNull()?.lang
@@ -61,7 +62,9 @@ class StudyViewModel(private val container: AppContainer, val deckKeyRaw: String
     private suspend fun load() {
         val key = deckKey ?: run { _state.update { it.copy(loading = false, empty = true) }; return }
         val settings = container.settingsStore.current()
-        val saved = container.studyRepository.load(key.key)?.let { SessionState.fromJson(it) }
+        val rawSaved = container.studyRepository.load(key.key)
+        if (rawSaved?.contains("meaning-model-v4") == true) _state.update { it.copy(migrationReset = true) }
+        val saved = rawSaved?.let { SessionState.fromJson(it) }
         val required = saved?.let { s -> (s.order + s.initialOrder + s.roundOrders.values.flatten()).distinct() }.orEmpty()
         val freshCards = when (key) {
             is DeckKey.Document -> container.cardRepository.deckCards(key.documentId, key.filter)
@@ -125,6 +128,8 @@ class StudyViewModel(private val container: AppContainer, val deckKeyRaw: String
         sessionJob = viewModelScope.launch { m.state.collect { s -> _state.update { it.copy(session = s) }; syncAutoplay(s) } }
 
     }
+
+    fun acknowledgeMigration() { _state.update { it.copy(migrationReset = false) } }
 
     fun resume() = viewModelScope.launch {
         val s = _state.value.resumeCandidate ?: return@launch
