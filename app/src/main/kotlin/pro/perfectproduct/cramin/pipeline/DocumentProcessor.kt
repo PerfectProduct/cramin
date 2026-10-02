@@ -50,6 +50,8 @@ import pro.perfectproduct.cramin.util.Clock
 import pro.perfectproduct.cramin.util.Lang
 import pro.perfectproduct.cramin.util.Log
 import java.io.File
+import kotlinx.coroutines.sync.withLock
+import pro.perfectproduct.cramin.data.repo.ReprocessProgress
 
 /** Исход обработки для воркера. */
 sealed interface ProcessOutcome {
@@ -72,6 +74,7 @@ class ProcessorDeps(
     val segmenter: Segmenter,
     val usage: UsageRepository,
     val clock: Clock,
+    val checkpoint: (String) -> Unit = {},
 )
 
 /**
@@ -87,19 +90,28 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
 
     /** `onProgress(status, progress)` вызывается при смене стадии и по мере выполнения задач. */
     suspend fun process(documentId: Long, onProgress: suspend (DocStatus, Float) -> Unit = { _, _ -> }): ProcessOutcome {
+        return db.documentLock(documentId).withLock { processLocked(documentId, onProgress) }
+    }
+
+    private suspend fun processLocked(documentId: Long, onProgress: suspend (DocStatus, Float) -> Unit): ProcessOutcome {
         val doc = db.documentDao().getById(documentId) ?: return ProcessOutcome.Skipped
         if (doc.status == DocStatus.READY) return ProcessOutcome.Skipped
         Log.i(TAG, "process doc=$documentId status=${doc.status} type=${doc.sourceType}")
         return try {
+            // Imports surviving v1 snapshots, or captures cards restored before an old crash.
+            db.withTransaction { ReprocessProgress(db, deps.files).capture(documentId) }
             val count = run(doc, onProgress)
             ProcessOutcome.Ready(count)
         } catch (e: CancellationException) {
             Log.i(TAG, "doc=$documentId cancelled")
             throw e
         } catch (t: Throwable) {
+            val current = db.documentDao().getById(documentId)
+            // Completion committed: a later notification/file cleanup failure cannot undo READY.
+            if (current?.status == DocStatus.READY)
+                return ProcessOutcome.Ready(db.cardDao().getByDocument(documentId).size)
             val pe = PipelineException.from(t)
             Log.w(TAG, "doc=$documentId failed: ${pe.code} ${pe.message}", if (pe.code == ErrorCode.UNKNOWN) t else null)
-            val current = db.documentDao().getById(documentId)
             db.documentDao().setStatus(documentId, DocStatus.FAILED, current?.progress ?: 0f, pe.code.name, pe.message?.take(200), now)
             ProcessOutcome.Failed(pe.code, pe.message.orEmpty())
         }
@@ -141,7 +153,6 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         extractStage(ctx)
         val count = consolidateAndBuildStage(ctx)
 
-        db.documentDao().setStatus(id, DocStatus.READY, 1f, null, null, now)
         onProgress(DocStatus.READY, 1f)
         Log.i(TAG, "doc=$id READY cards=$count")
         return count
@@ -461,7 +472,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             ctx.onProgress(DocStatus.CONSOLIDATING, ctx.progress.within(DocStatus.CONSOLIDATING, (i + 1f) / (batches.size + 1)))
         }
 
-        val snapshot = readStatusSnapshot(id)
+        val snapshot = db.withTransaction { ReprocessProgress(db, deps.files).capture(id) }.associateBy { it.lemmaKey }
         val count = writeCards(ctx, cards, senses, snapshot)
         return count
     }
@@ -471,6 +482,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         val t = now
         db.withTransaction {
             db.cardDao().deleteByDocument(id)
+            deps.checkpoint("replacementDeleted")
             for (card in cards) {
                 val drafts = senses[card.lemmaKey] ?: Consolidation.fallback(card)
                 val cardId = db.cardDao().insertCard(
@@ -518,7 +530,12 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                     db.cardDao().restoreSnapshot(id, card.lemmaKey, s.status, s.starred, s.dueAt, s.intervalDays, s.ease, s.reps, s.lapses, t)
                 }
             }
+            deps.checkpoint("restored")
+            db.documentDao().setStatus(id, DocStatus.READY, 1f, null, null, now)
+            ReprocessProgress(db, deps.files).complete(id)
+            deps.checkpoint("ready")
         }
+        deps.checkpoint("committed")
         deps.files.dir(id).resolve(STATUS_SNAPSHOT_FILE).delete()
         return cards.size
     }
@@ -587,14 +604,6 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         val second = callRaw(job, request)
         return runCatching { check(LlmJson.parse<T>(second.content)) }.getOrNull()
             ?: throw LlmException.InvalidResponse("schema violation after retry")
-    }
-
-    private fun readStatusSnapshot(id: Long): Map<String, CardStatusSnapshot> {
-        val f = deps.files.dir(id).resolve(STATUS_SNAPSHOT_FILE)
-        if (!f.isFile) return emptyMap()
-        return runCatching { Json.decodeFromString<List<StatusSnapshotRow>>(f.readText()) }.getOrNull()
-            ?.associate { it.lemmaKey to CardStatusSnapshot(it.lemmaKey, CardStatus.valueOf(it.status), it.starred, it.dueAt, it.intervalDays, it.ease, it.reps, it.lapses) }
-            .orEmpty()
     }
 
     @kotlinx.serialization.Serializable

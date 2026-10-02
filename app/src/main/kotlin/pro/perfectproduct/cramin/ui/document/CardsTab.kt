@@ -36,6 +36,7 @@ fun CardsTab(vm: DocumentViewModel, counts: CardCounts, onStudy: (String, Boolea
     val row by vm.document.collectAsState()
     val filter by vm.deckFilter.collectAsState()
     val shuffle by vm.shuffle.collectAsState()
+    val canResume by vm.canResume.collectAsState()
     val direction by vm.direction.collectAsState()
     val doc = row?.document ?: return
     val src = Lang.fromCode(doc.sourceLang)
@@ -69,7 +70,7 @@ fun CardsTab(vm: DocumentViewModel, counts: CardCounts, onStudy: (String, Boolea
             Text(stringResource(R.string.cards_shuffle))
         }
         Spacer(Modifier.height(16.dp))
-        val enabled = doc.status == DocStatus.READY && deckSize > 0
+        val enabled = doc.status == DocStatus.READY && (deckSize > 0 || canResume)
         Button(onClick = { onStudy(vm.deckKey(), shuffle) }, enabled = enabled, modifier = Modifier.fillMaxWidth().height(52.dp).testTag("studyButton")) {
             Text(stringResource(R.string.cards_study) + if (deckSize > 0) " · $deckSize" else "", style = MaterialTheme.typography.titleMedium)
         }

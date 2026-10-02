@@ -36,6 +36,7 @@ class TestPipeline(
     extraExtractors: Map<SourceType, SourceExtractor> = emptyMap(),
     val transcriber: Transcriber? = null,
     val audioSegmenter: AudioSegmenter? = null,
+    val checkpoint: (String) -> Unit = {},
 ) : AutoCloseable {
     val context: Context = ApplicationProvider.getApplicationContext()
     val db: CraminDatabase = CraminDatabase.inMemory(context)
@@ -59,6 +60,7 @@ class TestPipeline(
         segmenter = Segmenter(Icu4jSentenceBreaker()),
         usage = usage,
         clock = clock,
+        checkpoint = checkpoint,
     )
 
     fun processor() = DocumentProcessor(deps)

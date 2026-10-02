@@ -145,7 +145,15 @@ class UiFlowsTest {
         compose.onNodeWithTag("flashCard").performTouchInput { swipeRight() }
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("roundSummary")).fetchSemanticsNodes().isNotEmpty() }
         assertEquals(CardStatus.KNOWN, runBlocking { container.cardRepository.getStatus(cardId(id, "closed")) })
-        compose.onNodeWithTag("roundDone").performClick()
+        compose.onNodeWithTag("roundUndo").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
+        assertEquals(CardStatus.LEARNING, container.cardRepository.getStatus(cardId(id, "closed")))
+        compose.onNodeWithTag("counter").assertTextContains("1 / 1")
+        compose.onNodeWithTag("undo").performClick()
+        compose.waitUntil(5_000) { runBlocking { container.cardRepository.getStatus(cardId(id, "closed")) } == CardStatus.NEW }
+        compose.onNodeWithTag("counter").assertTextContains("2 / 2")
+        compose.onNodeWithTag("knownCount").assertTextContains("1")
+        compose.onNodeWithTag("learningCount").assertTextContains("0")
     }
 
     @Test
@@ -167,6 +175,41 @@ class UiFlowsTest {
         compose.onNodeWithTag("resume").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("counter")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("counter").assertTextContains("2 / 2")
+    }
+
+    @Test
+    fun completedSharedSessionResumesWithMergedExamplesAndExactUndo() = runBlocking<Unit> {
+        val banks = CardStatus.entries.mapIndexed { i, status ->
+            val doc = seedDocument()
+            val bank = cardId(doc, "bank")
+            container.cardRepository.setStatus(bank, status)
+            container.cardRepository.setStatus(cardId(doc, "closed"), CardStatus.KNOWN)
+            container.db.openHelper.writableDatabase.execSQL("UPDATE Sense SET translation = ? WHERE cardId = ?", arrayOf<Any>("смысл $i", bank))
+            bank
+        }
+        val original = banks.associateWith { container.cardRepository.getStatus(it) }
+        val before = container.cardRepository.sharedDeckCards(pro.perfectproduct.cramin.util.Lang.EN, pro.perfectproduct.cramin.util.Lang.RU).single()
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithTag("allUnlearned").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("allDeckStudy")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("allDeckStudy").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("flashCard").performTouchInput { swipeRight() }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("roundSummary")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("roundDone").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("allDeckStudy")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("allDeckStudy").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("resume")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("resume").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("roundUndo")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("roundUndo").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
+        assertEquals(original, banks.associateWith { container.cardRepository.getStatus(it) })
+        val after = container.cardRepository.sharedDeckCards(pro.perfectproduct.cramin.util.Lang.EN, pro.perfectproduct.cramin.util.Lang.RU).single()
+        assertEquals(before.senses, after.senses)
+        compose.onNodeWithTag("flashCard").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("cardBack")).fetchSemanticsNodes().isNotEmpty() }
+        repeat(3) { compose.onNodeWithText("смысл $it").assertIsDisplayed() }
     }
 
     private suspend fun cardId(docId: Long, lemma: String): Long = container.db.cardDao().getByDocument(docId).first { it.lemma == lemma }.id

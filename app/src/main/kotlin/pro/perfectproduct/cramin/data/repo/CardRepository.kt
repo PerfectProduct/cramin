@@ -43,15 +43,15 @@ class CardRepository(
      * дедупликация по (srcLang, tgtLang, lemmaKey) — остаётся карточка из самого свежего документа,
      * смыслы объединяются без дубликатов переводов.
      */
-    suspend fun sharedDeckCards(lang: Lang, targetLang: Lang): List<StudyCard> {
+    suspend fun sharedDeckCards(lang: Lang, targetLang: Lang, requiredIds: List<Long> = emptyList(), originalGroups: Map<Long, List<Long>> = emptyMap()): List<StudyCard> = db.withTransaction {
         val all = cards.getCardsForPair(lang.code, targetLang.code)
         val byKey = LinkedHashMap<String, MutableList<CardEntity>>()
         for (c in all) byKey.getOrPut(c.lemmaKey) { mutableListOf() }.add(c)
         // Карточка считается невыученной, если хотя бы один дубликат не KNOWN (свайп ставит статус всем).
-        val groups = byKey.values.filter { g -> g.any { it.status != CardStatus.KNOWN } }
+        val groups = byKey.values.filter { g -> g.any { it.status != CardStatus.KNOWN || it.id in requiredIds || originalGroups.values.any { ids -> it.id in ids } } }
         val primaries = groups.map { it.first() }
         val built = build(primaries + groups.flatMap { it.drop(1) }).associateBy { it.id }
-        return groups.mapNotNull { group ->
+        val merged = groups.mapNotNull { group ->
             val primary = built[group.first().id] ?: return@mapNotNull null
             val seen = LinkedHashMap<String, StudySense>()
             for (card in group) {
@@ -67,6 +67,11 @@ class CardRepository(
                 duplicateIds = group.drop(1).map { it.id },
             )
         }
+        // Retain saved representatives even if a newer duplicate became the primary.
+        merged + requiredIds.mapNotNull { id ->
+            val group = groups.firstOrNull { g -> g.any { it.id == id || it.id in originalGroups[id].orEmpty() } } ?: return@mapNotNull null
+            merged.firstOrNull { it.id == group.first().id }?.takeIf { it.id != id }?.copy(id = id)
+        }
     }
 
     /** Карточки сохранённой сессии по id — колода могла измениться (часть уже KNOWN), но сессия продолжается по своему порядку. */
@@ -79,6 +84,22 @@ class CardRepository(
     suspend fun card(cardId: Long): StudyCard? {
         val entity = cards.getCard(cardId) ?: return null
         return build(listOf(entity)).firstOrNull()
+    }
+
+    fun statusStore(shared: Boolean, sharedCard: (Long) -> StudyCard? = { null }) = object : pro.perfectproduct.cramin.study.CardStatusStore {
+        override suspend fun get(cardId: Long) = getStatus(cardId)
+        override suspend fun snapshot(cardId: Long): Map<Long, CardStatus> {
+            val group = if (shared) sharedCard(cardId) else null
+            return if (group == null) statusSnapshot(cardId, shared)
+            else cards.getLemmaCards(group.lang.code, group.targetLang.code, group.lemmaKey).associate { it.id to it.status }
+        }
+        override suspend fun set(cardId: Long, status: CardStatus) { setStatus(cardId, status) }
+    }
+
+    suspend fun statusSnapshot(cardId: Long, shared: Boolean): Map<Long, CardStatus> {
+        val card = cards.getCard(cardId) ?: return emptyMap()
+        return (if (shared) cards.getLemmaCards(card.lang, card.targetLang, card.lemmaKey) else listOf(card))
+            .associate { it.id to it.status }
     }
 
     suspend fun getStatus(cardId: Long): CardStatus? = cards.getStatus(cardId)

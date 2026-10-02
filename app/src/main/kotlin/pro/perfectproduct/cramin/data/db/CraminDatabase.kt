@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 
 /**
- * База Cramin, схема v1 (SPEC §13). `exportSchema = true`: JSON-схема коммитится в `app/schemas/`.
+ * База Cramin, схема v2 (SPEC §13). `exportSchema = true`: JSON-схема коммитится в `app/schemas/`.
  * Каждое изменение схемы — новая версия, [Migration] в [MIGRATIONS] и тест с MigrationTestHelper (SPEC §12.5).
  * `fallbackToDestructiveMigration*` запрещён: прогресс изучения переживает обновления.
  */
@@ -21,11 +21,17 @@ import androidx.room.migration.Migration
         SenseEntity::class,
         OccurrenceEntity::class,
         StudySessionEntity::class,
+        ReprocessState::class,
     ],
     version = CraminDatabase.VERSION,
     exportSchema = true,
 )
 abstract class CraminDatabase : RoomDatabase() {
+    // All processors and reprocess requests share this lock in the single app process.
+    private val documentLocks = java.util.concurrent.ConcurrentHashMap<Long, kotlinx.coroutines.sync.Mutex>()
+    fun documentLock(id: Long) = documentLocks.getOrPut(id) { kotlinx.coroutines.sync.Mutex() }
+
+    abstract fun reprocessDao(): ReprocessDao
     abstract fun documentDao(): DocumentDao
     abstract fun sentenceDao(): SentenceDao
     abstract fun segmentDao(): SegmentDao
@@ -34,11 +40,15 @@ abstract class CraminDatabase : RoomDatabase() {
     abstract fun studySessionDao(): StudySessionDao
 
     companion object {
-        const val VERSION = 1
+        const val VERSION = 2
         const val NAME = "cramin.db"
 
-        /** Миграции между версиями схемы; в v1 пусто. */
-        val MIGRATIONS: Array<Migration> = emptyArray()
+        /** Аддитивная миграция: существующие данные v1 не меняются. */
+        val MIGRATIONS: Array<Migration> = arrayOf(object : Migration(1, 2) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `ReprocessState` (`documentId` INTEGER NOT NULL, `snapshotJson` TEXT NOT NULL, `pending` INTEGER NOT NULL, PRIMARY KEY(`documentId`), FOREIGN KEY(`documentId`) REFERENCES `Document`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+            }
+        })
 
         fun build(context: Context): CraminDatabase =
             Room.databaseBuilder(context.applicationContext, CraminDatabase::class.java, NAME)

@@ -1,6 +1,7 @@
 package pro.perfectproduct.cramin.app
 
 import android.app.Application
+import kotlinx.coroutines.launch
 import androidx.work.Configuration
 import pro.perfectproduct.cramin.util.Log
 
@@ -18,6 +19,10 @@ class CraminApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer.create(this)
+        // Recover pending nonterminal work, including death between cancellation and re-enqueue.
+        container.appScope.launch {
+            container.db.reprocessDao().queued().forEach { container.processScheduler.enqueue(it) }
+        }
         Log.i(TAG, "started, debug=${Log.enabled}")
     }
 

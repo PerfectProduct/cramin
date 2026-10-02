@@ -1,6 +1,11 @@
 package pro.perfectproduct.cramin.pipeline
 
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.async
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -153,7 +158,7 @@ class PipelineEndToEndTest {
             val id = p.importText(Lang.EN, Lang.RU)
             var extractCalls = 0
             fake.errorInjector = { req, _ ->
-                if (req.role == ModelRole.EXTRACT && ++extractCalls == 2) RuntimeException("simulated process death") else null
+                if (req.role == ModelRole.EXTRACT && ++extractCalls == 2) RuntimeException("injected extraction failure") else null
             }
             val first = p.processor().process(id)
             assertTrue("$first", first is ProcessOutcome.Failed && (first as ProcessOutcome.Failed).code == ErrorCode.UNKNOWN)
@@ -238,6 +243,7 @@ class PipelineEndToEndTest {
             p.cards.setStatus(library.id, CardStatus.KNOWN)
             p.cards.setStarred(library.id, true)
             p.documents.prepareReprocess(id)
+            p.documents.prepareReprocess(id) // repeated request must retain the original progress
             assertEquals(DocStatus.QUEUED, p.documents.get(id)!!.status)
             assertTrue(p.processor().process(id) is ProcessOutcome.Ready)
             val again = p.cards.deckCards(id, DeckFilter.ALL).first { it.lemma == "library" }
@@ -246,4 +252,128 @@ class PipelineEndToEndTest {
             assertTrue(again.id != library.id)
         }
     }
+    @Test
+    fun reprocessPreparationFaultsNeverLoseProgress() = runTest {
+        for (point in listOf("snapshot", "deleted", "prepared")) {
+            pipeline().use { p ->
+                val id = p.importText(Lang.EN, Lang.RU)
+                assertTrue(p.processor().process(id) is ProcessOutcome.Ready)
+                val card = p.cards.deckCards(id, DeckFilter.ALL).first()
+                p.cards.setStatus(card.id, CardStatus.LEARNING)
+                p.cards.setStarred(card.id, true)
+                val repository = pro.perfectproduct.cramin.data.repo.DocumentRepository(p.db, p.files, p.clock) {
+                    if (it == point) error("injected $point")
+                }
+                assertTrue(runCatching { repository.prepareReprocess(id) }.isFailure)
+                // Retry the request whether the first transaction rolled back or committed.
+                p.documents.prepareReprocess(id)
+                assertTrue(p.processor().process(id) is ProcessOutcome.Ready)
+                val restored = p.cards.deckCards(id, DeckFilter.ALL).first { it.lemmaKey == card.lemmaKey }
+                assertEquals(CardStatus.LEARNING, restored.status)
+                assertTrue(restored.starred)
+            }
+        }
+    }
+
+    @Test
+    fun replacementAndReadyFaultsRetainSnapshotOrCompletedProgress() = runTest {
+        for (point in listOf("replacementDeleted", "restored", "ready", "committed")) {
+            var armed = false
+            TestPipeline(tmp.newFolder(), FakeLlmClient(), checkpoint = { if (armed && it == point) error("injected $point") }).use { p ->
+                val id = p.importText(Lang.EN, Lang.RU)
+                assertTrue(p.processor().process(id) is ProcessOutcome.Ready)
+                val card = p.cards.deckCards(id, DeckFilter.ALL).first()
+                p.cards.setStatus(card.id, CardStatus.KNOWN)
+                p.cards.setStarred(card.id, true)
+                p.documents.prepareReprocess(id)
+                armed = true
+                val outcome = p.processor().process(id)
+                assertTrue(if (point == "committed") outcome is ProcessOutcome.Ready else outcome is ProcessOutcome.Failed)
+                armed = false
+                if (point == "committed") {
+                    assertEquals(DocStatus.READY, p.documents.get(id)!!.status)
+                    assertTrue(p.processor().process(id) is ProcessOutcome.Skipped)
+                } else {
+                    assertEquals(DocStatus.FAILED, p.documents.get(id)!!.status)
+                    assertTrue(p.db.reprocessDao().get(id)!!.pending)
+                    p.documents.prepareReprocess(id)
+                    assertTrue(p.processor().process(id) is ProcessOutcome.Ready)
+                }
+                val restored = p.cards.deckCards(id, DeckFilter.ALL).first { it.lemmaKey == card.lemmaKey }
+                assertEquals(CardStatus.KNOWN, restored.status)
+                assertTrue(restored.starred)
+                assertFalse(p.db.reprocessDao().get(id)!!.pending)
+            }
+        }
+    }
+
+    @Test
+    fun legacySnapshotAndInterruptedV1CardsAreRecovered() = runTest {
+        for (withFile in listOf(true, false)) {
+            pipeline().use { p ->
+                val id = p.importText(Lang.EN, Lang.RU)
+                assertTrue(p.processor().process(id) is ProcessOutcome.Ready)
+                val card = p.cards.deckCards(id, DeckFilter.ALL).first()
+                p.cards.setStatus(card.id, CardStatus.KNOWN)
+                p.cards.setStarred(card.id, true)
+                val snapshot = p.db.cardDao().snapshotStatuses(id)
+                // Recreate a v1 interrupted document: no v2 marker, optional surviving file.
+                p.db.openHelper.writableDatabase.execSQL("DELETE FROM ReprocessState")
+                if (withFile) {
+                    DocumentProcessor.writeStatusSnapshot(p.files, id, snapshot)
+                    p.db.cardDao().deleteByDocument(id)
+                }
+                p.documents.requeue(id)
+                assertTrue(p.processor().process(id) is ProcessOutcome.Ready)
+                val restored = p.cards.deckCards(id, DeckFilter.ALL).first { it.lemmaKey == card.lemmaKey }
+                assertEquals(CardStatus.KNOWN, restored.status)
+                assertTrue(restored.starred)
+                // Stale legacy file after completion must not override newer user progress.
+                DocumentProcessor.writeStatusSnapshot(p.files, id, snapshot)
+                p.cards.setStatus(restored.id, CardStatus.LEARNING)
+                p.cards.setStarred(restored.id, false)
+                p.documents.prepareReprocess(id)
+                assertTrue(p.processor().process(id) is ProcessOutcome.Ready)
+                val fresh = p.cards.deckCards(id, DeckFilter.ALL).first { it.lemmaKey == card.lemmaKey }
+                assertEquals(CardStatus.LEARNING, fresh.status)
+                assertFalse(fresh.starred)
+            }
+        }
+    }
+
+    @Test
+    fun cancelledProcessorReleasesReprocessLockAndRetainsProgress() = runTest {
+        val fake = FakeLlmClient()
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        var pause = false
+        val client = object : pro.perfectproduct.cramin.llm.LlmClient {
+            override suspend fun complete(request: pro.perfectproduct.cramin.llm.LlmRequest): pro.perfectproduct.cramin.llm.LlmResponse {
+                if (pause) { entered.complete(Unit); release.await() }
+                return fake.complete(request)
+            }
+        }
+        TestPipeline(tmp.newFolder(), client).use { p ->
+            val id = p.importText(Lang.EN, Lang.RU)
+            assertTrue(p.processor().process(id) is ProcessOutcome.Ready)
+            val card = p.cards.deckCards(id, DeckFilter.ALL).first()
+            p.cards.setStatus(card.id, CardStatus.LEARNING)
+            p.cards.setStarred(card.id, true)
+            p.documents.prepareReprocess(id)
+            pause = true
+            val old = launch { p.processor().process(id) }
+            entered.await()
+            val request = async { p.documents.prepareReprocess(id) }
+            yield()
+            assertFalse(request.isCompleted)
+            old.cancelAndJoin()
+            request.await()
+            pause = false
+            assertTrue(p.processor().process(id) is ProcessOutcome.Ready)
+            val restored = p.cards.deckCards(id, DeckFilter.ALL).first { it.lemmaKey == card.lemmaKey }
+            assertEquals(CardStatus.LEARNING, restored.status)
+            assertTrue(restored.starred)
+        }
+    }
+
 }

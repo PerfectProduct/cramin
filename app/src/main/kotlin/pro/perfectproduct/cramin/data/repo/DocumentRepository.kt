@@ -2,13 +2,13 @@ package pro.perfectproduct.cramin.data.repo
 
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.withLock
 import pro.perfectproduct.cramin.data.db.CraminDatabase
 import pro.perfectproduct.cramin.data.db.Direction
 import pro.perfectproduct.cramin.data.db.DocStatus
 import pro.perfectproduct.cramin.data.db.DocumentEntity
 import pro.perfectproduct.cramin.data.db.DocumentWithCounts
 import pro.perfectproduct.cramin.data.db.SourceType
-import pro.perfectproduct.cramin.pipeline.DocumentProcessor
 import pro.perfectproduct.cramin.util.Clock
 import pro.perfectproduct.cramin.util.Lang
 import pro.perfectproduct.cramin.util.Log
@@ -29,6 +29,7 @@ class DocumentRepository(
     private val db: CraminDatabase,
     private val files: DocumentFiles,
     private val clock: Clock,
+    private val checkpoint: (String) -> Unit = {},
 ) {
     private val documents get() = db.documentDao()
 
@@ -113,23 +114,27 @@ class DocumentRepository(
      * «Обработать заново» (SPEC §6.11): удаляет производные данные, но статусы карточек
      * запоминает по lemmaKey; пайплайн восстановит их после извлечения.
      */
-    suspend fun prepareReprocess(id: Long): List<pro.perfectproduct.cramin.data.db.CardStatusSnapshot> {
-        val now = clock.now()
-        val snapshot = db.withTransaction {
-            val snapshot = db.cardDao().snapshotStatuses(id)
-            db.cardDao().deleteByDocument(id)
-            db.jobDao().deleteByDocument(id)
-            db.segmentDao().deleteByDocument(id)
-            db.sentenceDao().deleteByDocument(id)
-            db.studySessionDao().deleteByPrefix("doc:$id:")
-            documents.setStatus(id, DocStatus.QUEUED, 0f, null, null, now)
-            documents.setUsage(id, 0, 0, null, now)
-            snapshot
+    suspend fun prepareReprocess(id: Long): List<pro.perfectproduct.cramin.data.db.CardStatusSnapshot> =
+        db.documentLock(id).withLock {
+            db.withTransaction {
+                val progress = ReprocessProgress(db, files)
+                val alreadyPending = db.reprocessDao().get(id)?.pending == true
+                val snapshot = progress.capture(id)
+                checkpoint("snapshot")
+                // Repeated requests retain both the snapshot and completed work of this attempt.
+                if (!alreadyPending) {
+                    db.cardDao().deleteByDocument(id)
+                    db.jobDao().deleteByDocument(id)
+                    db.segmentDao().deleteByDocument(id)
+                    db.sentenceDao().deleteByDocument(id)
+                    db.studySessionDao().deleteByPrefix("doc:$id:")
+                    documents.setUsage(id, 0, 0, null, clock.now())
+                }
+                checkpoint("deleted")
+                documents.setStatus(id, DocStatus.QUEUED, 0f, null, null, clock.now())
+                snapshot
+            }.also { checkpoint("prepared") }
         }
-        // Пайплайн восстановит статусы по lemmaKey после записи новых карточек (SPEC §6.11).
-        DocumentProcessor.writeStatusSnapshot(files, id, snapshot)
-        return snapshot
-    }
 
     fun sourceTextFile(id: Long): File = files.sourceText(id)
 

@@ -98,6 +98,12 @@ class ProcessScheduler(private val workManager: WorkManager) {
         Log.i("Scheduler", "enqueued doc=$documentId")
     }
 
+    suspend fun cancelAndAwait(documentId: Long) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            workManager.cancelUniqueWork(ProcessDocumentWorker.uniqueName(documentId)).result.get()
+        }
+    }
+
     fun cancel(documentId: Long) {
         workManager.cancelUniqueWork(ProcessDocumentWorker.uniqueName(documentId))
     }

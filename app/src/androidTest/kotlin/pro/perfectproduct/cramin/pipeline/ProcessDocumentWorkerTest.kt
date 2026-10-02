@@ -59,4 +59,32 @@ class ProcessDocumentWorkerTest {
         assertEquals("result=$result", ListenableWorker.Result.failure(workDataOf(ProcessDocumentWorker.KEY_ERROR to "SAME_LANGUAGE")), result)
         container.db.close()
     }
+    @Test
+    fun reprocessWorkerPreservesProgressAcrossFailureAndRepeatedRequest() = runBlocking {
+        val container = TestContainer(context)
+        try {
+            val id = container.documentRepository.create(NewDocument.Text(Fixtures.text(Lang.EN), null, Lang.RU, null))
+            suspend fun work(): ListenableWorker.Result = TestListenableWorkerBuilder<ProcessDocumentWorker>(context)
+                .setInputData(workDataOf(ProcessDocumentWorker.KEY_DOCUMENT_ID to id))
+                .setWorkerFactory(container.workerFactory).build().doWork()
+            work()
+            val card = container.cardRepository.deckCards(id, DeckFilter.ALL).first()
+            container.cardRepository.setStatus(card.id, pro.perfectproduct.cramin.data.db.CardStatus.LEARNING)
+            container.cardRepository.setStarred(card.id, true)
+            container.documentRepository.prepareReprocess(id)
+            container.fakeLlm.errorInjector = { _, _ -> IllegalStateException("injected worker failure") }
+            work()
+            assertEquals(DocStatus.FAILED, container.documentRepository.get(id)!!.status)
+            assertTrue(container.db.reprocessDao().get(id)!!.pending)
+            container.documentRepository.prepareReprocess(id)
+            container.documentRepository.prepareReprocess(id)
+            container.fakeLlm.errorInjector = null
+            work()
+            assertEquals(DocStatus.READY, container.documentRepository.get(id)!!.status)
+            val restored = container.cardRepository.deckCards(id, DeckFilter.ALL).first { it.lemmaKey == card.lemmaKey }
+            assertEquals(pro.perfectproduct.cramin.data.db.CardStatus.LEARNING, restored.status)
+            assertTrue(restored.starred)
+        } finally { container.db.close() }
+    }
+
 }

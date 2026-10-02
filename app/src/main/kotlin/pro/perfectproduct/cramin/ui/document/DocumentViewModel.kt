@@ -6,8 +6,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import pro.perfectproduct.cramin.app.AppContainer
 import pro.perfectproduct.cramin.data.db.CardCounts
 import pro.perfectproduct.cramin.data.db.CardStatus
@@ -55,6 +57,11 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
     val deckFilter: StateFlow<DeckFilter> = _deckFilter
     fun setDeckFilter(f: DeckFilter) { _deckFilter.value = f }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val canResume = deckFilter.flatMapLatest { filter ->
+        container.studyRepository.observeResumable(DeckKey.Document(documentId, filter).key)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     private val _shuffle = MutableStateFlow(false)
     val shuffle: StateFlow<Boolean> = _shuffle
     fun setShuffle(v: Boolean) { _shuffle.value = v }
@@ -87,10 +94,14 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
         container.processScheduler.enqueue(documentId)
     }
 
-    fun reprocess() = viewModelScope.launch {
-        container.processScheduler.cancel(documentId)
-        container.documentRepository.prepareReprocess(documentId)
-        container.processScheduler.enqueue(documentId)
+    private val reprocessMutex = kotlinx.coroutines.sync.Mutex()
+
+    fun reprocess() = container.appScope.launch {
+        reprocessMutex.withLock {
+            container.processScheduler.cancelAndAwait(documentId)
+            container.documentRepository.prepareReprocess(documentId)
+            container.processScheduler.enqueue(documentId)
+        }
     }
 
     fun chooseSourceLang(lang: Lang) = viewModelScope.launch {

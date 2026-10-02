@@ -124,6 +124,9 @@ fun StudyScreen(
             title = { Text(stringResource(R.string.study_round_title, session.knownThisRound, session.roundSize), modifier = Modifier.testTag("roundSummary")) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { vm.dispatch(SessionEvent.Undo) }, enabled = session.canUndo, modifier = Modifier.fillMaxWidth().testTag("roundUndo")) {
+                        Text(stringResource(R.string.study_undo))
+                    }
                     if (session.learningIdsThisRound.isNotEmpty()) {
                         TextButton(onClick = { vm.dispatch(SessionEvent.RepeatLearning) }, modifier = Modifier.fillMaxWidth().testTag("repeatLearning")) {
                             Text(stringResource(R.string.study_repeat_learning, session.learningIdsThisRound.size))

@@ -1,5 +1,8 @@
 package pro.perfectproduct.cramin.data
 
+import androidx.room.withTransaction
+import pro.perfectproduct.cramin.study.*
+import pro.perfectproduct.cramin.data.repo.StudyRepository
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -153,4 +156,76 @@ class DaoTest {
         assertEquals("Банк был закрыт. Мы сидели на берегу реки.", ex?.translation)
         assertEquals(0, ex?.targetStart)
     }
+    @Test
+    fun sharedUndoSurvivesResumeAndMembershipChangesWithMergedExamples() = runTest {
+        val repo = CardRepository(db, clock)
+        val study = StudyRepository(db, clock)
+        val ids = CardStatus.entries.mapIndexed { i, status ->
+            val d = db.documentDao().insert(doc("synthetic-$i", createdAt = i.toLong()))
+            val id = db.cardDao().insertCard(card(d, "bank", status))
+            val sentence = db.sentenceDao().insertAll(listOf(SentenceEntity(documentId = d, idx = 0, paragraphIdx = 0, text = "bank $i", segmentId = null))).single()
+            val sense = db.cardDao().insertSense(SenseEntity(cardId = id, idx = 0, translation = "sense $i", exampleOccurrenceId = null))
+            val occurrence = db.cardDao().insertOccurrence(OccurrenceEntity(cardId = id, senseId = sense, sentenceId = sentence, surface = "bank", targetSurface = null, start = 0, end = 4, targetStart = null, targetEnd = null, isExample = true))
+            db.cardDao().setSenseExample(sense, occurrence)
+            id
+        }
+        val original = ids.associateWith { repo.getStatus(it) }
+        val shared = repo.sharedDeckCards(Lang.EN, Lang.RU).single()
+        fun machine(state: SessionState) = StudySessionMachine(state, repo.statusStore(true),
+            persist = { study.save(it.deckKey, it.toJson()) }, transaction = { db.withTransaction { it() } })
+        val m = machine(SessionState("all:en:ru", listOf(shared.id)))
+        m.dispatch(SessionEvent.SwipeRight)
+        assertTrue(repo.sharedDeckCards(Lang.EN, Lang.RU).isEmpty())
+        // Completed round is resumable, including the now-known shared card.
+        val state = SessionState.fromJson(study.load("all:en:ru")!!)!!
+        val rebuilt = repo.sharedDeckCards(Lang.EN, Lang.RU, state.order).single()
+        assertEquals(shared.senses, rebuilt.senses)
+        assertTrue(rebuilt.senses.all { it.example != null })
+        machine(state).dispatch(SessionEvent.Undo)
+        assertEquals(original, ids.associateWith { repo.getStatus(it) })
+        // Repeat, delete one original, add a new duplicate: Undo must only touch original IDs.
+        m.dispatch(SessionEvent.Undo)
+        m.dispatch(SessionEvent.SwipeLeft)
+        val resumed = machine(SessionState.fromJson(study.load("all:en:ru")!!)!!)
+        db.documentDao().delete(db.cardDao().getCard(ids.last())!!.documentId)
+        val addedDoc = db.documentDao().insert(doc("added", createdAt = 10))
+        val added = db.cardDao().insertCard(card(addedDoc, "bank", CardStatus.KNOWN))
+        val rebuiltAfterDeletion = repo.sharedDeckCards(Lang.EN, Lang.RU, listOf(shared.id), mapOf(shared.id to ids))
+        assertTrue(rebuiltAfterDeletion.any { it.id == shared.id })
+        resumed.dispatch(SessionEvent.Undo)
+        assertNull(repo.getStatus(ids.last()))
+        assertEquals(CardStatus.KNOWN, repo.getStatus(added))
+        ids.dropLast(1).forEach { assertEquals(original[it], repo.getStatus(it)) }
+    }
+
+    @Test
+    fun failedSessionPersistenceRollsBackWholeGroupAndUndo() = runTest {
+        val repo = CardRepository(db, clock)
+        val ids = CardStatus.entries.map { status ->
+            val d = db.documentDao().insert(doc("synthetic"))
+            db.cardDao().insertCard(card(d, "bank", status))
+        }
+        val before = ids.associateWith { repo.getStatus(it) }
+        val initial = SessionState("all:en:ru", listOf(ids.last()))
+        var fail = true
+        val study = StudyRepository(db, clock)
+        study.save(initial.deckKey, initial.toJson())
+        val m = StudySessionMachine(initial, repo.statusStore(true), persist = {
+            study.save(it.deckKey, it.toJson())
+            if (fail) error("injected after session save")
+        }, transaction = { db.withTransaction { it() } })
+        assertTrue(runCatching { m.dispatch(SessionEvent.SwipeRight) }.isFailure)
+        assertEquals(before, ids.associateWith { repo.getStatus(it) })
+        assertEquals(initial, m.state.value)
+        assertEquals(initial, SessionState.fromJson(study.load(initial.deckKey)!!))
+        fail = false
+        m.dispatch(SessionEvent.SwipeRight)
+        val committed = m.state.value
+        fail = true
+        assertTrue(runCatching { m.dispatch(SessionEvent.Undo) }.isFailure)
+        assertTrue(ids.all { repo.getStatus(it) == CardStatus.KNOWN })
+        assertEquals(committed, m.state.value)
+        assertEquals(committed, SessionState.fromJson(study.load(initial.deckKey)!!))
+    }
+
 }

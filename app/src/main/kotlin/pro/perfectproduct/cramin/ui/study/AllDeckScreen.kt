@@ -63,6 +63,12 @@ class AllDeckViewModel(private val container: AppContainer) : ViewModel() {
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val canResume: StateFlow<Boolean> = current.flatMapLatest { cur ->
+        if (cur == null) flowOf(false) else container.studyRepository.observeResumable(
+            DeckKey.All(Lang.requireCode(cur.first.lang), Lang.requireCode(cur.first.targetLang)).key)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val direction: StateFlow<Direction> = combine(current, container.settingsStore.settings) { cur, s -> cur?.first to s.defaultDirection }
         .flatMapLatest { (pair, def) ->
             if (pair == null) flowOf(def) else container.settingsStore.allDeckDirection(pair.lang, pair.targetLang).map { it ?: def }
@@ -82,6 +88,7 @@ fun AllDeckScreen(onBack: () -> Unit, onStudy: (String, Boolean) -> Unit, vm: Al
     val pairs by vm.pairs.collectAsState()
     val current by vm.current.collectAsState()
     val direction by vm.direction.collectAsState()
+    val canResume by vm.canResume.collectAsState()
     var shuffle by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
@@ -115,7 +122,7 @@ fun AllDeckScreen(onBack: () -> Unit, onStudy: (String, Boolean) -> Unit, vm: Al
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = { onStudy(DeckKey.All(Lang.requireCode(cur.first.lang), Lang.requireCode(cur.first.targetLang)).key, shuffle) },
-                    enabled = cur.second > 0,
+                    enabled = cur.second > 0 || canResume,
                     modifier = Modifier.fillMaxWidth().height(52.dp).testTag("allDeckStudy"),
                 ) { Text(stringResource(R.string.cards_study), style = MaterialTheme.typography.titleMedium) }
                 if (cur.second == 0) {

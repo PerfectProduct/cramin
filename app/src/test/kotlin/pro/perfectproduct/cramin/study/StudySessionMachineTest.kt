@@ -63,12 +63,14 @@ class StudySessionMachineTest {
         assertEquals(listOf(1L, 3L), r2.order)
         assertEquals(0, r2.position)
         assertEquals(0, r2.knownThisRound)
-        assertTrue(r2.undoStack.isEmpty())
+        assertEquals(4, r2.undoStack.size)
         m.dispatch(SessionEvent.SwipeRight)
         m.dispatch(SessionEvent.SwipeRight)
         assertTrue(m.state.value.finished)
-        // Все выучены: «повторить» нечего — начинается заново с полной колоды.
+        // No learning cards: only explicit RestartAll starts a new session.
         m.dispatch(SessionEvent.RepeatLearning)
+        assertTrue(m.state.value.finished)
+        m.dispatch(SessionEvent.RestartAll)
         assertEquals(ids, m.state.value.order)
         assertEquals(1, m.state.value.round)
     }
@@ -150,9 +152,61 @@ class StudySessionMachineTest {
     }
 
     @Test
+    fun undoAcrossRoundBoundaryRestoresPreviousRound() = runTest {
+        val m = machine()
+        m.dispatch(SessionEvent.SwipeLeft)
+        repeat(3) { m.dispatch(SessionEvent.SwipeRight) }
+        val beforeLast = m.state.value.copy(position = 3, knownThisRound = 2)
+        m.dispatch(SessionEvent.RepeatLearning)
+        m.dispatch(SessionEvent.SwipeRight)
+        m.dispatch(SessionEvent.Undo)
+        m.dispatch(SessionEvent.Undo)
+        assertEquals(1, m.state.value.round)
+        assertEquals(ids, m.state.value.order)
+        assertEquals(beforeLast.position, m.state.value.position)
+        assertEquals(beforeLast.knownThisRound, m.state.value.knownThisRound)
+    }
+
+    @Test
     fun deckBuilderIsDeterministic() {
         assertEquals(DeckBuilder.shuffle(ids, 1L), DeckBuilder.shuffle(ids, 1L))
         assertEquals(ids, DeckBuilder.order(ids, shuffle = false, seed = 1L))
         assertEquals(ids.toSet(), DeckBuilder.order(ids, shuffle = true, seed = 1L).toSet())
     }
+    @Test
+    fun legacyJsonRetainsProgressButDiscardsUnprovableUndo() {
+        val legacy = """{"deckKey":"all:en:ru","order":[1,2],"position":1,"knownThisRound":1,"undoStack":[{"cardId":1,"previousStatus":"NEW","action":"KNOWN"}]}"""
+        val state = SessionState.fromJson(legacy)!!
+        assertEquals(1, state.position)
+        assertEquals(1, state.knownThisRound)
+        assertFalse(state.canUndo)
+    }
+
+    @Test
+    fun undoPausesAutoplayAndRestartKeepsDatabaseProgress() = runTest {
+        val statuses = FakeStatuses(ids.associateWith { CardStatus.NEW })
+        val m = machine(statuses)
+        m.dispatch(SessionEvent.SwipeRight)
+        m.dispatch(SessionEvent.ToggleAutoplay)
+        m.dispatch(SessionEvent.Undo)
+        assertFalse(m.state.value.autoplay)
+        m.dispatch(SessionEvent.SwipeRight)
+        m.dispatch(SessionEvent.RestartAll)
+        assertFalse(m.state.value.canUndo)
+        assertEquals(CardStatus.KNOWN, statuses.map[1L])
+    }
+
+    @Test
+    fun legacyLearningCountersRemainConsistentAfterNewUndo() = runTest {
+        val legacy = """{"deckKey":"doc:1:all","order":[1,2,3,4],"position":1,"learningThisRound":1,"learningIdsThisRound":[1],"undoStack":[{"cardId":1,"previousStatus":"NEW","action":"LEARNING"}]}"""
+        val statuses = FakeStatuses(mapOf(1L to CardStatus.LEARNING, 2L to CardStatus.NEW, 3L to CardStatus.NEW, 4L to CardStatus.NEW))
+        val restored = SessionState.fromJson(legacy)!!
+        val m = machine(statuses, restored)
+        m.dispatch(SessionEvent.SwipeLeft)
+        m.dispatch(SessionEvent.Undo)
+        assertEquals(restored, m.state.value)
+        assertEquals(listOf(1L), m.state.value.learningIdsThisRound)
+        assertEquals(CardStatus.LEARNING, statuses.map[1L])
+    }
+
 }

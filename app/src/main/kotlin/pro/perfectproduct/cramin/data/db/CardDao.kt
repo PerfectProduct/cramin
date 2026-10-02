@@ -26,15 +26,16 @@ data class OccurrenceRow(
 )
 
 /** Снимок статуса карточки для «Обработать заново» (сопоставление по lemmaKey, SPEC §6.11). */
+@kotlinx.serialization.Serializable
 data class CardStatusSnapshot(
     val lemmaKey: String,
     val status: CardStatus,
     val starred: Boolean,
-    val dueAt: Long?,
-    val intervalDays: Int?,
-    val ease: Double?,
-    val reps: Int?,
-    val lapses: Int?,
+    val dueAt: Long? = null,
+    val intervalDays: Int? = null,
+    val ease: Double? = null,
+    val reps: Int? = null,
+    val lapses: Int? = null,
 )
 
 data class LangPair(val lang: String, val targetLang: String)
@@ -96,6 +97,9 @@ interface CardDao {
     suspend fun deleteByDocument(documentId: Long)
 
     // --- Чтение -------------------------------------------------------------
+
+    @Query("SELECT * FROM Card WHERE lang = :lang AND targetLang = :targetLang AND lemmaKey = :lemmaKey")
+    suspend fun getLemmaCards(lang: String, targetLang: String, lemmaKey: String): List<CardEntity>
 
     @Query("SELECT * FROM Card WHERE id = :cardId")
     suspend fun getCard(cardId: Long): CardEntity?
