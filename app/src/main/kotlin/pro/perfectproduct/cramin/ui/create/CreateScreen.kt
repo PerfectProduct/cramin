@@ -126,12 +126,12 @@ fun CreateScreen(
             Text(stringResource(R.string.create_source_label), style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(10.dp))
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SourcePill(stringResource(R.string.create_pdf), enabled = state.hasKey, tag = "sourcePdf") { pdfPicker.launch(arrayOf("application/pdf")) }
-                SourcePill(stringResource(R.string.create_url), enabled = state.hasKey, tag = "sourceUrl") {
+                SourcePill(stringResource(R.string.create_pdf), R.drawable.ic_action_document, enabled = state.hasKey, tag = "sourcePdf") { pdfPicker.launch(arrayOf("application/pdf")) }
+                SourcePill(stringResource(R.string.create_url), R.drawable.ic_action_link, enabled = state.hasKey, tag = "sourceUrl") {
                     if (urlText.isEmpty()) clipboardText(context)?.let { if (UrlClassifier.isUrl(it)) urlText = it }
                     mode = CreateMode.URL
                 }
-                SourcePill(stringResource(R.string.create_text), enabled = state.hasKey, tag = "sourceText") {
+                SourcePill(stringResource(R.string.create_text), R.drawable.ic_action_clipboard, enabled = state.hasKey, tag = "sourceText") {
                     if (pastedText.isEmpty()) clipboardText(context)?.let { if (!UrlClassifier.isUrl(it)) pastedText = it }
                     mode = CreateMode.TEXT
                 }
@@ -183,8 +183,9 @@ fun CreateScreen(
 private enum class CreateMode { URL, TEXT }
 
 @Composable
-private fun SourcePill(label: String, enabled: Boolean, tag: String, onClick: () -> Unit) {
-    FilledTonalButton(onClick = onClick, enabled = enabled, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth().height(52.dp).testTag(tag)) {
+private fun SourcePill(label: String, icon: Int, enabled: Boolean, tag: String, onClick: () -> Unit) {
+    FilledTonalButton(onClick = onClick, enabled = enabled, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag(tag)) {
+        Icon(androidx.compose.ui.res.painterResource(icon), null, modifier = Modifier.padding(end = 12.dp))
         Text(label, style = MaterialTheme.typography.titleMedium)
     }
 }

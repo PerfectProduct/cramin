@@ -41,13 +41,14 @@ object SurfaceMatcher {
         return out.sortedWith(compareBy({ it.sentenceIdx }, { it.start }))
     }
 
-    private fun isWordChar(c: Char): Boolean = c.isLetterOrDigit() || c == '_'
+    private fun isWordChar(c: Char): Boolean = isWordCodePoint(c.code)
+    private fun isWordCodePoint(c: Int): Boolean = Character.isLetterOrDigit(c) || c == '_'.code || Character.getType(c) in setOf(6, 7, 8)
 
-    private fun isBoundaryAfter(text: String, endEx: Int): Boolean = endEx >= text.length || !isWordChar(text[endEx])
+    private fun isBoundaryAfter(text: String, endEx: Int): Boolean = endEx >= text.length || !isWordCodePoint(text.codePointAt(endEx))
 
     private fun isBoundaryBefore(text: String, pos: Int, lang: Lang): Boolean {
         if (pos == 0) return true
-        if (!isWordChar(text[pos - 1])) return true
+        if (!isWordCodePoint(text.codePointBefore(pos))) return true
         if (lang != Lang.HE) return false
         // Иврит: слово может начинаться с одной–трёх приставок перед формой.
         var i = pos - 1

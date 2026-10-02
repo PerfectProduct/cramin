@@ -44,7 +44,7 @@
     <string name="library_tab_all">Все</string>
     <string name="library_tab_in_progress">В процессе</string>
     <string name="library_tab_learned">Выученные</string>
-    <string name="library_all_unlearned">🗂 Все невыученные</string>
+    <string name="library_all_unlearned">Все невыученные</string>
     <string name="library_all_unlearned_subtitle">Карточки всех готовых документов</string>
     <string name="library_create">+ Создать</string>
     <string name="library_empty">Добавьте первый текст — статью, видео или PDF</string>
@@ -66,8 +66,8 @@
     <string name="create_target">Перевод на:</string>
     <string name="create_source_label">Загрузите источник</string>
     <string name="create_pdf">📁 Файл PDF</string>
-    <string name="create_url">🔗 ▶ Сайт или YouTube</string>
-    <string name="create_text">📋 Скопированный текст</string>
+    <string name="create_url">Сайт или YouTube</string>
+    <string name="create_text">Скопированный текст</string>
     <string name="create_no_key">Добавьте ключ OpenRouter в настройках</string>
     <string name="create_url_dialog_title">Ссылка на статью или видео</string>
     <string name="create_url_hint">https://…</string>
@@ -92,8 +92,8 @@
     <string name="doc_processing_body">%1$s — %2$d %%</string>
     <string name="doc_big_warning">Большой документ: %1$d слов. Обработка может быть долгой и дорогой.</string>
     <string name="doc_view_pairs">Пары</string>
-    <string name="doc_view_source">Только оригинал</string>
-    <string name="doc_view_target">Только перевод</string>
+    <string name="doc_view_source">Оригинал</string>
+    <string name="doc_view_target">Перевод</string>
     <string name="doc_text_empty">Текст появится после обработки</string>
 
     <!-- Вкладка «Карточки» (§9.5) -->
@@ -253,4 +253,5 @@
     <string name="diagnostic_language">Определение языка</string>
     <string name="diagnostic_unknown">Стадия неизвестна</string>
     <string name="study_migration_notice">Карточки теперь разделены по значениям. Несовместимая сессия сброшена, сохранённый прогресс не обнулён. При повторной обработке прогресс переносится только на однозначно совпавшие значения; остальные требуют проверки.</string>
+    <string name="action_speak">Озвучить</string>
 </resources>

@@ -26,6 +26,19 @@ class StudySessionMachineTest {
         StudySessionMachine(state, statuses, persist = { persisted += it.toJson() }, fullOrder = ids, seedSource = { 42L })
 
     @Test
+    fun pointerDownPausesWithoutChangingCardOrHistory() = runTest {
+        val statuses = FakeStatuses(ids.associateWith { CardStatus.NEW })
+        val m = machine(statuses)
+        m.dispatch(SessionEvent.ToggleAutoplay)
+        val before = m.state.value
+        m.dispatch(SessionEvent.Interaction)
+        assertEquals(before.copy(autoplay = false), m.state.value)
+        m.dispatch(SessionEvent.Tick)
+        assertEquals(before.copy(autoplay = false), m.state.value)
+        assertTrue(statuses.writes.isEmpty())
+    }
+
+    @Test
     fun swipesUpdateCountersStatusesAndPosition() = runTest {
         val statuses = FakeStatuses(ids.associateWith { CardStatus.NEW })
         val m = machine(statuses)

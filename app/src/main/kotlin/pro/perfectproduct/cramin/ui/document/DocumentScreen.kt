@@ -113,8 +113,8 @@ fun DocumentScreen(
         },
         bottomBar = {
             NavigationBar {
-                NavigationBarItem(selected = tab == "text", onClick = { tab = "text" }, icon = { Text("📄") }, label = { Text(stringResource(R.string.doc_tab_text)) }, modifier = Modifier.testTag("tabText"))
-                NavigationBarItem(selected = tab == "cards", onClick = { tab = "cards" }, icon = { Text("🗂") }, label = { Text(stringResource(R.string.doc_tab_cards)) }, modifier = Modifier.testTag("tabCards"))
+                NavigationBarItem(selected = tab == "text", onClick = { tab = "text" }, icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_action_document), null) }, label = { Text(stringResource(R.string.doc_tab_text)) }, modifier = Modifier.testTag("tabText"))
+                NavigationBarItem(selected = tab == "cards", onClick = { tab = "cards" }, icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_action_cards), null) }, label = { Text(stringResource(R.string.doc_tab_cards)) }, modifier = Modifier.testTag("tabCards"))
             }
         },
     ) { padding ->

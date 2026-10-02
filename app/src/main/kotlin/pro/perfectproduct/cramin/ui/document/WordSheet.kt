@@ -2,6 +2,8 @@ package pro.perfectproduct.cramin.ui.document
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +33,7 @@ import pro.perfectproduct.cramin.ui.components.contentTextStyle
 import pro.perfectproduct.cramin.ui.components.posLabel
 
 /** Мини-карточка слова (SPEC §9.4): лемма (иврит с огласовками), часть речи, смыслы, статус, звезда, 🔊. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun WordSheet(card: StudyCard, vm: DocumentViewModel, onChanged: (StudyCard) -> Unit) {
     val tts by vm.ttsAvailable.collectAsState()
@@ -44,7 +47,7 @@ fun WordSheet(card: StudyCard, vm: DocumentViewModel, onChanged: (StudyCard) -> 
                 Text(posLabel(card.pos), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (card.lang in tts) {
-                IconButton(onClick = { vm.speak(card.lemmaVocalized ?: card.lemma, card.lang) }) { Text("🔊") }
+                IconButton(onClick = { vm.speak(card.lemmaVocalized ?: card.lemma, card.lang) }) { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_action_volume), stringResource(R.string.action_speak)) }
             }
             IconButton(onClick = { vm.setStarred(card.id, !card.starred); onChanged(card.copy(starred = !card.starred)) }) {
                 Icon(
@@ -59,7 +62,7 @@ fun WordSheet(card: StudyCard, vm: DocumentViewModel, onChanged: (StudyCard) -> 
             Text("• " + sense.translation, style = contentTextStyle(MaterialTheme.typography.bodyLarge))
         }
         Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatusChip(stringResource(R.string.word_status_new), card.status == CardStatus.NEW) { vm.setStatus(card.id, CardStatus.NEW); onChanged(card.copy(status = CardStatus.NEW)) }
             StatusChip(stringResource(R.string.word_status_learning), card.status == CardStatus.LEARNING) { vm.setStatus(card.id, CardStatus.LEARNING); onChanged(card.copy(status = CardStatus.LEARNING)) }
             StatusChip(stringResource(R.string.word_status_known), card.status == CardStatus.KNOWN) { vm.setStatus(card.id, CardStatus.KNOWN); onChanged(card.copy(status = CardStatus.KNOWN)) }

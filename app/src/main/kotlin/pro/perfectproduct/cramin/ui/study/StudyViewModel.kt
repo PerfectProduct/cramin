@@ -138,6 +138,17 @@ class StudyViewModel(private val container: AppContainer, val deckKeyRaw: String
 
     fun restartInsteadOfResume() { viewModelScope.launch { startFresh(_state.value.resumeCandidate?.initialOrder ?: freshIds) } }
 
+    private var autoplayAtPointerDown = false
+    fun interactionStart() {
+        autoplayAtPointerDown = _state.value.session?.autoplay == true
+        autoplayJob?.cancel()
+        dispatch(SessionEvent.Interaction)
+    }
+    fun autoplayPointerClick() {
+        // Root pointer-down already paused playback; a press on Pause must not restart it.
+        if (!autoplayAtPointerDown) dispatch(SessionEvent.ToggleAutoplay)
+    }
+
     fun dispatch(event: SessionEvent) = viewModelScope.launch {
         val before = _state.value.session
         machine?.dispatch(event)

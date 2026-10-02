@@ -38,6 +38,7 @@ object UnitValidator {
         targetLang: Lang,
     ): List<ValidatedUnit> {
         val out = ArrayList<ValidatedUnit>(units.size)
+        val usedSourceSpans = HashMap<Int, MutableSet<IntRange>>()
         for (u in units) {
             // 1. Единицы с i вне чанка отбрасываются.
             if (u.i !in chunk) continue
@@ -51,11 +52,17 @@ object UnitValidator {
             if (!lemma.contains(' ') && TextNormalizer.normalize(lemma, lang) in stoplist) continue
             // 2. f не найдено — единица остаётся без смещений подсветки.
             val surface = TextNormalizer.nfc(u.f).trim().ifEmpty { lemma }
-            val span = SpanFinder.find(sentence, surface, lang)
+            val used = usedSourceSpans.getOrPut(u.i) { mutableSetOf() }
+            val span = SurfaceMatcher.findAll(listOf(surface), listOf(SentenceDraft(u.i, 0, sentence)), lang)
+                .map { it.start..it.end }.firstOrNull { it !in used }
+            if (span != null) used += span
             // 3. ft не найдено в сегменте — поле обнуляется.
             val ft = u.ft?.let { TextNormalizer.nfc(it).trim() }?.takeIf { it.isNotEmpty() }
             val segment = context.segmentTranslation(u.i)
-            val tSpan = if (ft != null && segment != null) SpanFinder.find(segment, ft, targetLang) else null
+            // Repeated identical translations cannot be aligned reliably from text alone.
+            val tSpan = if (ft != null && segment != null)
+                SurfaceMatcher.findAll(listOf(ft), listOf(SentenceDraft(0, 0, segment)), targetLang)
+                    .singleOrNull()?.let { it.start..it.end } else null
             out += ValidatedUnit(
                 sentenceIdx = u.i,
                 surface = surface,

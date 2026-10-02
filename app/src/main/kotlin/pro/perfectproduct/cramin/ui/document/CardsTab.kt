@@ -2,9 +2,13 @@ package pro.perfectproduct.cramin.ui.document
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -31,6 +35,7 @@ import pro.perfectproduct.cramin.ui.components.StatTile
 import pro.perfectproduct.cramin.util.Lang
 
 /** Вкладка «Карточки» (SPEC §9.5): сводка, фильтр колоды, «Учить», направление, перемешивание. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CardsTab(vm: DocumentViewModel, counts: CardCounts, onStudy: (String, Boolean) -> Unit) {
     val row by vm.document.collectAsState()
@@ -47,15 +52,15 @@ fun CardsTab(vm: DocumentViewModel, counts: CardCounts, onStudy: (String, Boolea
         DeckFilter.STARRED -> counts.starred
     }
     Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            StatTile(stringResource(R.string.cards_total), counts.total, Modifier.weight(1f))
-            StatTile(stringResource(R.string.cards_new), counts.newCount, Modifier.weight(1f))
-            StatTile(stringResource(R.string.cards_learning), counts.learning, Modifier.weight(1f), color = MaterialTheme.colorScheme.tertiary)
-            StatTile(stringResource(R.string.cards_known), counts.known, Modifier.weight(1f), color = MaterialTheme.colorScheme.primary)
-            StatTile(stringResource(R.string.cards_starred), counts.starred, Modifier.weight(1f))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            StatTile(stringResource(R.string.cards_total), counts.total, Modifier.widthIn(min = 88.dp).weight(1f))
+            StatTile(stringResource(R.string.cards_new), counts.newCount, Modifier.widthIn(min = 88.dp).weight(1f))
+            StatTile(stringResource(R.string.cards_learning), counts.learning, Modifier.widthIn(min = 88.dp).weight(1f), color = MaterialTheme.colorScheme.tertiary)
+            StatTile(stringResource(R.string.cards_known), counts.known, Modifier.widthIn(min = 88.dp).weight(1f), color = MaterialTheme.colorScheme.primary)
+            StatTile(stringResource(R.string.cards_starred), counts.starred, Modifier.widthIn(min = 88.dp).weight(1f))
         }
         Spacer(Modifier.height(20.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = filter == DeckFilter.UNLEARNED, onClick = { vm.setDeckFilter(DeckFilter.UNLEARNED) }, label = { Text(stringResource(R.string.cards_filter_unlearned)) })
             FilterChip(selected = filter == DeckFilter.ALL, onClick = { vm.setDeckFilter(DeckFilter.ALL) }, label = { Text(stringResource(R.string.cards_filter_all)) })
             FilterChip(selected = filter == DeckFilter.STARRED, onClick = { vm.setDeckFilter(DeckFilter.STARRED) }, label = { Text(stringResource(R.string.cards_filter_starred)) })
@@ -71,7 +76,7 @@ fun CardsTab(vm: DocumentViewModel, counts: CardCounts, onStudy: (String, Boolea
         }
         Spacer(Modifier.height(16.dp))
         val enabled = doc.status == DocStatus.READY && (deckSize > 0 || canResume)
-        Button(onClick = { onStudy(vm.deckKey(), shuffle) }, enabled = enabled, modifier = Modifier.fillMaxWidth().height(52.dp).testTag("studyButton")) {
+        Button(onClick = { onStudy(vm.deckKey(), shuffle) }, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("studyButton")) {
             Text(stringResource(R.string.cards_study) + if (deckSize > 0) " · $deckSize" else "", style = MaterialTheme.typography.titleMedium)
         }
         if (doc.status == DocStatus.READY && deckSize == 0) {

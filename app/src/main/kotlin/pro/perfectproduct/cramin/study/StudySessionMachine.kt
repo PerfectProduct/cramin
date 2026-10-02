@@ -67,6 +67,7 @@ data class SessionState(
 }
 
 sealed interface SessionEvent {
+    data object Interaction : SessionEvent
     data object Flip : SessionEvent
     data object SwipeRight : SessionEvent
     data object SwipeLeft : SessionEvent
@@ -109,6 +110,7 @@ class StudySessionMachine(
         var committed = s
         transaction {
             val next: SessionState = when (event) {
+                SessionEvent.Interaction -> s.copy(autoplay = false)
                 SessionEvent.Flip -> if (s.finished) s else s.copy(isFlipped = !s.isFlipped, autoplay = false)
                 SessionEvent.SwipeRight -> sort(s, CardStatus.KNOWN)
                 SessionEvent.SwipeLeft -> sort(s, CardStatus.LEARNING)

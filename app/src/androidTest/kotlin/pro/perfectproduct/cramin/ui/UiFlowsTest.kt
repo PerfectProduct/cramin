@@ -2,6 +2,8 @@ package pro.perfectproduct.cramin.ui
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasTestTag
@@ -121,6 +123,29 @@ class UiFlowsTest {
         scenario = ActivityScenario.launch(intent)
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("urlField")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("urlField").assertTextContains("https://example.com/article")
+    }
+
+    @Test
+    fun autoplayPausesOnCancelledPointerAndPauseButtonDoesNotRestart() = runBlocking<Unit> {
+        val id = seedDocument()
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithTag("play-$id").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("studyButton").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
+        // Accessibility action has no preceding pointer-down.
+        compose.onNodeWithTag("autoplay").performClick()
+        compose.onNodeWithTag("autoplay").assertContentDescriptionEquals(context.getString(pro.perfectproduct.cramin.R.string.study_pause))
+        compose.onNodeWithTag("flashCard").performTouchInput { down(center); cancel() }
+        compose.onNodeWithTag("autoplay").assertContentDescriptionEquals(context.getString(pro.perfectproduct.cramin.R.string.study_autoplay))
+        compose.onNodeWithTag("counter").assertTextContains("1 / 2")
+        compose.onNodeWithTag("cardFront").assertIsDisplayed()
+        // Real pointer clicks start then pause, even though root intercepts pointer-down.
+        compose.onNodeWithTag("autoplay").performTouchInput { click() }
+        compose.onNodeWithTag("autoplay").assertContentDescriptionEquals(context.getString(pro.perfectproduct.cramin.R.string.study_pause))
+        compose.onNodeWithTag("autoplay").performTouchInput { click() }
+        compose.onNodeWithTag("autoplay").assertContentDescriptionEquals(context.getString(pro.perfectproduct.cramin.R.string.study_autoplay))
+        assertEquals(CardStatus.NEW, container.cardRepository.getStatus(cardId(id, "bank")))
     }
 
     @Test

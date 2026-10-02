@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -32,7 +33,7 @@ fun StatTile(label: String, value: Int, modifier: Modifier = Modifier, color: Co
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(value.toString(), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = color)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -65,15 +66,20 @@ fun CounterPill(value: Int, color: Color, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun RoundIconButton(emoji: String, contentDescription: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+fun RoundIconButton(emoji: String, contentDescription: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, onAccessibilityClick: () -> Unit = onClick) {
     Box(
         modifier = modifier
             .size(56.dp)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-            .clickable(enabled = enabled, onClick = onClick)
-            .semantics { this.contentDescription = contentDescription },
+            .semantics { this.contentDescription = contentDescription; if (enabled) onClick { onAccessibilityClick(); true } }
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(emoji, style = MaterialTheme.typography.titleLarge, color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f))
+        val icon = when (emoji) {
+            "↶" -> pro.perfectproduct.cramin.R.drawable.ic_action_undo
+            "⏸" -> pro.perfectproduct.cramin.R.drawable.ic_action_pause
+            else -> pro.perfectproduct.cramin.R.drawable.ic_action_play
+        }
+        androidx.compose.material3.Icon(androidx.compose.ui.res.painterResource(icon), null, tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f))
     }
 }

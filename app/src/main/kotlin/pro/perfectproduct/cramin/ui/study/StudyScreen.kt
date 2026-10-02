@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -65,6 +66,14 @@ fun StudyScreen(
     }
 
     Scaffold(
+        modifier = Modifier.pointerInput(vm) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                    if (event.changes.any { it.pressed && !it.previousPressed }) vm.interactionStart()
+                }
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -116,7 +125,8 @@ fun StudyScreen(
                 RoundIconButton(
                     if (session.autoplay) "⏸" else "▶",
                     stringResource(if (session.autoplay) R.string.study_pause else R.string.study_autoplay),
-                    onClick = { vm.dispatch(SessionEvent.ToggleAutoplay) },
+                    onClick = vm::autoplayPointerClick,
+                    onAccessibilityClick = { vm.dispatch(SessionEvent.ToggleAutoplay) },
                     enabled = !session.finished,
                     modifier = Modifier.testTag("autoplay"),
                 )

@@ -158,7 +158,7 @@ private fun CardFace(card: StudyCard, direction: Direction, isFront: Boolean, tt
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             if (speakLang in ttsLangs) {
-                IconButton(onClick = { onSpeak(speakText, speakLang) }, modifier = Modifier.testTag("speak")) { Text("🔊") }
+                IconButton(onClick = { onSpeak(speakText, speakLang) }, modifier = Modifier.testTag("speak")) { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_action_volume), stringResource(R.string.action_speak)) }
             } else {
                 Spacer(Modifier.height(48.dp))
             }
@@ -172,13 +172,13 @@ private fun CardFace(card: StudyCard, direction: Direction, isFront: Boolean, tt
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             if (showSource && isFront) {
-                SourceSide(card)
+                Column(Modifier.verticalScroll(rememberScrollState())) { SourceSide(card) }
             } else if (!showSource && isFront) {
                 Text(
                     card.visibleSenses.joinToString("; ") { it.translation },
                     style = contentTextStyle(MaterialTheme.typography.headlineMedium),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier.testTag("cardFront"),
+                    modifier = Modifier.testTag("cardFront").verticalScroll(rememberScrollState()),
                 )
             } else {
                 BackSide(card, showSource)
@@ -222,13 +222,13 @@ private fun BackSide(card: StudyCard, showSource: Boolean) {
 
 @Composable
 private fun ExampleBlock(ex: StudyExample, highlight: Color) {
-    Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 18.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainerLow).padding(16.dp)) {
         Text(highlighted(ex.sentence, ex.start, ex.end, highlight), style = contentTextStyle(MaterialTheme.typography.bodyMedium))
         if (ex.translation != null) {
             Text(
                 highlighted(ex.translation, ex.targetStart, ex.targetEnd, highlight),
-                style = contentTextStyle(MaterialTheme.typography.bodySmall), color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp),
+                style = contentTextStyle(MaterialTheme.typography.bodyMedium), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 12.dp),
             )
         }
     }
