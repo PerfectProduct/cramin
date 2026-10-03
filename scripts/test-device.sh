@@ -85,7 +85,8 @@ if [ "$LIVE" = 1 ]; then
   ARGS+=("-Pandroid.testInstrumentationRunnerArguments.liveBudgetUsd=${budget:-1.00}")
   [ -z "$CLASS" ] && ARGS+=("-Pandroid.testInstrumentationRunnerArguments.annotation=pro.perfectproduct.cramin.LiveApi")
 else
-  ARGS+=("-Pandroid.testInstrumentationRunnerArguments.notAnnotation=pro.perfectproduct.cramin.LiveApi,pro.perfectproduct.cramin.ExternalSource")
+  ARGS+=("-Pandroid.testInstrumentationRunnerArguments.notAnnotation=pro.perfectproduct.cramin.LiveApi")
+  ARGS+=("-Pandroid.testInstrumentationRunnerArguments.notClass=pro.perfectproduct.cramin.ingest.PublicSourceTest")
 fi
 
 echo "==> ./gradlew ${ARGS[0]} (лог: $LOG; ключ не печатается)"

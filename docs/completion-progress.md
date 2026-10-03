@@ -72,3 +72,22 @@ Updater: update-checks.log — assembleDebug и 131 JVM passed, 0 failed/skipped
 Подтверждено встроенное обновление 0.1.19-debug (98d9a58) → 0.1.20-debug (ea2f21d): pending пережил настоящий SIGKILL; возврат из системного разрешения автоматически открыл installer. Все таблицы БД совпали по хешу, resume и Undo работают. Использован внедрённый проверенный pending APK; production GitHub discovery не проверялся. Доказательства: evidence/update-install.
 
 Увеличенный шрифт: large-card2.log — 9 device сценариев passed (7 UI + 2 длинных карточки EN/HE, font150/200). Прокрутка не сортирует и не переворачивает, действия доступны. Исправлены перенос фильтров библиотеки и отображение номера сохраняемой позиции. API26/36 AOSP образы установлены, smoke ещё впереди.
+
+UI accessibility package: 63a18ec. AUD-007 inventory/notices/source kit prepared; 117 resolved coordinates,
+115 source JARs plus pinned upstream archives. Primary texts include PDFBox's OFL font. Owner's combined
+GPL-compatible distribution decision and exact desugar configuration source/build provenance remain
+publication gates; root licence unchanged. See THIRD_PARTY_NOTICES.md. Next: complete smoke API26/36,
+full offline API34/unit/lint, final screenshots and signed artifacts.
+
+Финальный main: assembleDebug/testDebugUnitTest/lintDebug passed (final-main.log), 131 JVM / 0 failed / 0 skipped.
+Полный device34 первый прогон: 22 tests / 4 failed. Три ExternalSource попали в набор несмотря на
+comma-separated notAnnotation и остановились на opt-in guard до запросов; один UI assert 1/2 остался
+рядом с новым 2/2. Старый assert удалён, бесплатный сетевой класс теперь дополнительно исключается
+через notClass. Предыдущее утверждение о 9 успешных целевых сценариях не является подтверждением
+актуального полного набора; окончательные результаты берутся из свежего XML, а не только BUILD SUCCESSFUL.
+
+Свежий API34: final-device34-pass.log и evidence/final-device34 XML — 19 tests, 0 failed/errors/skipped.
+Второй промежуточный прогон имел 1 test-only failure: assertTextContains требовал substring=true для
+«Продолжить с 2/2»; исправлено. Последний полный main: 131 JVM passed; lint 0 errors / 31 warnings
+(версии, ресурсы, рекомендации и классы trust manager внутри BouncyCastle; приложение их не подключает
+как TLS trust manager). API26/36 запущены последовательно на собственных новых AVD.

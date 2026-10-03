@@ -1,10 +1,17 @@
 package pro.perfectproduct.cramin.ui.settings
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalContext
+import org.json.JSONArray
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,6 +31,20 @@ import pro.perfectproduct.cramin.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LicensesScreen(onBack: () -> Unit) {
+    val assets = LocalContext.current.assets
+    val notices = remember {
+        val index = JSONArray(assets.open("legal/index.json").bufferedReader().use { it.readText() })
+        (0 until index.length()).map { i ->
+            index.getJSONObject(i).let { it.getString("title") to it.getString("file") }
+        }
+    }
+    val inventory = remember {
+        val rows = JSONArray(assets.open("legal/inventory.json").bufferedReader().use { it.readText() })
+        (0 until rows.length()).joinToString("\n") { i ->
+            val row = rows.getJSONObject(i)
+            "${row.getString("group")}:${row.getString("module")}:${row.getString("version")}"
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -32,25 +53,26 @@ fun LicensesScreen(onBack: () -> Unit) {
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(20.dp)) {
-            for ((name, license) in LIBRARIES) {
-                Text(name, style = MaterialTheme.typography.titleSmall)
-                Text(license, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 12.dp))
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
+            item {
+                Text(stringResource(R.string.licenses_explanation), modifier = Modifier.padding(vertical = 16.dp))
+            }
+            item { NoticeSection(stringResource(R.string.licenses_inventory), inventory) }
+            items(notices, key = { it.second }) { (title, file) ->
+                val body = remember(file) { assets.open("legal/$file").bufferedReader().use { it.readText() } }
+                NoticeSection(title, body)
             }
         }
     }
 }
 
-private val LIBRARIES = listOf(
-    "Kotlin, kotlinx.coroutines, kotlinx.serialization" to "Apache License 2.0 — JetBrains",
-    "AndroidX: Compose, Room, WorkManager, DataStore, Navigation, Lifecycle" to "Apache License 2.0 — The Android Open Source Project",
-    "OkHttp, Okio" to "Apache License 2.0 — Square, Inc.",
-    "Readability4J" to "Apache License 2.0 — dankito",
-    "jsoup" to "MIT License — Jonathan Hedley",
-    "NewPipeExtractor" to "GNU General Public License v3.0 — Team NewPipe (используется без изменений; исходники: https://github.com/TeamNewPipe/NewPipeExtractor)",
-    "nanojson" to "Apache License 2.0",
-    "Rhino" to "Mozilla Public License 2.0 — Mozilla",
-    "PdfBox-Android" to "Apache License 2.0 — Tom Roush; Apache PDFBox — Apache Software Foundation",
-    "protobuf-javalite" to "BSD 3-Clause — Google",
-    "desugar_jdk_libs" to "GNU GPL v2 with Classpath Exception — Google",
-)
+
+@Composable
+private fun NoticeSection(title: String, body: String) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(Modifier.padding(vertical = 12.dp)) {
+        Text(title, style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.clickable { expanded = !expanded }.padding(vertical = 8.dp))
+        if (expanded) Text(body, style = MaterialTheme.typography.bodyMedium)
+    }
+}

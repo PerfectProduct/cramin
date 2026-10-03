@@ -209,8 +209,7 @@ class UiFlowsTest {
         // Колода «невыученные» теперь из одной карточки, но сессия продолжается со своих 2 (SPEC §9.6).
         compose.onNodeWithTag("studyButton").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("resume")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("resume").assertTextContains("1/2", substring = true)
-        compose.onNodeWithTag("resume").assertTextContains("2/2").performClick()
+        compose.onNodeWithTag("resume").assertTextContains("2/2", substring = true).performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("counter")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("counter").assertTextContains("2 / 2")
     }

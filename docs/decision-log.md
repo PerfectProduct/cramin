@@ -330,3 +330,11 @@ API34: шесть SIGKILL (repo-snapshot, repo-prepared, replacementDeleted, res
 committed) сохранили per-meaning status/starred; fingerprint одинаков. Force-stop проверен
 отдельно со stopped=true и явным запуском Activity. Это настоящая смерть процесса, не
 моделируемое исключение; платные клиенты в фикстуре отсутствуют. Уведомления были запрещены.
+
+## DL-046 — Attribution and source delivery
+
+Runtime inventory includes transitive libraries, desugaring and PDFBox's bundled font/resources.
+Preserve full primary notices in offline assets and provide pinned source archives outside git;
+do not change the root licence. Proposed combined APK distribution with NewPipe requires GPL-compatible
+terms/source delivery; owner decision remains a publication gate (see THIRD_PARTY_NOTICES.md).
+Source availability is recorded separately from rebuilding every dependency or proving identical binaries.

@@ -1,0 +1,154 @@
+[
+  {
+    "title": "TeamNewPipe/LICENSE",
+    "file": "001.txt"
+  },
+  {
+    "title": "liberationfonts/LICENSE",
+    "file": "002.txt"
+  },
+  {
+    "title": "mozilla/LICENSE.txt",
+    "file": "003.txt"
+  },
+  {
+    "title": "mozilla/NOTICE-tools.txt",
+    "file": "004.txt"
+  },
+  {
+    "title": "mozilla/NOTICE.txt",
+    "file": "005.txt"
+  },
+  {
+    "title": "google/LICENSE",
+    "file": "006.txt"
+  },
+  {
+    "title": "nanojson copyright",
+    "file": "007.txt"
+  },
+  {
+    "title": "TomRoush/LICENSE.txt",
+    "file": "008.txt"
+  },
+  {
+    "title": "TomRoush/NOTICE.txt",
+    "file": "009.txt"
+  },
+  {
+    "title": "activity-compose/META-INF/androidx/activity/activity-compose/LICENSE.txt; activity-ktx/META-INF/androidx/activity/activity-ktx/LICENSE.txt; activity/META-INF/androidx/activity/activity/LICENSE.txt; annotation-experimental/META-INF/androidx/annotation/annotation-experimental/LICENSE.txt; annotation-jvm/META-INF/androidx/annotation/annotation/LICENSE.txt; collection-jvm/META-INF/androidx/collection/collection/LICENSE.txt; collection-ktx/META-INF/androidx/collection/collection-ktx/LICENSE.txt; animation-android/META-INF/androidx/compose/animation/animation/LICENSE.txt; animation-core-android/META-INF/androidx/compose/animation/animation-core/LICENSE.txt; foundation-android/META-INF/androidx/compose/foundation/foundation/LICENSE.txt; foundation-layout-android/META-INF/androidx/compose/foundation/foundation-layout/LICENSE.txt; material3-android/META-INF/androidx/compose/material3/material3/LICENSE.txt; material-ripple-android/META-INF/androidx/compose/material/material-ripple/LICENSE.txt; runtime-android/META-INF/androidx/compose/runtime/runtime/LICENSE.txt; runtime-annotation-android/META-INF/androidx/compose/runtime/runtime-annotation/LICENSE.txt; runtime-retain-android/META-INF/androidx/compose/runtime/runtime-retain/LICENSE.txt; runtime-saveable-android/META-INF/androidx/compose/runtime/runtime-saveable/LICENSE.txt; ui-android/META-INF/androidx/compose/ui/ui/LICENSE.txt; ui-geometry-android/META-INF/androidx/compose/ui/ui-geometry/LICENSE.txt; ui-graphics-android/META-INF/androidx/compose/ui/ui-graphics/LICENSE.txt; ui-test-manifest/META-INF/androidx/compose/ui/ui-test-manifest/LICENSE.txt; ui-text-android/META-INF/androidx/compose/ui/ui-text/LICENSE.txt; ui-tooling-android/META-INF/androidx/compose/ui/ui-tooling/LICENSE.txt; ui-tooling-data-android/META-INF/androidx/compose/ui/ui-tooling-data/LICENSE.txt; ui-tooling-preview-android/META-INF/androidx/compose/ui/ui-tooling-preview/LICENSE.txt; ui-unit-android/META-INF/androidx/compose/ui/ui-unit/LICENSE.txt; ui-util-android/META-INF/androidx/compose/ui/ui-util/LICENSE.txt; core-ktx/META-INF/androidx/core/core-ktx/LICENSE.txt; core-viewtree/META-INF/androidx/core/core-viewtree/LICENSE.txt; core/META-INF/androidx/core/core/LICENSE.txt; datastore-android/META-INF/androidx/datastore/datastore/LICENSE.txt; datastore-core-android/META-INF/androidx/datastore/datastore-core/LICENSE.txt; datastore-core-okio-jvm/META-INF/androidx/datastore/datastore-core-okio/LICENSE.txt; datastore-preferences-android/META-INF/androidx/datastore/datastore-preferences/LICENSE.txt; datastore-preferences-core-android/META-INF/androidx/datastore/datastore-preferences-core/LICENSE.txt; datastore-preferences-proto/META-INF/androidx/datastore/datastore-preferences-proto/LICENSE.txt; lifecycle-common-java8/META-INF/androidx/lifecycle/lifecycle-common-java8/LICENSE.txt; lifecycle-common-jvm/META-INF/androidx/lifecycle/lifecycle-common/LICENSE.txt; lifecycle-livedata-core-ktx/META-INF/androidx/lifecycle/lifecycle-livedata-core-ktx/LICENSE.txt; lifecycle-livedata-core/META-INF/androidx/lifecycle/lifecycle-livedata-core/LICENSE.txt; lifecycle-livedata/META-INF/androidx/lifecycle/lifecycle-livedata/LICENSE.txt; lifecycle-process/META-INF/androidx/lifecycle/lifecycle-process/LICENSE.txt; lifecycle-runtime-android/META-INF/androidx/lifecycle/lifecycle-runtime/LICENSE.txt; lifecycle-runtime-compose-android/META-INF/androidx/lifecycle/lifecycle-runtime-compose/LICENSE.txt; lifecycle-runtime-ktx-android/META-INF/androidx/lifecycle/lifecycle-runtime-ktx/LICENSE.txt; lifecycle-service/META-INF/androidx/lifecycle/lifecycle-service/LICENSE.txt; lifecycle-viewmodel-android/META-INF/androidx/lifecycle/lifecycle-viewmodel/LICENSE.txt; lifecycle-viewmodel-compose-android/META-INF/androidx/lifecycle/lifecycle-viewmodel-compose/LICENSE.txt; lifecycle-viewmodel-ktx/META-INF/androidx/lifecycle/lifecycle-viewmodel-ktx/LICENSE.txt; lifecycle-viewmodel-savedstate-android/META-INF/androidx/lifecycle/lifecycle-viewmodel-savedstate/LICENSE.txt; lifecycle-viewmodel/META-INF/androidx/lifecycle/lifecycle-viewmodel/LICENSE.txt; navigation-common-android/META-INF/androidx/navigation/navigation-common/LICENSE.txt; navigation-compose-android/META-INF/androidx/navigation/navigation-compose/LICENSE.txt; navigation-runtime-android/META-INF/androidx/navigation/navigation-runtime/LICENSE.txt; navigationevent-android/META-INF/androidx/navigationevent/navigationevent/LICENSE.txt; navigationevent-compose-android/META-INF/androidx/navigationevent/navigationevent-compose/LICENSE.txt; profileinstaller/META-INF/androidx/profileinstaller/profileinstaller/LICENSE.txt; room-common-jvm/META-INF/androidx/room/room-common/LICENSE.txt; room-ktx/META-INF/androidx/room/room-ktx/LICENSE.txt; room-runtime-android/META-INF/androidx/room/room-runtime/LICENSE.txt; savedstate-android/META-INF/androidx/savedstate/savedstate/LICENSE.txt; savedstate-compose-android/META-INF/androidx/savedstate/savedstate-compose/LICENSE.txt; savedstate-ktx/META-INF/androidx/savedstate/savedstate-ktx/LICENSE.txt; sqlite-android/META-INF/androidx/sqlite/sqlite/LICENSE.txt; sqlite-framework-android/META-INF/androidx/sqlite/sqlite-framework/LICENSE.txt; startup-runtime/META-INF/androidx/startup/startup-runtime/LICENSE.txt; transition/META-INF/androidx/transition/transition/LICENSE.txt; window-core-android/META-INF/androidx/window/window-core/LICENSE.txt; window/META-INF/androidx/window/window/LICENSE.txt; work-runtime-ktx/META-INF/androidx/work/work-runtime-ktx/LICENSE.txt; work-runtime/META-INF/androidx/work/work-runtime/LICENSE.txt",
+    "file": "010.txt"
+  },
+  {
+    "title": "datastore-preferences-external-protobuf/META-INF/androidx/datastore/datastore-preferences-external-protobuf/LICENSE.txt",
+    "file": "011.txt"
+  },
+  {
+    "title": "desugar_jdk_libs_configuration_nio/LICENSE",
+    "file": "012.txt"
+  },
+  {
+    "title": "listenablefuture copyright",
+    "file": "013.txt"
+  },
+  {
+    "title": "protobuf-javalite copyright",
+    "file": "014.txt"
+  },
+  {
+    "title": "Bouncy Castle licence",
+    "file": "015.txt"
+  },
+  {
+    "title": "jsoup/META-INF/jsoup/LICENSE",
+    "file": "016.txt"
+  },
+  {
+    "title": "slf4j-api copyright",
+    "file": "017.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/fontbox/resources/unicode/Scripts.txt",
+    "file": "018.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/Courier-Bold.afm",
+    "file": "019.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/Courier-BoldOblique.afm",
+    "file": "020.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/Courier-Oblique.afm",
+    "file": "021.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/Courier.afm",
+    "file": "022.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/Helvetica-Bold.afm",
+    "file": "023.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/Helvetica-BoldOblique.afm",
+    "file": "024.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/Helvetica-Oblique.afm",
+    "file": "025.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/Helvetica.afm",
+    "file": "026.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/Symbol.afm",
+    "file": "027.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/Times-Bold.afm",
+    "file": "028.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/Times-BoldItalic.afm",
+    "file": "029.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/Times-Italic.afm",
+    "file": "030.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/Times-Roman.afm",
+    "file": "031.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/afm/ZapfDingbats.afm",
+    "file": "032.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/glyphlist/additional.txt",
+    "file": "033.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/glyphlist/glyphlist.txt",
+    "file": "034.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/glyphlist/zapfdingbats.txt",
+    "file": "035.txt"
+  },
+  {
+    "title": "PDFBox resource assets/com/tom_roush/pdfbox/resources/text/BidiMirroring.txt",
+    "file": "036.txt"
+  },
+  {
+    "title": "Liberation Sans bundled font",
+    "file": "037.txt"
+  },
+  {
+    "title": "protobuf-BSD",
+    "file": "038.txt"
+  }
+]
