@@ -144,3 +144,26 @@ Next: commit this verified package, then build/copy debug from that SHA and reco
 no further repo commit after artifact build. Publication and paid calls remain unauthorized.
 Completed commit for this pass is identified by subject “Fix BRIEF request budgeting and preserve safe failure provenance”;
 exact SHA and post-commit artifact checks belong in external HANDOFF.md (avoid changing version just to record its SHA).
+
+## Approved isolated BRIEF probe — 2026-10-03
+
+User explicitly authorized <=2 BRIEF calls, <=$0.10 total; no other stages. Production baseline
+09c540c. Dedicated opt-in live test excludes all other live classes via init filter; maxAttempts=1,
+OkHttp retry/redirect off, network interceptor rejects a second HTTP attempt, persistent slots
+reserved before requests. Fresh public catalog + endpoints, maximum pricing including tiers/cache
+write, full serialized byte proxy +4096 input reserve +6000 output +25% monetary margin.
+First short RU upper bound $0.03457875. No phone model/snapshot assumed; uses repo BRIEF config.
+Evidence /home/dev/cramin-completion/2026-10-03-brief-live/. Next: inspect first safe result;
+second only if it answers remaining question and cumulative reserved bounds remain <=$0.10.
+
+
+Probe completed: short HTTP200, 346/232 tokens, $0.0003476; longer RU HTTP200, 2175/265,
+$0.0008616. Exactly 2 HTTP attempts, total reported $0.0012092; sum reserved bounds $0.08353875.
+No source/pipeline/STT stages run. Second answered larger-input contract question after short success.
+Original phone causes remain unknown. Current authorization exhausted: no more paid calls.
+One long Gradle invocation was UP-TO-DATE/no HTTP; init mode input corrected, ledger verified.
+Next: archive report/runner, offline regression, commit test/docs-only evidence; rebuild debug for
+resulting history version. Production code unchanged; earlier 0.1.24 remains valid for 09c540c.
+Offline JVM after probe: 142 passed, 0 failures/errors/skipped (`offline.log`); live excluded.
+Production source unchanged. Evidence commit subject: “Record bounded live BRIEF diagnostic results”;
+exact SHA and post-commit debug artifact recorded in external HANDOFF.md to avoid version recursion.
