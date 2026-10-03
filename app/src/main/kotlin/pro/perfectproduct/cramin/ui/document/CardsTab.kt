@@ -37,7 +37,7 @@ import pro.perfectproduct.cramin.util.Lang
 /** Вкладка «Карточки» (SPEC §9.5): сводка, фильтр колоды, «Учить», направление, перемешивание. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun CardsTab(vm: DocumentViewModel, counts: CardCounts, onStudy: (String, Boolean) -> Unit) {
+fun CardsTab(vm: DocumentViewModel, counts: CardCounts, onStudy: (String, Boolean) -> Unit, header: @Composable () -> Unit = {}) {
     val row by vm.document.collectAsState()
     val filter by vm.deckFilter.collectAsState()
     val shuffle by vm.shuffle.collectAsState()
@@ -51,40 +51,43 @@ fun CardsTab(vm: DocumentViewModel, counts: CardCounts, onStudy: (String, Boolea
         DeckFilter.ALL -> counts.total
         DeckFilter.STARRED -> counts.starred
     }
-    Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            StatTile(stringResource(R.string.cards_total), counts.total, Modifier.widthIn(min = 88.dp).weight(1f))
-            StatTile(stringResource(R.string.cards_new), counts.newCount, Modifier.widthIn(min = 88.dp).weight(1f))
-            StatTile(stringResource(R.string.cards_learning), counts.learning, Modifier.widthIn(min = 88.dp).weight(1f), color = MaterialTheme.colorScheme.tertiary)
-            StatTile(stringResource(R.string.cards_known), counts.known, Modifier.widthIn(min = 88.dp).weight(1f), color = MaterialTheme.colorScheme.primary)
-            StatTile(stringResource(R.string.cards_starred), counts.starred, Modifier.widthIn(min = 88.dp).weight(1f))
-        }
-        Spacer(Modifier.height(20.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = filter == DeckFilter.UNLEARNED, onClick = { vm.setDeckFilter(DeckFilter.UNLEARNED) }, label = { Text(stringResource(R.string.cards_filter_unlearned)) })
-            FilterChip(selected = filter == DeckFilter.ALL, onClick = { vm.setDeckFilter(DeckFilter.ALL) }, label = { Text(stringResource(R.string.cards_filter_all)) })
-            FilterChip(selected = filter == DeckFilter.STARRED, onClick = { vm.setDeckFilter(DeckFilter.STARRED) }, label = { Text(stringResource(R.string.cards_filter_starred)) })
-        }
-        Spacer(Modifier.height(20.dp))
-        if (src != null && tgt != null) {
-            DirectionToggle(src = src, tgt = tgt, direction = direction, onChange = vm::setDirection, modifier = Modifier.align(Alignment.CenterHorizontally))
-        }
-        Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = shuffle, onCheckedChange = vm::setShuffle)
-            Text(stringResource(R.string.cards_shuffle))
-        }
-        Spacer(Modifier.height(16.dp))
-        val enabled = doc.status == DocStatus.READY && (deckSize > 0 || canResume)
-        Button(onClick = { onStudy(vm.deckKey(), shuffle) }, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("studyButton")) {
-            Text(stringResource(R.string.cards_study) + if (deckSize > 0) " · $deckSize" else "", style = MaterialTheme.typography.titleMedium)
-        }
-        if (doc.status == DocStatus.READY && deckSize == 0) {
+    Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+        header()
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                StatTile(stringResource(R.string.cards_total), counts.total, Modifier.widthIn(min = 88.dp).weight(1f))
+                StatTile(stringResource(R.string.cards_new), counts.newCount, Modifier.widthIn(min = 88.dp).weight(1f))
+                StatTile(stringResource(R.string.cards_learning), counts.learning, Modifier.widthIn(min = 88.dp).weight(1f), color = MaterialTheme.colorScheme.tertiary)
+                StatTile(stringResource(R.string.cards_known), counts.known, Modifier.widthIn(min = 88.dp).weight(1f), color = MaterialTheme.colorScheme.primary)
+                StatTile(stringResource(R.string.cards_starred), counts.starred, Modifier.widthIn(min = 88.dp).weight(1f))
+            }
+            Spacer(Modifier.height(20.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = filter == DeckFilter.UNLEARNED, onClick = { vm.setDeckFilter(DeckFilter.UNLEARNED) }, label = { Text(stringResource(R.string.cards_filter_unlearned)) })
+                FilterChip(selected = filter == DeckFilter.ALL, onClick = { vm.setDeckFilter(DeckFilter.ALL) }, label = { Text(stringResource(R.string.cards_filter_all)) })
+                FilterChip(selected = filter == DeckFilter.STARRED, onClick = { vm.setDeckFilter(DeckFilter.STARRED) }, label = { Text(stringResource(R.string.cards_filter_starred)) })
+            }
+            Spacer(Modifier.height(20.dp))
+            if (src != null && tgt != null) {
+                DirectionToggle(src = src, tgt = tgt, direction = direction, onChange = vm::setDirection, modifier = Modifier.align(Alignment.CenterHorizontally))
+            }
             Spacer(Modifier.height(12.dp))
-            Text(
-                stringResource(if (filter == DeckFilter.UNLEARNED && counts.total > 0) R.string.cards_all_learned else R.string.cards_empty_deck),
-                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = shuffle, onCheckedChange = vm::setShuffle)
+                Text(stringResource(R.string.cards_shuffle))
+            }
+            Spacer(Modifier.height(16.dp))
+            val enabled = doc.status == DocStatus.READY && (deckSize > 0 || canResume)
+            Button(onClick = { onStudy(vm.deckKey(), shuffle) }, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("studyButton")) {
+                Text(stringResource(R.string.cards_study) + if (deckSize > 0) " · $deckSize" else "", style = MaterialTheme.typography.titleMedium)
+            }
+            if (doc.status == DocStatus.READY && deckSize == 0) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    stringResource(if (filter == DeckFilter.UNLEARNED && counts.total > 0) R.string.cards_all_learned else R.string.cards_empty_deck),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
+            }
         }
     }
 }

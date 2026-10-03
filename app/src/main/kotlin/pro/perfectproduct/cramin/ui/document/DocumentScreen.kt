@@ -120,12 +120,14 @@ fun DocumentScreen(
     ) { padding ->
         if (doc == null) return@Scaffold
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            DocumentHeader(doc, counts.total, counts.known)
-            StatusBanner(doc, onCopy = vm::copyDiagnostics, onResumeApi = vm::resumeConsolidationWithApi, onRetryLocal = vm::retryLocalConsolidation, onRetry = vm::retry, onOpenSettings = onOpenSettings, onChooseLang = { chooseLang = it }, onCheckUpdates = onOpenSettings)
+            val header: @Composable () -> Unit = {
+                DocumentHeader(doc, counts.total, counts.known)
+                StatusBanner(doc, onCopy = vm::copyDiagnostics, onResumeApi = vm::resumeConsolidationWithApi, onRetryLocal = vm::retryLocalConsolidation, onRetry = vm::retry, onOpenSettings = onOpenSettings, onChooseLang = { chooseLang = it }, onCheckUpdates = onOpenSettings)
+            }
             if (tab == "text") {
-                TextTab(vm)
+                TextTab(vm, header)
             } else {
-                CardsTab(vm, counts, onStudy = onStudy)
+                CardsTab(vm, counts, onStudy = onStudy, header = header)
             }
         }
     }
@@ -210,7 +212,7 @@ private fun StatusBanner(doc: DocumentEntity, onCopy: (android.content.Context) 
     if (confirmApi) AlertDialog(
         onDismissRequest = { confirmApi = false },
         title = { Text(stringResource(R.string.consolidation_api_resume)) },
-        text = { Text(stringResource(R.string.consolidation_api_confirm)) },
+        text = { Text(stringResource(R.string.consolidation_api_confirm), modifier = Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { TextButton(onClick = { confirmApi = false; onResumeApi() }) { Text(stringResource(R.string.consolidation_api_start)) } },
         dismissButton = { TextButton(onClick = { confirmApi = false }) { Text(stringResource(R.string.consolidation_api_cancel)) } },
     )

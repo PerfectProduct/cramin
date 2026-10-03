@@ -6,10 +6,12 @@ import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
@@ -94,7 +96,7 @@ class UiFlowsTest {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             clipboard.setPrimaryClip(android.content.ClipData.newPlainText("test", ""))
         }
-        compose.onNodeWithText("Скопировать диагностику").performClick()
+        compose.onNodeWithText("Скопировать диагностику").performScrollTo().performClick()
         compose.waitUntil(10_000) {
             var copied = ""
             compose.runOnIdle {
@@ -167,12 +169,29 @@ class UiFlowsTest {
 
     @Test fun consolidationFailureOffersExplicitNetworkFreeRecovery() = runBlocking<Unit> {
         val id = seedDocument()
+        val saved = container.documentRepository.get(id)!!
+        container.db.documentDao().update(saved.copy(sourceType = SourceType.URL, sourceLang = "ru", targetLang = "en",
+            modelsSnapshotJson = """{"brief":{"model":"synthetic-model"}}"""))
+        container.db.openHelper.writableDatabase.execSQL("DELETE FROM Card WHERE documentId = ?", arrayOf(id))
         container.db.documentDao().setStatus(id, DocStatus.FAILED, .54f, "UNKNOWN", "PRIVATE", 2)
         container.db.documentDao().setFailure(id,
             """{"source":"URL","stage":"CONSOLIDATING","code":"UNKNOWN","observedAtEpochMs":1791027829315,"local":{"build":"0.1.26-debug","buildCode":26,"attemptId":"synthetic","cacheOnly":true,"step":"REQUEST","exceptionTypes":["pro.perfectproduct.cramin.pipeline.ConsolidationCacheMissing"],"appFrames":[],"counts":{},"clientInvocations":0,"clientResponses":0}}""")
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithText("Riverside Library").performClick()
-        compose.onNodeWithTag("retryLocalConsolidation").assertIsDisplayed()
+        compose.onNodeWithTag("retryLocalConsolidation").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.err_consolidation_cache_unfinished)).performScrollTo().assertIsDisplayed()
+        for (tab in listOf("tabText", "tabCards")) {
+            compose.onNodeWithTag(tab).assertIsDisplayed().performClick()
+            compose.onNodeWithTag("retryLocalConsolidation").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithTag("resumeConsolidationApi").performScrollTo().assertIsDisplayed()
+            captureDocumentActions(tab)
+            compose.onNodeWithTag("resumeConsolidationApi").performClick()
+            compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.consolidation_api_confirm)).assertIsDisplayed()
+            assertEquals(0, container.fakeLlm.requests.size)
+            compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.consolidation_api_cancel)).assertIsDisplayed().performClick()
+            assertEquals(DocStatus.FAILED, container.documentRepository.get(id)?.status)
+            assertEquals(0, container.fakeLlm.requests.size)
+        }
         copyStateAndWait()
         compose.runOnIdle {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
@@ -180,13 +199,18 @@ class UiFlowsTest {
             org.junit.Assert.assertTrue(copied.contains("ConsolidationCacheMissing"))
             org.junit.Assert.assertTrue(copied.contains("NOT_INVOKED"))
         }
-        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.err_consolidation_cache_unfinished)).assertIsDisplayed()
-        compose.onNodeWithTag("resumeConsolidationApi").performClick()
-        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.consolidation_api_confirm)).assertIsDisplayed()
-        assertEquals(0, container.fakeLlm.requests.size)
-        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.consolidation_api_cancel)).performClick()
-        assertEquals(DocStatus.FAILED, container.documentRepository.get(id)?.status)
-        assertEquals(0, container.fakeLlm.requests.size)
+    }
+
+    // Opt-in synthetic screenshots collected by Gradle; no document data from the owner.
+    private fun captureDocumentActions(tab: String) {
+        val args = androidx.test.platform.app.InstrumentationRegistry.getArguments()
+        if (args.getString("captureDocumentActions") != "true") return
+        val dir = args.getString("additionalTestOutputDir") ?: return
+        val bitmap = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        java.io.File(dir, "document-actions-$tab.png").outputStream().use {
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+        }
+        bitmap.recycle()
     }
 
     @Test
@@ -212,6 +236,15 @@ class UiFlowsTest {
         compose.onNodeWithTag("urlField").assertTextContains("https://example.com/article")
     }
 
+    private fun awaitAutoplayDescription(label: Int) {
+        val description = context.getString(label)
+        // Session changes commit to Room off the Compose clock before reaching the UI.
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasTestTag("autoplay") and hasContentDescription(description)).fetchSemanticsNodes().size == 1
+        }
+        compose.onNodeWithTag("autoplay").assertContentDescriptionEquals(description)
+    }
+
     @Test
     fun autoplayPausesOnCancelledPointerAndPauseButtonDoesNotRestart() = runBlocking<Unit> {
         val id = seedDocument()
@@ -222,16 +255,16 @@ class UiFlowsTest {
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
         // Accessibility action has no preceding pointer-down.
         compose.onNodeWithTag("autoplay").performClick()
-        compose.onNodeWithTag("autoplay").assertContentDescriptionEquals(context.getString(pro.perfectproduct.cramin.R.string.study_pause))
+        awaitAutoplayDescription(pro.perfectproduct.cramin.R.string.study_pause)
         compose.onNodeWithTag("flashCard").performTouchInput { down(center); cancel() }
-        compose.onNodeWithTag("autoplay").assertContentDescriptionEquals(context.getString(pro.perfectproduct.cramin.R.string.study_autoplay))
+        awaitAutoplayDescription(pro.perfectproduct.cramin.R.string.study_autoplay)
         compose.onNodeWithTag("counter").assertTextContains("1 / 2")
         compose.onNodeWithTag("cardFront").assertIsDisplayed()
         // Real pointer clicks start then pause, even though root intercepts pointer-down.
         compose.onNodeWithTag("autoplay").performTouchInput { click() }
-        compose.onNodeWithTag("autoplay").assertContentDescriptionEquals(context.getString(pro.perfectproduct.cramin.R.string.study_pause))
+        awaitAutoplayDescription(pro.perfectproduct.cramin.R.string.study_pause)
         compose.onNodeWithTag("autoplay").performTouchInput { click() }
-        compose.onNodeWithTag("autoplay").assertContentDescriptionEquals(context.getString(pro.perfectproduct.cramin.R.string.study_autoplay))
+        awaitAutoplayDescription(pro.perfectproduct.cramin.R.string.study_autoplay)
         assertEquals(CardStatus.NEW, container.cardRepository.getStatus(cardId(id, "bank")))
     }
 

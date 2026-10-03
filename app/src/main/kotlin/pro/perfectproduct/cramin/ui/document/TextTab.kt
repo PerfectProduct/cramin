@@ -46,7 +46,7 @@ import pro.perfectproduct.cramin.ui.components.contentTextStyle
 /** Вкладка «Текст» (SPEC §9.4): абзацы → сегменты, подчёркнутые слова, режимы Пары/Оригинал/Перевод. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun TextTab(vm: DocumentViewModel) {
+fun TextTab(vm: DocumentViewModel, header: @Composable () -> Unit = {}) {
     val paragraphs by vm.paragraphs.collectAsState()
     val mode by vm.viewMode.collectAsState()
     var sheetCard by remember { mutableStateOf<StudyCard?>(null) }
@@ -58,19 +58,22 @@ fun TextTab(vm: DocumentViewModel) {
         loadingCardId = null
     }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        FlowRow(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = mode == TextViewMode.PAIRS, onClick = { vm.setViewMode(TextViewMode.PAIRS) }, label = { Text(stringResource(R.string.doc_view_pairs)) })
-            FilterChip(selected = mode == TextViewMode.SOURCE_ONLY, onClick = { vm.setViewMode(TextViewMode.SOURCE_ONLY) }, label = { Text(stringResource(R.string.doc_view_source)) })
-            FilterChip(selected = mode == TextViewMode.TARGET_ONLY, onClick = { vm.setViewMode(TextViewMode.TARGET_ONLY) }, label = { Text(stringResource(R.string.doc_view_target)) })
+    LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(28.dp), modifier = Modifier.testTag("textList")) {
+        item(key = "documentHeader") {
+            Column {
+                header()
+                FlowRow(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = mode == TextViewMode.PAIRS, onClick = { vm.setViewMode(TextViewMode.PAIRS) }, label = { Text(stringResource(R.string.doc_view_pairs)) })
+                    FilterChip(selected = mode == TextViewMode.SOURCE_ONLY, onClick = { vm.setViewMode(TextViewMode.SOURCE_ONLY) }, label = { Text(stringResource(R.string.doc_view_source)) })
+                    FilterChip(selected = mode == TextViewMode.TARGET_ONLY, onClick = { vm.setViewMode(TextViewMode.TARGET_ONLY) }, label = { Text(stringResource(R.string.doc_view_target)) })
+                }
+            }
         }
         if (paragraphs.isEmpty()) {
-            EmptyState("📄", stringResource(R.string.doc_text_empty))
-            return@Column
-        }
-        LazyColumn(contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(28.dp), modifier = Modifier.testTag("textList")) {
+            item(key = "empty") { EmptyState("📄", stringResource(R.string.doc_text_empty)) }
+        } else {
             items(paragraphs, key = { it.paragraphIdx }) { paragraph ->
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     for (segment in paragraph.segments) {
                         Column {
                             if (mode != TextViewMode.TARGET_ONLY) {

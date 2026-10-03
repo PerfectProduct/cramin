@@ -424,3 +424,18 @@ origin/transport observation; do not fabricate a response for a missing record. 
 summary checks cached pipeline coverage and expected meaning keys/occurrence count vs stored cards.
 No schema change, no API, no settings/model/limit changes. Semantic completeness remains unprovable;
 historical fallback provenance can be unknown. Details: READY-HISTORY.md. Cost task explicitly excluded.
+
+## DL052 — Document recovery actions scroll with content (2026-10-04)
+
+The 0.1.29 document header/status were non-scrolling siblings above the tab. Legacy warnings,
+expanded diagnostic history and the cache-only explanation could exceed the viewport, clipping
+recovery actions. Put the shared header/status inside each tab's single scrolling surface: a header
+item in the text LazyColumn, and a header above the cards controls in their scrolling Column.
+Keep navigation bars outside scrolling. Long API-confirmation text also scrolls; confirmation remains
+explicit and separate from opening the dialog. No pipeline, cache, database or paid-call behavior changes.
+Extend the existing recovery UI test with legacy URL/RU→EN/zero cards and both tabs, clipboard and
+cancelled API confirmation. Evidence: /home/dev/cramin-completion/2026-10-04-document-actions/.
+
+Validation also exposed an existing UI-test synchronization race: autoplay transitions publish only
+after Room commit. Await the expected description (5s bound), retaining all gesture/state assertions;
+production autoplay is unchanged. Failed attempts are retained in external evidence.

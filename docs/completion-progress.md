@@ -248,3 +248,20 @@ READY-HISTORY.md. Next: commit, postcommit build/checks, signature/upgrade0.1.28
 copy; external HANDOFF records final SHA/artifacts without an extra version-changing commit.
 Owner next action: update, open this document, copy diagnostic state once; no retry/reprocess/API.
 Evidence: /home/dev/cramin-completion/2026-10-03-ready-history/.
+
+## 2026-10-04 — Recovery actions clipped by legacy warnings
+
+Baseline 5acdf98 / 0.1.29, clean. Owner's final message was truncated; visible report identifies
+unreachable consolidation actions below a long error block. Confirmed structural UI defect: status
+and header had no scrolling ancestor and could consume the entire viewport. Reproduction extends
+existing UI test with legacy URL, RU→EN, zero cards; pre-fix test failed (no scroll semantics parent).
+Shared header/status now scroll with each tab, navigation remains fixed, API confirmation text scrolls.
+Pipeline, data schema and processing actions unchanged. No paid calls or monetary-limit work.
+Validation: assembleDebug/testDebugUnitTest/lintDebug passed; 163 JVM passed, lint 0 errors/31 warnings.
+API34 final offline suite: 25 passed/0 failed/0 skipped; compact 360×640 dp font150 recovery: 1 passed,
+both tabs. Earlier full runs exposed an existing immediate-assert race against Room in autoplay test;
+bounded state waits fixed test synchronization, production autoplay unchanged. One run was aborted
+before device tests to relieve WSL memory pressure; all logs retained.
+Next: commit this completed UI fix, build signed debug from that commit, verify signature/upgrade
+and copy APK to a new Downloads folder. Final SHA and evidence recorded externally
+under /home/dev/cramin-completion/2026-10-04-document-actions/ to avoid version-changing extra commit.
