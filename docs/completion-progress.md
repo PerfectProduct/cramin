@@ -109,3 +109,38 @@ final-adaptive-device34.log — 19 passed / 0 failed/errors/skipped. Снимо�
 0267a6b (HTTP/retries), 6fa1b28 (config), 98d9a58 (updater/release), ea2f21d (source/lifecycle),
 63a18ec (large font), 86282e5 (notices/offline tests), заключительный пакет docs/adaptive controls.
 Полный финальный список SHA находится в HANDOFF.md/COMMITS.txt.
+
+## 2026-10-03 — targeted BRIEF follow-up (in progress)
+
+Phone 0.1.23 reports only Source/BRIEFING/BAD_REQUEST. Copy-time app/API values are not
+failure provenance. Historical requests cannot be reconstructed from these blocks.
+Before-fix reproductions: 3 wire tests failed; legacy capability and full-input-budget tests failed.
+Confirmed local defects: small word caps ignored; giant single paragraph omitted; no full BRIEF
+budget; legacy request bypassed capability filtering. No proof these caused owner's failures.
+Implementing safe request-time event, immutable legacy metadata enrichment, exact-code rejection
+classification, conservative full serialized input sizing. No model change or paid calls.
+Evidence: /home/dev/cramin-completion/2026-10-03-brief/. Next: run regression/main checks,
+review event privacy and persistence, record limitations and commit verified fixes.
+
+Phone follow-up: supplied blocks confirm only saved source/BRIEFING/BAD_REQUEST. 0.1.23 copied
+current app/API values; no historical provenance. Added request-time safe event and explicit
+copy-time labels; regression confirms old JSON has UNKNOWN request, retry retains new event.
+Nested native JSON error test first failed (UNSUPPORTED_PARAMETER -> UNKNOWN), then parser
+added for machine fields only. Main JVM now 142 passed; final lint/device result pending below.
+First API34 full run: 20 tests, 1 failure in existing cancelled-pointer autoplay test; new clipboard
+case passed. Focus checked: launcher, no ANR dialog. Preserve failure and repeat on final code.
+
+BRIEF final verification: `./gradlew assembleDebug testDebugUnitTest lintDebug -Plive=false`
+(main-verified.log): passed, 142 JVM / 0 failed / 0 skipped; lint 0 errors / 31 existing warnings.
+`ANDROID_SERIAL=emulator-5580 ./gradlew connectedDebugAndroidTest -Plive=false
+-Pandroid.testInstrumentationRunnerArguments.notAnnotation=pro.perfectproduct.cramin.LiveApi
+-Pandroid.testInstrumentationRunnerArguments.notClass=pro.perfectproduct.cramin.ingest.PublicSourceTest`
+(device34-final.log): 20 passed, 0 failures/errors/skipped. Working AVD API34 verified explicitly;
+first autoplay failure did not repeat, autoplay implementation/test unchanged. No paid requests,
+phone access, process-death test or real provider rejection reproduction in this targeted pass.
+Historical phone causes remain blocked on a new safe event / separately approved constrained call.
+DL-048 and BRIEF-DIAGNOSTICS.md record confirmed fixes, provenance, limitations and paid plan.
+Next: commit this verified package, then build/copy debug from that SHA and record external HANDOFF;
+no further repo commit after artifact build. Publication and paid calls remain unauthorized.
+Completed commit for this pass is identified by subject “Fix BRIEF request budgeting and preserve safe failure provenance”;
+exact SHA and post-commit artifact checks belong in external HANDOFF.md (avoid changing version just to record its SHA).

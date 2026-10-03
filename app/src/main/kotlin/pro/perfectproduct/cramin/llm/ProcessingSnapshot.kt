@@ -11,8 +11,16 @@ data class ProcessingSnapshot(
     val config: EffectiveConfig,
     val catalog: List<CatalogModel> = emptyList(),
     val legacyParametersUnknown: Boolean = false,
+    val legacyCapabilitiesResolved: Boolean = false,
 ) : CatalogView {
     override fun find(modelId: String): CatalogModel? = catalog.firstOrNull { it.id == modelId }
+    /** Fill only historically absent metadata, once; never replace saved role settings/models. */
+    fun resolveLegacyCapabilities(current: CatalogView?): ProcessingSnapshot {
+        if (!legacyParametersUnknown || legacyCapabilitiesResolved || current == null) return this
+        val enriched = (catalog + config.roles.values.mapNotNull { current.find(it.model) }).distinctBy { it.id }
+        return copy(catalog = enriched, legacyCapabilitiesResolved = config.roles.values.filter { it.role.isText }
+            .all { role -> enriched.any { it.id == role.model } })
+    }
     fun encode(): String = json.encodeToString(this)
 
     companion object {

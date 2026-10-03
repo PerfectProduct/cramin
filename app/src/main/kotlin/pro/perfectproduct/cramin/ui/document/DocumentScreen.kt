@@ -224,6 +224,10 @@ private fun StatusBanner(doc: DocumentEntity, onRetry: () -> Unit, onOpenSetting
                 else -> statusLabel(DocStatus.valueOf(diagnostic.stage.name))
             }
             Text(stringResource(R.string.diagnostic_previous, stageLabel, diagnostic.code.name), style = MaterialTheme.typography.bodyMedium)
+            diagnostic.rejection?.let { Text(stringResource(R.string.diagnostic_rejection, it.name), style = MaterialTheme.typography.bodySmall) }
+            Text(stringResource(R.string.diagnostic_observed,
+                diagnostic.observedAtEpochMs?.let { java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it)) }
+                    ?: stringResource(R.string.diagnostic_unknown)), style = MaterialTheme.typography.bodySmall)
             if (diagnostic.stage == pro.perfectproduct.cramin.pipeline.FailureStage.UNKNOWN) {
                 Text(stringResource(R.string.diagnostic_unknown_stage), style = MaterialTheme.typography.bodySmall)
             }

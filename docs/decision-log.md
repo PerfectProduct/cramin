@@ -346,3 +346,42 @@ Onboarding/общая колода используют minimum button height; �
 Финальные APK собираются только после последнего коммита, их SHA/version/cert и свежие проверки
 фиксируются вне git в HANDOFF.md, чтобы отчёт сам не менял вычисляемую из истории версию.
 Демонстрационные снимки используют синтетическую Room4; они не подтверждают реальную LLM-семантику.
+
+## DL-048 — BRIEF wire contract and historical failure provenance
+
+0.1.23 copied the **current** app version / Android API alongside persisted source, stage and code.
+These are not the failure's build/device/parameters. Old failureJson remains readable; absent event
+fields stay UNKNOWN. Never infer historical request parameters from today's settings or snapshot.
+No Room migration: an optional typed request event extends failureJson. Retry preserves it.
+
+Capture each HTTP attempt from the actual serialized body: local UUID, start/response time, build,
+config origin, requested/reported model, allowlisted provider, HTTP/API status, bounded identifier,
+input sizes, explicit byte-proxy estimate, sent options, strict-schema hash and finite rejection.
+Persist failure at transport callback before retry/Worker unwinding, and attach the same event to
+final failure. This is the **last observed failure**, not an append-only history or proof that later
+attempts did not run. A process killed before the callback cannot supply an unobserved response.
+No raw error prose/body, document text, keys, URLs or account routing preferences are recorded.
+Known parameter names and nonnegative numeric metadata limits are copied; prose is never parsed.
+Native JSON wrapped in metadata.raw is parsed for exact machine codes/params/limits only (string
+size capped at 32768), never retained. Response model is accepted only if equal to requested model.
+Provider allowlist / UUID or generation-ID grammar deliberately sacrifice coverage for privacy.
+Unreported model/provider/limit/request ID stay UNKNOWN; NOT_SENT distinguishes omitted options.
+
+New snapshots keep saved capability metadata. Roles-only legacy snapshots retain saved role models
+and settings, default missing pipeline parameters, and enrich only absent catalog metadata once
+from the same model IDs; save before HTTP. Existing metadata is not replaced. If a legacy model
+has no capabilities, fail locally before inference instead of guessing support. Missing entries can
+be filled on a later attempt; known entries remain frozen. This does not recover historic metadata.
+
+BRIEF word sampling now obeys small caps and keeps a bounded nonempty giant paragraph. Reserve
+explicit output + 1024 protocol units against saved context, counting the full serialized UTF-8 JSON
+(system/user/schema included) as a conservative token proxy. This is NOT a model tokenizer or a
+proof of provider-context fit. Unknown context uses a local 32768 budget, not a claimed model limit.
+Unset BRIEF output is bounded to min(6000, positive catalog output cap); explicit values remain,
+and impossible output budgets fail locally. Trimming may reduce sampled tail coverage. No model
+change, loss of structured outputs, automatic context-error retry or blind BAD_REQUEST retry.
+
+Contract references: OpenRouter errors-and-debugging, parameters, structured-outputs,
+reasoning-tokens and provider-selection (linked in docs/BRIEF-DIAGNOSTICS.md). Current catalog
+omits temperature for configured BRIEF; old legacy path sent it. That is a reproducible request
+construction defect, NOT proof of the three phone failures. Their concrete causes remain unknown.

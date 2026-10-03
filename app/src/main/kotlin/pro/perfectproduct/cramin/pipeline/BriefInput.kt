@@ -8,13 +8,14 @@ object BriefInput {
     const val HEAD_WORDS = 20_000
 
     fun select(paragraphs: List<String>, maxInputWords: Int): String {
+        require(maxInputWords > 0)
         val counts = paragraphs.map { WordCounter.count(it) }
         val total = counts.sum()
         if (total <= maxInputWords) return paragraphs.joinToString("\n\n")
         val chosen = ArrayList<Int>()
         var words = 0
         var i = 0
-        while (i < paragraphs.size && words + counts[i] <= HEAD_WORDS) {
+        while (i < paragraphs.size && words + counts[i] <= minOf(HEAD_WORDS, maxInputWords)) {
             chosen += i
             words += counts[i]
             i++
@@ -35,6 +36,15 @@ object BriefInput {
                 pos += step
             }
         }
+        if (chosen.isEmpty()) return takeWords(paragraphs.firstOrNull { it.isNotBlank() }.orEmpty(), maxInputWords)
         return chosen.sorted().joinToString("\n\n") { paragraphs[it] }
+    }
+    private fun takeWords(text: String, limit: Int): String {
+        var count = 0
+        for (token in Regex("\\S+").findAll(text)) {
+            if (token.value.any { it.isLetterOrDigit() } && ++count > limit)
+                return text.substring(0, token.range.first).trimEnd()
+        }
+        return text
     }
 }

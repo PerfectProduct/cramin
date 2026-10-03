@@ -116,7 +116,11 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             if (current?.status == DocStatus.READY)
                 return ProcessOutcome.Ready(db.cardDao().getByDocument(documentId).size)
             val pe = PipelineException.from(t)
-            val failure = FailureDiagnostic(doc.sourceType, pe.stage ?: stage, pe.code)
+            val rejection = (t as? LlmException.BadRequest) ?: (pe.cause as? LlmException.BadRequest)
+            val failure = FailureDiagnostic(doc.sourceType, pe.stage ?: stage, pe.code,
+                rejection?.category, rejection?.httpStatus?.takeIf { it in 100..599 },
+                rejection?.status?.takeIf { it in 100..599 }, now,
+                ((t as? LlmException) ?: (pe.cause as? LlmException))?.diagnostic)
             Log.w(TAG, "doc=$documentId failed: ${failure.stage} ${pe.code}")
             db.withTransaction {
                 db.documentDao().setFailure(documentId, failure.encode())
@@ -145,10 +149,12 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
 
     private suspend fun run(doc0: DocumentEntity, onProgress: suspend (DocStatus, Float) -> Unit): Int {
         val id = doc0.id
-        val snapshot = doc0.modelsSnapshotJson?.let { ProcessingSnapshot.decode(it) }
+        var snapshot = doc0.modelsSnapshotJson?.let { ProcessingSnapshot.decode(it) }
             ?: ProcessingSnapshot.capture(deps.configProvider(), deps.catalogProvider()).also {
                 db.documentDao().setPipelineSnapshot(id, it.encode(), PIPELINE_VERSION, now)
             }
+        if (snapshot.legacyParametersUnknown && !snapshot.legacyCapabilitiesResolved)
+            snapshot = snapshot.resolveLegacyCapabilities(deps.catalogProvider())
         if (doc0.modelsSnapshotJson != null && snapshot.legacyParametersUnknown && doc0.modelsSnapshotJson != snapshot.encode())
             db.documentDao().setPipelineSnapshot(id, snapshot.encode(), PIPELINE_VERSION, now)
         val config = snapshot.config
@@ -271,8 +277,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             return
         }
         val paragraphs = ctx.sentences.groupBy { it.paragraphIdx }.values.map { p -> p.joinToString(" ") { it.text } }
-        val input = BriefInput.select(paragraphs, ctx.config.pipeline.briefMaxInputWords)
-        val request = LlmRequest(ModelRole.BRIEF, role.model, Prompts.BRIEF, Messages.brief(ctx.lang, ctx.targetLang, input), Schemas.BRIEF_NAME, Schemas.BRIEF, role.temperature, role.maxTokens, role.reasoning)
+        val request = BriefRequestFactory.build(paragraphs, ctx.lang, ctx.targetLang, ctx.config, ctx.catalog)
         val brief = try {
             callParsed<Brief>(job, request) { b ->
                 if (b.title.isBlank()) throw LlmException.InvalidResponse("empty title") else b.copy(glossary = b.glossary.filter { it.src.isNotBlank() && it.tgt.isNotBlank() })
@@ -594,8 +599,28 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
     /** Один HTTP-вызов с учётом токенов и стоимости в Job и Document. */
     private suspend fun callRaw(job: JobEntity, request: LlmRequest): LlmResponse {
         val saved = db.documentDao().getById(job.documentId)?.modelsSnapshotJson?.let { ProcessingSnapshot.decode(it) }
+        if (saved?.legacyParametersUnknown == true && saved.find(request.model) == null)
+            throw LlmException.BadRequest(0, pro.perfectproduct.cramin.llm.RequestRejection.CAPABILITIES_UNKNOWN.name)
         val frozenRequest = request.copy(parametersFrozen = saved != null,
-            supportedParameters = saved?.find(request.model)?.supportedParameters?.toSet())
+            supportedParameters = saved?.find(request.model)?.supportedParameters?.toSet(),
+            configOrigin = when { saved?.legacyParametersUnknown == true -> pro.perfectproduct.cramin.llm.ConfigOrigin.LEGACY_FALLBACK
+                saved != null -> pro.perfectproduct.cramin.llm.ConfigOrigin.NEW_SNAPSHOT
+                else -> pro.perfectproduct.cramin.llm.ConfigOrigin.UNKNOWN },
+            onFailureDiagnostic = { event ->
+                val doc = db.documentDao().getById(job.documentId)
+                if (doc != null) {
+                    val stage = when (request.role) {
+                        ModelRole.BRIEF -> FailureStage.BRIEFING
+                        ModelRole.TRANSLATE -> FailureStage.TRANSLATING
+                        ModelRole.EXTRACT -> FailureStage.EXTRACTING
+                        ModelRole.CONSOLIDATE -> FailureStage.CONSOLIDATING
+                        ModelRole.STT -> FailureStage.TRANSCRIBING
+                    }
+                    val code = if (event.rejection != null) ErrorCode.BAD_REQUEST else ErrorCode.UNKNOWN
+                    db.documentDao().setFailure(job.documentId, FailureDiagnostic(doc.sourceType, stage, code,
+                        event.rejection, event.httpStatus, event.apiStatus, event.respondedAtEpochMs ?: event.startedAtEpochMs, event).encode())
+                }
+            })
         val response = deps.llm.complete(frozenRequest)
         db.withTransaction {
         val fresh = db.jobDao().getById(job.id) ?: job

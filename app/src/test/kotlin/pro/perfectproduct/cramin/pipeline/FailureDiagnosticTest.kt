@@ -17,4 +17,15 @@ class FailureDiagnosticTest {
             assertTrue(diagnostic.copyText("test",34).contains("BRIEFING"))
         }
     }
+    @Test fun oldEventsDoNotAcquireCopyTimeProvenance() {
+        val old = kotlinx.serialization.json.Json.decodeFromString(FailureDiagnostic.serializer(),
+            """{"source":"PDF","stage":"BRIEFING","code":"BAD_REQUEST"}""")
+        assertNull(old.request)
+        assertNull(old.observedAtEpochMs)
+        val report = old.copyText("later-build", 36)
+        assertTrue(report.contains("Copied with Cramin: later-build"))
+        assertTrue(report.contains("Copy device Android API: 36"))
+        assertTrue(report.contains("Request event: UNKNOWN (not recorded)"))
+    }
+
 }

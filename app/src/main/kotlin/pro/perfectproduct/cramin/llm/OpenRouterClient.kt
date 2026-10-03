@@ -7,15 +7,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -47,14 +44,25 @@ class OpenRouterClient(
     override suspend fun complete(request: LlmRequest): LlmResponse {
         val key = keyProvider()?.takeIf { it.isNotBlank() } ?: throw LlmException.Auth(0)
         val supported = if (request.parametersFrozen) request.supportedParameters else paramSupport(request.model)
-        val body = buildBody(request, supported).toString()
+        val body = ChatRequestBody.build(request, supported, requireParameters)
         var lastError: LlmException? = null
         for (attempt in 1..maxAttempts) {
+            val event = RequestDiagnostic.capture(request, body)
             val outcome = try {
-                execute(key, body)
+                execute(key, body.toString(), event)
             } catch (e: IOException) {
                 Log.w(TAG, "attempt $attempt: network ${e.javaClass.simpleName}")
                 Attempt.Retry(null, LlmException.Network(e.javaClass.simpleName, e))
+            }
+            val failure = when (outcome) {
+                is Attempt.Fail -> outcome.error
+                is Attempt.Retry -> outcome.error
+                else -> null
+            }
+            if (failure != null) {
+                val captured = failure.diagnostic ?: event
+                failure.diagnostic = captured
+                request.onFailureDiagnostic?.invoke(captured)
             }
             when (outcome) {
                 is Attempt.Done -> return outcome.response
@@ -79,7 +87,7 @@ class OpenRouterClient(
         data class Retry(val retryAfterMs: Long?, val error: LlmException) : Attempt
     }
 
-    private suspend fun execute(key: String, body: String): Attempt = withContext(Dispatchers.IO) {
+    private suspend fun execute(key: String, body: String, event: RequestDiagnostic): Attempt = withContext(Dispatchers.IO) {
         val req = Request.Builder()
             .url("$baseUrl/chat/completions")
             .header("Authorization", "Bearer $key")
@@ -89,15 +97,27 @@ class OpenRouterClient(
             .build()
         http.newCall(req).useCancellable { resp ->
             val text = resp.body.string()
-            when {
+            val outcome = when {
                 resp.isSuccessful -> parseSuccess(text)
                 resp.code == 401 || resp.code == 403 -> Attempt.Fail(LlmException.Auth(resp.code))
                 resp.code == 402 -> Attempt.Fail(LlmException.Payment())
                 resp.code == 429 -> Attempt.Retry(retryAfterMs(resp.header("Retry-After")), LlmException.RateLimited())
                 resp.code >= 500 -> Attempt.Retry(retryAfterMs(resp.header("Retry-After")), LlmException.Server(resp.code))
-                else -> Attempt.Fail(LlmException.BadRequest(resp.code, "HTTP error"))
+                else -> Attempt.Fail(rejection(resp.code, text))
             }
+            val failure = when (outcome) { is Attempt.Fail -> outcome.error; is Attempt.Retry -> outcome.error; else -> null }
+            if (failure != null) {
+                val root = runCatching { LlmJson.lenient.parseToJsonElement(text) as? JsonObject }.getOrNull()
+                failure.diagnostic = event.response(resp.code, root, resp.header("X-Request-Id"),
+                    (failure as? LlmException.BadRequest)?.category)
+            }
+            outcome
         }
+    }
+
+    private fun rejection(status: Int, text: String): LlmException.BadRequest {
+        val error = runCatching { RequestDiagnostic.errorObject(LlmJson.lenient.parseToJsonElement(text) as? JsonObject) }.getOrNull()
+        return LlmException.BadRequest((error?.get("code") as? JsonPrimitive)?.intOrNull ?: status, RequestRejection.classify(error, status).name, status)
     }
 
     private fun parseSuccess(text: String): Attempt {
@@ -107,15 +127,14 @@ class OpenRouterClient(
             return Attempt.Fail(LlmException.InvalidResponse("not a JSON object"))
         }
         // OpenRouter может вернуть 200 с телом {"error": {...}} (например, провайдер отказал).
-        root["error"]?.jsonObject?.let { err ->
-            val code = err["code"]?.jsonPrimitive?.intOrNull ?: 0
-            val msg = "provider error"
+        RequestDiagnostic.errorObject(root)?.let { err ->
+            val code = (err["code"] as? JsonPrimitive)?.intOrNull ?: 0
             return when (code) {
                 429 -> Attempt.Retry(null, LlmException.RateLimited())
                 in 500..599 -> Attempt.Retry(null, LlmException.Server(code))
                 401, 403 -> Attempt.Fail(LlmException.Auth(code))
                 402 -> Attempt.Fail(LlmException.Payment())
-                else -> Attempt.Fail(LlmException.BadRequest(code, msg.take(200)))
+                else -> Attempt.Fail(LlmException.BadRequest(code, RequestRejection.classify(err, code).name, 200))
             }
         }
         val choice = root["choices"]?.jsonArray?.firstOrNull()?.jsonObject
@@ -136,38 +155,6 @@ class OpenRouterClient(
         return Attempt.Done(LlmResponse(content, finish, llmUsage, model))
     }
 
-    private fun buildBody(r: LlmRequest, supported: Set<String>?): JsonObject = buildJsonObject {
-        put("model", r.model)
-        put(
-            "messages",
-            buildJsonArray {
-                add(buildJsonObject { put("role", "system"); put("content", r.system) })
-                add(buildJsonObject { put("role", "user"); put("content", r.user) })
-            },
-        )
-        put(
-            "response_format",
-            buildJsonObject {
-                put("type", "json_schema")
-                put(
-                    "json_schema",
-                    buildJsonObject {
-                        put("name", r.schemaName)
-                        put("strict", true)
-                        put("schema", r.schema)
-                    },
-                )
-            },
-        )
-        put("usage", buildJsonObject { put("include", true) })
-        if (r.temperature != null && (supported == null || "temperature" in supported)) put("temperature", r.temperature)
-        r.maxTokens?.let { put("max_tokens", it) }
-        if (r.reasoning != null && (supported == null || "reasoning" in supported)) put("reasoning", r.reasoning)
-        if (requireParameters) {
-            // Роутинг только к провайдерам, которые честно поддерживают structured outputs (CRM-DL-011).
-            put("provider", buildJsonObject { put("require_parameters", true) })
-        }
-    }
 
     companion object {
         private const val TAG = "OpenRouter"

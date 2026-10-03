@@ -33,6 +33,8 @@ data class LlmRequest(
     val reasoning: JsonObject? = null,
     val supportedParameters: Set<String>? = null,
     val parametersFrozen: Boolean = false,
+    val configOrigin: ConfigOrigin = ConfigOrigin.UNKNOWN,
+    val onFailureDiagnostic: (suspend (RequestDiagnostic) -> Unit)? = null,
 )
 
 data class LlmUsage(
@@ -73,6 +75,8 @@ interface LlmClient {
  * пользователю показывается отдельный русский текст по классу ошибки.
  */
 sealed class LlmException(message: String, cause: Throwable? = null) : Exception(message, cause) {
+    var diagnostic: RequestDiagnostic? = null
+        internal set
     /** Сеть недоступна или оборвалась после всех ретраев. */
     class Network(message: String, cause: Throwable? = null) : LlmException(message, cause)
 
@@ -89,7 +93,9 @@ sealed class LlmException(message: String, cause: Throwable? = null) : Exception
     class Server(val status: Int) : LlmException("server error: HTTP $status")
 
     /** 4xx, которых не ждём: модель не найдена, параметры не поддерживаются и т. п. */
-    class BadRequest(val status: Int, val detail: String) : LlmException("bad request: HTTP $status: $detail")
+    class BadRequest(val status: Int, val detail: String, val httpStatus: Int = status) : LlmException("bad request: HTTP $httpStatus") {
+        val category: RequestRejection = runCatching { RequestRejection.valueOf(detail) }.getOrDefault(RequestRejection.UNKNOWN)
+    }
 
     /** Ответ не JSON или не по схеме. */
     class InvalidResponse(val reason: String) : LlmException("invalid response: $reason")

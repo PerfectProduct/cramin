@@ -90,7 +90,7 @@ class OpenRouterClientTest {
         server.scripted += MockResponse(code = 402, body = """{"error":{"code":402,"message":"Insufficient credits"}}""")
         try { client.complete(request); fail() } catch (e: LlmException.Payment) { /* ok */ }
         server.scripted += MockResponse(code = 400, body = """{"error":{"code":400,"message":"model not found"}}""")
-        try { client.complete(request); fail() } catch (e: LlmException.BadRequest) { assertEquals(400, e.status); assertEquals("HTTP error", e.detail) }
+        try { client.complete(request); fail() } catch (e: LlmException.BadRequest) { assertEquals(400, e.status); assertEquals("UNKNOWN", e.detail) }
         assertEquals(3, server.requests.size)
         assertTrue(sleeps.isEmpty())
     }

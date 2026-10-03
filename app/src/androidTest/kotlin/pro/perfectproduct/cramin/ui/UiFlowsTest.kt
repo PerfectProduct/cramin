@@ -103,6 +103,25 @@ class UiFlowsTest {
     }
 
     @Test
+    fun oldFailureClipboardLabelsCopyTimeAndCannotInventRequest() = runBlocking<Unit> {
+        val id = seedDocument()
+        container.db.documentDao().setStatus(id, DocStatus.FAILED, .1f, "BAD_REQUEST", "PRIVATE", 2)
+        container.db.documentDao().setFailure(id,
+            """{"source":"TEXT","stage":"BRIEFING","code":"BAD_REQUEST"}""")
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithText("Riverside Library").performClick()
+        compose.onNodeWithText("Скопировать диагностику").performClick()
+        compose.runOnIdle {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val copied = clipboard.primaryClip!!.getItemAt(0).text.toString()
+            org.junit.Assert.assertTrue(copied.contains("Copied with Cramin:"))
+            org.junit.Assert.assertTrue(copied.contains("Request event: UNKNOWN (not recorded)"))
+            org.junit.Assert.assertFalse(copied.contains("PRIVATE"))
+        }
+        assertEquals(DocStatus.FAILED, container.documentRepository.get(id)?.status)
+    }
+
+    @Test
     fun libraryShowsDocumentAndPlayOpensCardsTab() = runBlocking<Unit> {
         val id = seedDocument()
         scenario = ActivityScenario.launch(MainActivity::class.java)
