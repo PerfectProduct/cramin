@@ -160,7 +160,7 @@ fun StudyScreen(
             onDismissRequest = {},
             title = { Text(stringResource(R.string.study_resume_title)) },
             confirmButton = {
-                TextButton(onClick = vm::resume, modifier = Modifier.testTag("resume")) { Text(stringResource(R.string.study_resume_continue, saved.position, saved.total)) }
+                TextButton(onClick = vm::resume, modifier = Modifier.testTag("resume")) { Text(stringResource(R.string.study_resume_continue, minOf(saved.position + 1, saved.total), saved.total)) }
             },
             dismissButton = { TextButton(onClick = vm::restartInsteadOfResume) { Text(stringResource(R.string.study_restart)) } },
         )

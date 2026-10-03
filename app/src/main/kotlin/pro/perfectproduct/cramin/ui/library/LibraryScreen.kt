@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -61,7 +63,7 @@ import pro.perfectproduct.cramin.ui.components.EmojiBadge
 import pro.perfectproduct.cramin.ui.components.EmptyState
 import pro.perfectproduct.cramin.ui.components.formatDate
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun LibraryScreen(
     onOpenDocument: (Long, String) -> Unit,
@@ -112,7 +114,7 @@ fun LibraryScreen(
         floatingActionButtonPosition = androidx.compose.material3.FabPosition.Center,
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (f in LibraryFilter.entries) {
                     FilterChip(selected = filter == f, onClick = { vm.setFilter(f) }, label = { Text(stringResource(f.labelRes)) })
                 }

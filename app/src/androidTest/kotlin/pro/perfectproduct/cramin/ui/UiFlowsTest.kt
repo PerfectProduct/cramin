@@ -210,7 +210,7 @@ class UiFlowsTest {
         compose.onNodeWithTag("studyButton").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("resume")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("resume").assertTextContains("1/2", substring = true)
-        compose.onNodeWithTag("resume").performClick()
+        compose.onNodeWithTag("resume").assertTextContains("2/2").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("counter")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("counter").assertTextContains("2 / 2")
     }

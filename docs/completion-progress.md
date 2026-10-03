@@ -38,7 +38,7 @@
 
 ## Следующий шаг
 
-Далее ft/Unicode и оформление/жесты. Затем сеть/config, updater/workflow, источники/лицензии, lifecycle и финальные артефакты.
+Завершить notices/source kit, затем API26/36 smoke, полный финальный набор API34 и снимки; собрать APK из финального коммита.
 
 Коммит диагностики: `12a283a776412d3184709726a859e5f8b8a3feca`. Промежуточный APK и SHA в
 `/mnt/c/Users/impor/Downloads/cramin-completion/2026-10-03-diagnostics-12a283a/`.
@@ -68,3 +68,7 @@ Updater: update-checks.log — assembleDebug и 131 JVM passed, 0 failed/skipped
 Источники/lifecycle: pdf-entry2.log — настоящий picker/share + WorkManager, 1 сценарий/2 PDF passed. public-sources-classified.log — 1 passed/2 failed (доступ YouTube заблокирован сервисом), исходные случаи владельца неизвестны. evidence/sources/device-proof сохранены. lifecycle-process.log / evidence/lifecycle/process-death.json: 6 SIGKILL + отдельный force-stop passed, status/starred fingerprint совпал, уведомления запрещены, fake LLM. Harness APK только opt-in, не для владельца. Next: коммит пакета и кандидат N20, встроенная установка N19→N20; лицензии, увеличенный шрифт, финальные артефакты.
 
 Пакет источники/lifecycle: source-lifecycle-checks.log — обычный assembleDebug (без probe) и 131 JVM passed. Baseline updater: 98d9a58, 0.1.19-debug, сохранён в apks/update-baseline-98d9a58. Следующий коммит даст кандидат 0.1.20-debug для встроенной установки N→N+1. API26/36: официальные AOSP архивы 474/844 МБ; места достаточно, RAM ~10 ГБ требует последовательных AVD. Установка запущена, результат пока не заявлен.
+
+Подтверждено встроенное обновление 0.1.19-debug (98d9a58) → 0.1.20-debug (ea2f21d): pending пережил настоящий SIGKILL; возврат из системного разрешения автоматически открыл installer. Все таблицы БД совпали по хешу, resume и Undo работают. Использован внедрённый проверенный pending APK; production GitHub discovery не проверялся. Доказательства: evidence/update-install.
+
+Увеличенный шрифт: large-card2.log — 9 device сценариев passed (7 UI + 2 длинных карточки EN/HE, font150/200). Прокрутка не сортирует и не переворачивает, действия доступны. Исправлены перенос фильтров библиотеки и отображение номера сохраняемой позиции. API26/36 AOSP образы установлены, smoke ещё впереди.
