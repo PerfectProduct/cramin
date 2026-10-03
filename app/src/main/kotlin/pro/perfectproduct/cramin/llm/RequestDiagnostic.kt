@@ -36,8 +36,14 @@ data class RequestDiagnostic(
     val rejection: RequestRejection? = null,
     val parameter: String? = null,
     val reportedLimits: Map<String, Long> = emptyMap(),
+    val processingAttemptId: String? = null,
+    val logicalRequestId: String? = null,
+    val jobIndex: Int? = null,
+    val partPath: String? = null,
+    val observation: String = "LEGACY_UNKNOWN",
+
 ) {
-    fun copyText(): String = codec.encodeToJsonElement(serializer(), this).jsonObject.entries.joinToString("\n") {
+    fun copyText(): String = "attemptId scope: ONE_HTTP_ATTEMPT; processing correlation absent in legacy records\n" + codec.encodeToJsonElement(serializer(), this).jsonObject.entries.joinToString("\n") {
         "${it.key}: ${if (it.value == JsonNull) "UNKNOWN" else it.value}"
     }
     fun response(status: Int, root: JsonObject?, requestHeader: String?, reason: RequestRejection?): RequestDiagnostic {
@@ -73,6 +79,9 @@ data class RequestDiagnostic(
             } }
             val bytes = body.toString().toByteArray(Charsets.UTF_8).size
             return RequestDiagnostic(UUID.randomUUID().toString(), System.currentTimeMillis(),
+                processingAttemptId = request.processingAttemptId,
+                logicalRequestId = request.logicalRequestId, jobIndex = request.jobIndex,
+                partPath = request.partPath?.takeIf { it.matches(Regex("[LR]{0,6}")) },
                 buildVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})", configOrigin = request.configOrigin,
                 requestedModel = safeModel(text(body["model"])), systemChars = request.system.length, userChars = request.user.length,
                 inputUtf8Bytes = (request.system + request.user).toByteArray(Charsets.UTF_8).size,

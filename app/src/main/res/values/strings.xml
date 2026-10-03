@@ -247,7 +247,7 @@
     <string name="err_pdf_invalid">Не удалось прочитать PDF. Проверьте файл или выберите другой.</string>
     <string name="err_pdf_encrypted">PDF защищён. Выберите копию без защиты.</string>
     <string name="diagnostic_copy">Скопировать диагностику</string>
-    <string name="diagnostic_previous">Последний отказ: %1$s · %2$s</string>
+    <string name="diagnostic_previous">Историческое событие: %1$s · %2$s</string>
     <string name="diagnostic_unknown_stage">Стадия старой ошибки не сохранена</string>
     <string name="diagnostic_config">Конфигурация обработки</string>
     <string name="diagnostic_language">Определение языка</string>
@@ -259,7 +259,7 @@
     <string name="licenses_explanation">Компоненты и оригинальные уведомления правообладателей. Нажмите на заголовок, чтобы прочитать полный текст. Исходники распространяются вместе с соответствующей сборкой.</string>
     <string name="licenses_inventory">Состав зависимостей сборки</string>
     <string name="diagnostic_rejection">Категория отказа запроса: %1$s</string>
-    <string name="diagnostic_observed">Отказ зафиксирован: %1$s</string>
+    <string name="diagnostic_observed">Событие зафиксировано: %1$s</string>
     <string name="consolidation_local_retry">Повторить консолидацию без API</string>
     <string name="consolidation_local_hint">Только сохранённые результаты, без платных запросов. Если данных недостаточно, обработка остановится с диагностикой. Обычный повтор может обращаться к API.</string>
     <string name="err_consolidation_cache_missing">Сохранённых промежуточных данных недостаточно. Бесплатное завершение недоступно. Скопируйте диагностику перед обработкой через API.</string>
@@ -270,4 +270,8 @@
     <string name="consolidation_api_confirm">Будут запрошены только недостающие части консолидации. Перевод, извлечение слов и бриф повторяться не будут. Используются сохранённые модели и параметры. Возможны расходы OpenRouter; денежный предел не установлен.</string>
     <string name="consolidation_api_start">Продолжить с расходами</string>
     <string name="consolidation_api_cancel">Не запускать</string>
+    <string name="diagnostic_recovered">Восстановлено · документ готов</string>
+    <string name="diagnostic_failed_state">Обработка остановлена</string>
+    <string name="diagnostic_processing_state">Обработка продолжается · диагностика предыдущих событий</string>
+    <string name="diagnostic_history">История диагностики</string>
 </resources>

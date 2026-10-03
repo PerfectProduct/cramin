@@ -228,3 +228,23 @@ build/signature/secret scan, synthetic 0.1.26→new upgrade, Downloads copy and 
 start: owner stops before «Продолжить с расходами» until a separate decision. Do not use reprocess.
 Evidence /home/dev/cramin-completion/2026-10-03-length-recovery/; final SHA/artifacts stored externally
 so no subsequent version-changing commit is necessary.
+
+## 2026-10-03 — READY vs historical UNKNOWN (1240-card phone report)
+
+Baseline bf63f78 / 0.1.28, clean. Confirmed: intermediate HTTP failure callback persisted failureJson,
+then READY kept it and UI unconditionally presented it as failure. Phone current status/completeness
+remain unknown until new copy. No cost estimation/monetary-cap task; no model, generation or limit change.
+Implemented history disposition by actual Document.status, atomic new recoveredAt/recoveryAttemptId,
+legacy READY display without rewriting event; client/terminal origin, process/logical/HTTP correlation,
+transport response-not-recorded observation. Callback observedAt now means callback time; old values
+not reinterpreted. Read-only clipboard transaction checks expected saved meaning keys/occurrences and
+required jobs against actual cards; exports counts/enums only, semantic completeness explicitly unknown.
+
+Validation precommit: assembleDebug/testDebugUnitTest/lintDebug PASS; 163 JVM passed, 25 offline API34
+instrumented passed, zero failed/skipped. Existing length/resume tests extended, not duplicated. New
+UI tests distinguish legacy READY and running documents with cards. No real process death or live API.
+Final callback timestamp-only adjustment covered by postcommit JVM regression. Details DL051 and
+READY-HISTORY.md. Next: commit, postcommit build/checks, signature/upgrade0.1.28 check, unique Downloads
+copy; external HANDOFF records final SHA/artifacts without an extra version-changing commit.
+Owner next action: update, open this document, copy diagnostic state once; no retry/reprocess/API.
+Evidence: /home/dev/cramin-completion/2026-10-03-ready-history/.

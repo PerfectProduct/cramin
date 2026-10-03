@@ -38,6 +38,11 @@ class LengthContinuationTest {
                 assertTrue(requests.all { LlmJson.parse<List<ConsolidateItemInput>>(it.user.substringAfter("ITEMS:\n")).size == 2 })
                 for (old in done) assertEquals(old, p.db.jobDao().getById(old.id))
                 assertEquals(8, p.db.cardDao().getByDocument(id).count { it.lemma in words })
+                assertEquals(1, requests.map { it.processingAttemptId }.distinct().size)
+                assertEquals(requests.size, requests.map { it.logicalRequestId }.distinct().size)
+                assertEquals(setOf("L", "R"), requests.map { it.partPath }.toSet())
+                val summary = DocumentStateSummary.copyText(p.db, id, p.deps.stoplists, "test", 34)
+                assertTrue(summary.contains("MATCHES_SAVED_PIPELINE_RESULTS"))
             }
         }
     }

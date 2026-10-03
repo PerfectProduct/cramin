@@ -89,6 +89,50 @@ class UiFlowsTest {
         return docId
     }
 
+    private fun copyStateAndWait() {
+        compose.runOnIdle {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("test", ""))
+        }
+        compose.onNodeWithText("Скопировать диагностику").performClick()
+        compose.waitUntil(10_000) {
+            var copied = ""
+            compose.runOnIdle {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                copied = clipboard.primaryClip?.getItemAt(0)?.text?.toString().orEmpty()
+            }
+            copied.contains("State snapshot copied with Cramin:")
+        }
+    }
+
+    @Test fun legacyReadyShowsRecoveredHistoryWithoutRerunningWork() = runBlocking<Unit> {
+        val id = seedDocument()
+        val raw = """{"source":"TEXT","stage":"CONSOLIDATING","code":"UNKNOWN","observedAtEpochMs":1791059173074}"""
+        container.db.documentDao().setFailure(id, raw)
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithText("Riverside Library").performClick()
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.diagnostic_recovered)).assertIsDisplayed()
+        compose.onNodeWithTag("errorBanner").assertDoesNotExist()
+        copyStateAndWait()
+        compose.runOnIdle {
+            val copied = (context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).primaryClip!!.getItemAt(0).text.toString()
+            org.junit.Assert.assertTrue(copied.contains("Document status: READY"))
+            org.junit.Assert.assertTrue(copied.contains("RECOVERED_BY_DOCUMENT_READY"))
+        }
+        assertEquals(raw, container.documentRepository.get(id)!!.failureJson)
+        assertEquals(0, container.fakeLlm.requests.size)
+    }
+
+    @Test fun existingCardsDuringProcessingDoNotShowRecovered() = runBlocking<Unit> {
+        val id = seedDocument()
+        container.db.documentDao().setFailure(id, """{"source":"TEXT","stage":"CONSOLIDATING","code":"UNKNOWN"}""")
+        container.db.documentDao().setStatus(id, DocStatus.CONSOLIDATING, .9f, null, null, 3)
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithText("Riverside Library").performClick()
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.diagnostic_processing_state)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.diagnostic_recovered)).assertDoesNotExist()
+    }
+
     @Test
     fun failedRowOpensReasonAndLanguageActionWithoutRetry() = runBlocking<Unit> {
         val id = seedDocument()
@@ -110,7 +154,7 @@ class UiFlowsTest {
             """{"source":"TEXT","stage":"BRIEFING","code":"BAD_REQUEST"}""")
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithText("Riverside Library").performClick()
-        compose.onNodeWithText("Скопировать диагностику").performClick()
+        copyStateAndWait()
         compose.runOnIdle {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             val copied = clipboard.primaryClip!!.getItemAt(0).text.toString()
@@ -129,7 +173,7 @@ class UiFlowsTest {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithText("Riverside Library").performClick()
         compose.onNodeWithTag("retryLocalConsolidation").assertIsDisplayed()
-        compose.onNodeWithText("Скопировать диагностику").performClick()
+        copyStateAndWait()
         compose.runOnIdle {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             val copied = clipboard.primaryClip!!.getItemAt(0).text.toString()

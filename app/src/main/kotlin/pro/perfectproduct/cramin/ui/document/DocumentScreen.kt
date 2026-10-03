@@ -121,7 +121,7 @@ fun DocumentScreen(
         if (doc == null) return@Scaffold
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             DocumentHeader(doc, counts.total, counts.known)
-            StatusBanner(doc, onResumeApi = vm::resumeConsolidationWithApi, onRetryLocal = vm::retryLocalConsolidation, onRetry = vm::retry, onOpenSettings = onOpenSettings, onChooseLang = { chooseLang = it }, onCheckUpdates = onOpenSettings)
+            StatusBanner(doc, onCopy = vm::copyDiagnostics, onResumeApi = vm::resumeConsolidationWithApi, onRetryLocal = vm::retryLocalConsolidation, onRetry = vm::retry, onOpenSettings = onOpenSettings, onChooseLang = { chooseLang = it }, onCheckUpdates = onOpenSettings)
             if (tab == "text") {
                 TextTab(vm)
             } else {
@@ -205,7 +205,7 @@ private fun DocumentHeader(doc: DocumentEntity, total: Int, known: Int) {
 /** Обработка и ошибки с действием (SPEC: «Ошибка — повторить», конкретные сообщения по коду). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun StatusBanner(doc: DocumentEntity, onResumeApi: () -> Unit, onRetryLocal: () -> Unit, onRetry: () -> Unit, onOpenSettings: () -> Unit, onChooseLang: (ErrorAction) -> Unit, onCheckUpdates: () -> Unit) {
+private fun StatusBanner(doc: DocumentEntity, onCopy: (android.content.Context) -> Unit, onResumeApi: () -> Unit, onRetryLocal: () -> Unit, onRetry: () -> Unit, onOpenSettings: () -> Unit, onChooseLang: (ErrorAction) -> Unit, onCheckUpdates: () -> Unit) {
     var confirmApi by remember { mutableStateOf(false) }
     if (confirmApi) AlertDialog(
         onDismissRequest = { confirmApi = false },
@@ -223,8 +223,16 @@ private fun StatusBanner(doc: DocumentEntity, onResumeApi: () -> Unit, onRetryLo
     }
     val diagnostic = pro.perfectproduct.cramin.pipeline.FailureDiagnostic.forDocument(doc)
     val context = androidx.compose.ui.platform.LocalContext.current
+    var showHistory by remember(doc.id, doc.status) { mutableStateOf(doc.status == DocStatus.FAILED) }
     if (diagnostic != null) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)) {
+            Text(stringResource(when (doc.status) {
+                DocStatus.READY -> R.string.diagnostic_recovered
+                DocStatus.FAILED -> R.string.diagnostic_failed_state
+                else -> R.string.diagnostic_processing_state
+            }), style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = { showHistory = !showHistory }) { Text(stringResource(R.string.diagnostic_history)) }
+            if (showHistory) {
             val stageLabel = when (diagnostic.stage) {
                 pro.perfectproduct.cramin.pipeline.FailureStage.CONFIG -> stringResource(R.string.diagnostic_config)
                 pro.perfectproduct.cramin.pipeline.FailureStage.LANGUAGE -> stringResource(R.string.diagnostic_language)
@@ -239,11 +247,11 @@ private fun StatusBanner(doc: DocumentEntity, onResumeApi: () -> Unit, onRetryLo
             if (diagnostic.stage == pro.perfectproduct.cramin.pipeline.FailureStage.UNKNOWN) {
                 Text(stringResource(R.string.diagnostic_unknown_stage), style = MaterialTheme.typography.bodySmall)
             }
-            TextButton(onClick = {
-                val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Cramin", diagnostic.copyText(pro.perfectproduct.cramin.BuildConfig.VERSION_NAME, android.os.Build.VERSION.SDK_INT)))
-            }) { Text(stringResource(R.string.diagnostic_copy)) }
+            }
         }
+    }
+    TextButton(onClick = { onCopy(context) }, modifier = Modifier.padding(horizontal = 12.dp)) {
+        Text(stringResource(R.string.diagnostic_copy))
     }
     when {
         doc.status == DocStatus.FAILED -> {

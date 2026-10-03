@@ -128,7 +128,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                 rejection?.category, rejection?.httpStatus?.takeIf { it in 100..599 },
                 rejection?.status?.takeIf { it in 100..599 }, now,
                 ((t as? LlmException) ?: (pe.cause as? LlmException))?.diagnostic,
-                if (trace.active) trace.failure(t) else null)
+                if (trace.active) trace.failure(t) else null, origin = DiagnosticOrigin.TERMINAL_PROCESS_FAILURE)
             Log.w(TAG, "doc=$documentId failed: ${failure.stage} ${pe.code}")
             db.withTransaction {
                 db.documentDao().setFailure(documentId, failure.encode())
@@ -600,6 +600,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             deps.checkpoint("consolidationPartSaved")
         }
         suspend fun visit(path: String, group: List<MergedCard>): Map<String, List<SenseDraft>> {
+            trace.partPath = path
             val built = Consolidation.buildBatch(group) { ctx.sentence(it) }
             trace.counts["partDepth"] = path.length
             trace.counts["partGroups"] = group.size
@@ -711,6 +712,11 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             trace.step = ConsolidationStep.COMMIT_READY
             deps.checkpoint("restored")
             if (unmatched.isNotEmpty()) db.documentDao().setStudyNotice(id, true)
+            db.documentDao().getById(id)?.let { current ->
+                FailureDiagnostic.forDocument(current)?.let { failure ->
+                    db.documentDao().setFailure(id, failure.copy(recoveredAtEpochMs = now, recoveryAttemptId = trace.attemptId).encode())
+                }
+            }
             db.documentDao().setStatus(id, DocStatus.READY, 1f, null, null, now)
             ReprocessProgress(db, deps.files).complete(id, unmatched)
             deps.checkpoint("ready")
@@ -752,6 +758,8 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         if (saved?.legacyParametersUnknown == true && saved.find(request.model) == null)
             throw LlmException.BadRequest(0, pro.perfectproduct.cramin.llm.RequestRejection.CAPABILITIES_UNKNOWN.name)
         val frozenRequest = request.copy(parametersFrozen = saved != null,
+            processingAttemptId = trace?.attemptId, logicalRequestId = java.util.UUID.randomUUID().toString(),
+            jobIndex = job.idx, partPath = trace?.partPath,
             supportedParameters = saved?.find(request.model)?.supportedParameters?.toSet(),
             configOrigin = when { saved?.legacyParametersUnknown == true -> pro.perfectproduct.cramin.llm.ConfigOrigin.LEGACY_FALLBACK
                 saved != null -> pro.perfectproduct.cramin.llm.ConfigOrigin.NEW_SNAPSHOT
@@ -768,7 +776,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                     }
                     val code = if (event.rejection != null) ErrorCode.BAD_REQUEST else ErrorCode.UNKNOWN
                     db.documentDao().setFailure(job.documentId, FailureDiagnostic(doc.sourceType, stage, code,
-                        event.rejection, event.httpStatus, event.apiStatus, event.respondedAtEpochMs ?: event.startedAtEpochMs, event).encode())
+                        event.rejection, event.httpStatus, event.apiStatus, now, event, origin = DiagnosticOrigin.CLIENT_ATTEMPT_ISSUE).encode())
                 }
             })
         if (trace?.active == true) { trace.step = ConsolidationStep.REQUEST; trace.invocations.incrementAndGet() }

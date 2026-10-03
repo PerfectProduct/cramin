@@ -47,7 +47,8 @@ internal class ConsolidationTrace(val cacheOnly: Boolean, val consolidationOnly:
     val counts = linkedMapOf<String, Int>()
     val invocations = AtomicInteger()
     val responses = AtomicInteger()
-    private val attemptId = java.util.UUID.randomUUID().toString()
+    var partPath: String? = null
+    val attemptId = java.util.UUID.randomUUID().toString()
     fun failure(t: Throwable): LocalFailureDiagnostic {
         val chain = mutableListOf<Throwable>()
         var cause: Throwable? = t

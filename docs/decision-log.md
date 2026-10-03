@@ -413,3 +413,14 @@ not a claim about model capacity. Missing output defaults bounded to min(4000, k
 Add distinct missing/unfinished/incompatible cache codes and a separately confirmed consolidation-only
 API action that skips even FAILED BRIEF and uses saved config. No paid calls authorized/performed.
 See LENGTH-RECOVERY.md for exact semantics, call bounds, unavoidable HTTP→DB window and phone route.
+
+## DL051 — Current document state separate from historical request diagnostics (2026-10-03)
+
+Intermediate HTTP attempt failure is not terminal document failure. Keep last failureJson as history;
+READY marks recovery atomically for new completions. Existing READY uses status without rewriting old
+event or inventing completion time. Never infer recovery from card count. UI collapses recovered history;
+processing/FAILED remain distinct. Add per-process/logical-request/HTTP IDs and split path, safe event
+origin/transport observation; do not fabricate a response for a missing record. Read-only clipboard
+summary checks cached pipeline coverage and expected meaning keys/occurrence count vs stored cards.
+No schema change, no API, no settings/model/limit changes. Semantic completeness remains unprovable;
+historical fallback provenance can be unknown. Details: READY-HISTORY.md. Cost task explicitly excluded.

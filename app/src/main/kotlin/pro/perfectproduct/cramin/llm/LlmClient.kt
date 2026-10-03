@@ -34,6 +34,10 @@ data class LlmRequest(
     val supportedParameters: Set<String>? = null,
     val parametersFrozen: Boolean = false,
     val configOrigin: ConfigOrigin = ConfigOrigin.UNKNOWN,
+    val processingAttemptId: String? = null,
+    val logicalRequestId: String? = null,
+    val jobIndex: Int? = null,
+    val partPath: String? = null,
     val onFailureDiagnostic: (suspend (RequestDiagnostic) -> Unit)? = null,
 )
 

@@ -60,7 +60,10 @@ class OpenRouterClient(
                 else -> null
             }
             if (failure != null) {
-                val captured = failure.diagnostic ?: event
+                val captured = (failure.diagnostic ?: event).copy(observation = when (failure) {
+                    is LlmException.Network -> "TRANSPORT_EXCEPTION_RESPONSE_NOT_RECORDED"
+                    else -> "CLIENT_FAILURE_OBSERVED"
+                })
                 failure.diagnostic = captured
                 request.onFailureDiagnostic?.invoke(captured)
             }
