@@ -101,3 +101,59 @@ READY short-circuits repeat work. No public/test bypass or fake client is added 
    any proposed new paid processing requires separate authorization. No new paid calls are authorized.
 
 This establishes a safe next observation, not a promise that the phone's unknown failure will reproduce.
+
+## Follow-up: Payment → resume → consolidation (2026-10-03)
+
+Second phone report: TEXT, 0.1.24, observedAt=1791032941622, CONSOLIDATING/UNKNOWN without
+request event; owner observed a balance-related stop near 54%, then two stops near 89%.
+Neither the percentages nor that observation establish the causes of the later failures.
+No original source text or phone database was accessed; the supplied title is not a test fixture.
+
+Previously the client test covered HTTP 402 → Payment without retry, and pipeline tests covered
+generic interruption, but there was no complete Payment → persisted resume → consolidation scenario.
+`PaymentResumeTest` adds five cases: Payment during translation, concurrent extraction and consolidation;
+also Payment after the first successful half of a split translation/extraction request. All use fakes.
+The first three deliberately inject an independent local write failure after restoration, then recover
+using cache-only consolidation. This separates PAYMENT from a later UNKNOWN instead of assuming causation.
+
+Persistence facts:
+
+- Translation publishes a whole validated section and marks its job DONE in one transaction.
+  Previously DONE sections survive; unfinished sections can exist as PENDING jobs without responseJson.
+- Extraction saves a whole assembled chunk as one DONE Job update. Parallel siblings may already be
+  DONE when another gets Payment; others are cancelled. A new processor retries only unfinished jobs.
+- Split-range halves are held in memory until the full range succeeds. Usage for successful calls may
+  already be persisted, while their half-result is not. Ordinary retry can therefore pay for work again.
+  A response lost before durable accounting is not proof of zero provider expense either.
+- Consolidation retains completed batches and does not replace cards until every required batch has
+  a result/fallback. Unique Job(documentId,kind,idx) prevents duplicate job rows; the frozen config and
+  saved plan are reused. Normal Payment/resume does not itself change ranges or batch meaning mappings.
+- Tests compare saved DONE jobs unchanged, retained segments, assembled extraction output against an
+  uninterrupted baseline, exact segment coverage, unique resulting occurrences/cards, and zero model
+  calls from cache-only recovery. Partial-result retry creates no additional duplicates in these cases.
+  Raw extraction output itself can contain repeated entries; UnitValidator deduplicates matching spans.
+  An initial overly strict test assertion against any raw repetition was corrected to compare the
+  uninterrupted baseline and assert uniqueness of final occurrences; no application fix was needed.
+
+What 0.1.26 cache-only checks actually establish:
+
+1. Saved snapshot/languages/sentences exist; every sentence has a segment translation entry.
+2. EXTRACT jobs exist, are DONE with decodable responseJson and valid endpoint ranges; their range
+   union covers every stored sentence. Units then pass existing surface/POS/stoplist validation.
+3. Each required CONSOLIDATE batch is DONE with JSON or explicit fallback, parses successfully and
+   satisfies the current binding/legacy compatibility rules described above.
+4. Only then does atomic card replacement run. Missing/incompatible data produces local diagnostics;
+   the command does not call a provider, fetch catalog or rerun earlier stages.
+
+Limits: these checks are structural, not a proof that a model found every useful word. Range-union
+coverage does not independently reject all hypothetical overlapping EXTRACT ranges or overlapping
+Segment rows in a manually corrupted database. Untagged non-legacy cached responses have no historical
+input hash. The normal saved planner/transactions avoid those states, and Payment tests did not produce
+them. No production code was changed on those hypotheses. If phone diagnostics implicate such a state,
+reproduce that concrete condition before choosing a fix. CacheMissing after Payment is an expected
+safe stop, not proof of the later old UNKNOWN's cause.
+
+Targeted command: `./gradlew testDebugUnitTest -Plive=false --tests '*PaymentResumeTest'
+--tests '*OpenRouterClientTest' --tests '*ConsolidationRecoveryTest'` — 22 passed, 0 failed/skipped.
+No paid calls, real source regeneration, device operations or process-death simulation in this follow-up.
+Owner should keep the planned 0.1.26 cache-only checks for both documents; production code is unchanged.

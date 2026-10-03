@@ -192,3 +192,19 @@ without API calls”; exact SHA goes in external HANDOFF to avoid version-count 
 Next: post-commit debug build, signature/key scan, controlled 0.1.24→new APK update on synthetic data,
 copy final artifact to unique Downloads folder, then owner uses only «Повторить консолидацию без API»
 and sends new local event if failed. Missing cache requires diagnosis before separate paid approval.
+
+## 2026-10-03 — second phone case; Payment/resume coverage
+
+Baseline 9116ba2 / production 0.1.26, clean start. No production changes. Added PaymentResumeTest
+(five scenarios: translation, parallel extraction, consolidation, and two partial split-range failures).
+22 targeted JVM tests passed (5 new + 8 HTTP-mock client + 9 consolidation). Ordinary retry may pay
+again for an unfinished split range; cache-only stops on missing durable inputs without any call.
+No duplicates caused by retry in the exercised cases, saved DONE jobs reused unchanged. Structural
+checks do not certify arbitrary DB corruption or semantic completeness. Phone causes remain unknown.
+Initial test failure was an overstrict assertion about duplicate raw model units; fixed the test to
+compare the uninterrupted baseline and final occurrence uniqueness. No source generation/API calls.
+Details appended to CONSOLIDATION-DIAGNOSTICS.md. Evidence:
+/home/dev/cramin-completion/2026-10-03-payment-resume/.
+Next: commit test/docs-only coverage; run full offline JVM and assemble corresponding history-version
+APK for traceability. Owner continues with existing 0.1.26 (identical production source); no replacement
+APK required for the requested phone checks. External HANDOFF records final SHA/build/test result.
