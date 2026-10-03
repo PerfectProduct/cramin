@@ -385,3 +385,17 @@ Contract references: OpenRouter errors-and-debugging, parameters, structured-out
 reasoning-tokens and provider-selection (linked in docs/BRIEF-DIAGNOSTICS.md). Current catalog
 omits temperature for configured BRIEF; old legacy path sent it. That is a reproducible request
 construction defect, NOT proof of the three phone failures. Their concrete causes remain unknown.
+
+## DL049 — Consolidation recovery and local diagnostic events (2026-10-03)
+
+CONSOLIDATING contains local operations and optional LLM calls. Preserve bounded exception types,
+application class/method/line frames, event build/attempt, explicit substage, numeric structure and
+client invocation/response counts; never messages/payloads/paths. Old events remain unknown.
+Keep historical cache metadata separate from this attempt. A missing request event is not no API.
+
+Length in first/retry CONSOLIDATE uses the existing distinct-translation fallback; cached/fresh parsing
+share fence handling. Bind new cached response JSON to batch SHA-256; legacy unbound batches must
+match reconstructed pre-v4 grouping to avoid reassigned occurrence IDs. Corrupt/incompatible caches
+fail before atomic replacement. No Room schema change. Add explicit network-free consolidation retry,
+persisted in WorkData, which stops if cache is missing and never calls earlier stages/catalog/LLM.
+Ordinary retry can still cost money. Details and phone procedure: CONSOLIDATION-DIAGNOSTICS.md.

@@ -90,22 +90,29 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
     private val now get() = deps.clock.now()
 
     /** `onProgress(status, progress)` вызывается при смене стадии и по мере выполнения задач. */
-    suspend fun process(documentId: Long, onProgress: suspend (DocStatus, Float) -> Unit = { _, _ -> }): ProcessOutcome {
-        return db.documentLock(documentId).withLock { processLocked(documentId, onProgress) }
+    suspend fun process(documentId: Long, localConsolidationOnly: Boolean = false, onProgress: suspend (DocStatus, Float) -> Unit = { _, _ -> }): ProcessOutcome {
+        return kotlinx.coroutines.withContext(ConsolidationTrace(localConsolidationOnly)) {
+            db.documentLock(documentId).withLock { processLocked(documentId, onProgress) }
+        }
     }
 
     private suspend fun processLocked(documentId: Long, onProgress: suspend (DocStatus, Float) -> Unit): ProcessOutcome {
         val doc = db.documentDao().getById(documentId) ?: return ProcessOutcome.Skipped
         if (doc.status == DocStatus.READY) return ProcessOutcome.Skipped
         Log.i(TAG, "process doc=$documentId status=${doc.status} type=${doc.sourceType}")
-        var stage = FailureStage.CONFIG
+        val trace = requireNotNull(kotlinx.coroutines.currentCoroutineContext()[ConsolidationTrace])
+        var stage = if (trace.cacheOnly) FailureStage.CONSOLIDATING else FailureStage.CONFIG
+        trace.active = trace.cacheOnly
         return try {
             // Imports surviving v1 snapshots, or captures cards restored before an old crash.
+            if (trace.active) trace.step = ConsolidationStep.CAPTURE_PROGRESS
             db.withTransaction { ReprocessProgress(db, deps.files).capture(documentId) }
-            val count = run(doc) { status, progress ->
+            if (trace.active) trace.step = ConsolidationStep.LOAD_SNAPSHOT
+            val progressCallback: suspend (DocStatus, Float) -> Unit = { status, progress ->
                 stage = runCatching { FailureStage.valueOf(status.name) }.getOrDefault(stage)
                 onProgress(status, progress)
             }
+            val count = if (trace.cacheOnly) runCachedConsolidation(doc, progressCallback) else run(doc, progressCallback)
             ProcessOutcome.Ready(count)
         } catch (e: CancellationException) {
             Log.i(TAG, "doc=$documentId cancelled")
@@ -120,7 +127,8 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             val failure = FailureDiagnostic(doc.sourceType, pe.stage ?: stage, pe.code,
                 rejection?.category, rejection?.httpStatus?.takeIf { it in 100..599 },
                 rejection?.status?.takeIf { it in 100..599 }, now,
-                ((t as? LlmException) ?: (pe.cause as? LlmException))?.diagnostic)
+                ((t as? LlmException) ?: (pe.cause as? LlmException))?.diagnostic,
+                if (trace.active) trace.failure(t) else null)
             Log.w(TAG, "doc=$documentId failed: ${failure.stage} ${pe.code}")
             db.withTransaction {
                 db.documentDao().setFailure(documentId, failure.encode())
@@ -177,6 +185,19 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         onProgress(DocStatus.READY, 1f)
         Log.i(TAG, "doc=$id READY cards=$count")
         return count
+    }
+
+    /** Network-free recovery: no configuration refresh, extraction, BRIEF, translation or LLM. */
+    private suspend fun runCachedConsolidation(doc: DocumentEntity, onProgress: suspend (DocStatus, Float) -> Unit): Int {
+        val snapshot = doc.modelsSnapshotJson?.let { ProcessingSnapshot.decode(it) } ?: throw ConsolidationCacheMissing()
+        val lang = Lang.fromCode(doc.sourceLang) ?: throw ConsolidationCacheMissing()
+        val target = Lang.fromCode(doc.targetLang) ?: throw ConsolidationCacheMissing()
+        val stored = db.sentenceDao().getByDocument(doc.id)
+        if (stored.isEmpty()) throw ConsolidationCacheMissing()
+        val ctx = Ctx(doc, snapshot.config, snapshot, lang, target,
+            stored.map { SentenceDraft(it.idx, it.paragraphIdx, it.text) }, stored.associate { it.idx to it.id },
+            Progress(doc.audioSeconds > 0), onProgress)
+        return consolidateAndBuildStage(ctx).also { onProgress(DocStatus.READY, 1f) }
     }
 
     // ---------------------------------------------------------------------------------------
@@ -473,38 +494,86 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
     private suspend fun consolidateAndBuildStage(ctx: Ctx): Int {
         val id = ctx.doc.id
         setStatus(id, DocStatus.CONSOLIDATING, ctx.progress.start(DocStatus.CONSOLIDATING), ctx.onProgress)
+        val trace = requireNotNull(kotlinx.coroutines.currentCoroutineContext()[ConsolidationTrace])
+        trace.active = true
+        trace.step = ConsolidationStep.LOAD_INPUTS
+        trace.counts["sentences"] = ctx.sentences.size
         val role = ctx.config.role(ModelRole.CONSOLIDATE)
         val segments = db.segmentDao().getByDocument(id)
+        trace.counts["segments"] = segments.size
         val segmentByIdx = HashMap<Int, SegmentEntity>()
-        for (s in segments) for (i in s.firstSentenceIdx..s.lastSentenceIdx) segmentByIdx[i] = s
+        for (s in segments) for (i in ctx.byIdx.keys) if (i in s.firstSentenceIdx..s.lastSentenceIdx) segmentByIdx[i] = s
         val unitContext = object : UnitContext {
             override fun sentence(idx: Int) = ctx.sentence(idx)
             override fun segmentTranslation(idx: Int) = segmentByIdx[idx]?.translation
         }
         val stoplist = deps.stoplists.forLang(ctx.lang)
         val units = ArrayList<ValidatedUnit>()
-        for (job in db.jobDao().getByKind(id, JobKind.EXTRACT)) {
-            if (job.status != JobStatus.DONE || job.responseJson == null) throw PipelineException(ErrorCode.UNKNOWN, "extract job ${job.idx} not done")
+        val extractionJobs = db.jobDao().getByKind(id, JobKind.EXTRACT)
+        trace.counts["extractionJobs"] = extractionJobs.size
+        trace.counts["extractionDone"] = extractionJobs.count { it.status == JobStatus.DONE }
+        if (extractionJobs.isEmpty() || ctx.sentences.any { segmentByIdx[it.idx] == null }) throw ConsolidationCacheMissing()
+        val covered = hashSetOf<Int>()
+        for (job in extractionJobs) {
+            trace.step = ConsolidationStep.READ_EXTRACTION
+            trace.counts["extractionIndex"] = job.idx
+            if (job.status != JobStatus.DONE || job.responseJson == null) throw ConsolidationCacheMissing()
             val raw = LlmJson.strict.decodeFromString<StoredExtraction>(job.responseJson).u
-            units += UnitValidator.validate(job.rangeStart!!..job.rangeEnd!!, raw, unitContext, stoplist, ctx.lang, ctx.targetLang)
+            val start = job.rangeStart ?: throw ConsolidationCacheInvalid()
+            val end = job.rangeEnd ?: throw ConsolidationCacheInvalid()
+            if (start > end || start !in ctx.byIdx || end !in ctx.byIdx) throw ConsolidationCacheInvalid()
+            covered += ctx.byIdx.keys.filter { it in start..end }
+            trace.step = ConsolidationStep.VALIDATE_UNITS
+            trace.counts["rawUnits"] = raw.size
+            units += UnitValidator.validate(start..end, raw, unitContext, stoplist, ctx.lang, ctx.targetLang)
         }
+        if (covered != ctx.byIdx.keys) throw ConsolidationCacheMissing()
+        trace.step = ConsolidationStep.MERGE_UNITS
+        trace.counts["validatedUnits"] = units.size
         val cards = UnitMerger.merge(units, ctx.lang, ctx.targetLang)
+        trace.counts["lexicalGroups"] = cards.size
         Log.i(TAG, "doc=$id units=${units.size} cards=${cards.size} toConsolidate=${cards.count { it.needsConsolidation }}")
 
         val senses = HashMap<String, List<SenseDraft>>()
         for (card in cards) if (!card.needsConsolidation) senses[card.lemmaKey] = Consolidation.single(card)
         val batches = Consolidation.batches(cards)
+        val legacy = (ctx.catalog as? ProcessingSnapshot)?.legacyParametersUnknown == true
+        val legacyBatches = if (legacy) Consolidation.batches(cards.map { card ->
+            card.copy(translations = card.units.withIndex().groupBy(
+                { TextNormalizer.translationKey(it.value.translation, ctx.targetLang) }, { it.index }))
+        }) else emptyList()
+        trace.counts["batches"] = batches.size
         for ((i, batch) in batches.withIndex()) {
+            trace.step = ConsolidationStep.BUILD_BATCH
+            trace.counts["batchIndex"] = i
             val job = ensureJob(id, JobKind.CONSOLIDATE, i, null, null, role.model)
+            trace.savedBatchState = when {
+                job.status != JobStatus.DONE && job.finishReason == "length" -> SavedBatchState.UNFINISHED_LENGTH
+                job.status != JobStatus.DONE -> SavedBatchState.UNFINISHED_OTHER
+                job.responseJson != null -> SavedBatchState.DONE_JSON
+                job.finishReason == "fallback" -> SavedBatchState.DONE_FALLBACK
+                else -> SavedBatchState.MISSING_RESPONSE
+            }
+            trace.counts["savedBatchAttempts"] = job.attempts
             val built = Consolidation.buildBatch(batch) { ctx.sentence(it) }
             val response: ConsolidateResponse? = if (job.status == JobStatus.DONE) {
-                job.responseJson?.let { runCatching { LlmJson.lenient.decodeFromString<ConsolidateResponse>(it) }.getOrNull() }
+                trace.step = ConsolidationStep.READ_CACHED_RESPONSE
+                if (job.responseJson == null && job.finishReason != "fallback") throw ConsolidationCacheMissing()
+                job.responseJson?.let { Consolidation.readCached(it, built,
+                    legacyBatches.getOrNull(i)?.let { old -> Consolidation.buildBatch(old) { ctx.sentence(it) } }, legacy) }
             } else {
+                trace.step = ConsolidationStep.REQUEST
+                if (trace.cacheOnly) throw ConsolidationCacheMissing()
                 val request = LlmRequest(ModelRole.CONSOLIDATE, role.model, Prompts.CONSOLIDATE, Messages.consolidate(ctx.lang, ctx.targetLang, built.items), Schemas.CONSOLIDATE_NAME, Schemas.CONSOLIDATE, role.temperature, role.maxTokens, role.reasoning)
                 try {
-                    val (parsed, raw) = parseOrRetry<ConsolidateResponse>(job, request, callRaw(job, request))
-                    markJob(db.jobDao().getById(job.id) ?: job, JobStatus.DONE, raw, null)
+                    val (parsed, _) = parseOrRetry<ConsolidateResponse>(job, request, callRaw(job, request))
+                    trace.step = ConsolidationStep.SAVE_RESPONSE
+                    markJob(db.jobDao().getById(job.id) ?: job, JobStatus.DONE, Consolidation.encodeCached(built, parsed), null)
                     parsed
+                } catch (_: TruncatedResponse) {
+                    // A length-limited answer cannot safely merge meanings. Keep separate translations.
+                    markJob(db.jobDao().getById(job.id) ?: job, JobStatus.DONE, null, "fallback")
+                    null
                 } catch (e: LlmException.InvalidResponse) {
                     // Невалидный ответ после повтора — фолбэк §6.8, документ не падает.
                     Log.w(TAG, "doc=$id consolidate batch $i invalid; fallback")
@@ -512,10 +581,12 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                     null
                 }
             }
+            trace.step = ConsolidationStep.APPLY_SENSES
             senses.putAll(Consolidation.apply(batch, built, response))
             ctx.onProgress(DocStatus.CONSOLIDATING, ctx.progress.within(DocStatus.CONSOLIDATING, (i + 1f) / (batches.size + 1)))
         }
 
+        trace.step = ConsolidationStep.CAPTURE_PROGRESS
         val snapshot = db.withTransaction { ReprocessProgress(db, deps.files).capture(id) }
         val count = writeCards(ctx, cards, senses, snapshot)
         return count
@@ -525,6 +596,8 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         val id = ctx.doc.id
         val t = now
         var count = 0
+        val trace = requireNotNull(kotlinx.coroutines.currentCoroutineContext()[ConsolidationTrace])
+        trace.step = ConsolidationStep.REPLACE_CARDS
         val unmatched = snapshot.toMutableList()
         db.withTransaction {
             db.cardDao().deleteByDocument(id)
@@ -546,8 +619,10 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                         reps = progress?.reps, lapses = progress?.lapses,
                     ))
                     if (progress != null) unmatched.remove(progress)
+                    trace.step = ConsolidationStep.WRITE_SENSE
                     val senseId = db.cardDao().insertSense(pro.perfectproduct.cramin.data.db.SenseEntity(cardId = cardId, idx = 0, translation = draft.translation, exampleOccurrenceId = null))
                     val example = ExamplePicker.pick(card, draft) { ctx.sentence(it) }
+                    trace.step = ConsolidationStep.WRITE_OCCURRENCES
                     for (ui in draft.unitIndices) {
                         val u = card.units[ui]
                         val sentenceId = ctx.sentenceIds[u.sentenceIdx] ?: continue
@@ -559,8 +634,11 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                         if (ui == example) db.cardDao().setSenseExample(senseId, occurrence)
                     }
                     count++
+                    trace.counts["cardsWritten"] = count
+                    trace.step = ConsolidationStep.REPLACE_CARDS
                 }
             }
+            trace.step = ConsolidationStep.COMMIT_READY
             deps.checkpoint("restored")
             if (unmatched.isNotEmpty()) db.documentDao().setStudyNotice(id, true)
             db.documentDao().setStatus(id, DocStatus.READY, 1f, null, null, now)
@@ -598,6 +676,8 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
 
     /** Один HTTP-вызов с учётом токенов и стоимости в Job и Document. */
     private suspend fun callRaw(job: JobEntity, request: LlmRequest): LlmResponse {
+        val trace = kotlinx.coroutines.currentCoroutineContext()[ConsolidationTrace]
+        if (trace?.cacheOnly == true) throw ConsolidationCacheMissing()
         val saved = db.documentDao().getById(job.documentId)?.modelsSnapshotJson?.let { ProcessingSnapshot.decode(it) }
         if (saved?.legacyParametersUnknown == true && saved.find(request.model) == null)
             throw LlmException.BadRequest(0, pro.perfectproduct.cramin.llm.RequestRejection.CAPABILITIES_UNKNOWN.name)
@@ -621,7 +701,9 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                         event.rejection, event.httpStatus, event.apiStatus, event.respondedAtEpochMs ?: event.startedAtEpochMs, event).encode())
                 }
             })
+        if (trace?.active == true) { trace.step = ConsolidationStep.REQUEST; trace.invocations.incrementAndGet() }
         val response = deps.llm.complete(frozenRequest)
+        if (trace?.active == true) { trace.responses.incrementAndGet(); trace.step = ConsolidationStep.SAVE_RESPONSE }
         db.withTransaction {
         val fresh = db.jobDao().getById(job.id) ?: job
         db.jobDao().update(
@@ -642,10 +724,12 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
 
     /** Разбор JSON по схеме; невалидный ответ — один повтор запроса, затем InvalidResponse (SPEC §6.3). */
     private suspend inline fun <reified T> parseOrRetry(job: JobEntity, request: LlmRequest, first: LlmResponse): Pair<T, String> {
+        kotlinx.coroutines.currentCoroutineContext()[ConsolidationTrace]?.takeIf { it.active }?.let { it.step = ConsolidationStep.PARSE_RESPONSE }
         if (first.truncated) throw TruncatedResponse()
         runCatching { LlmJson.parse<T>(first.content) }.getOrNull()?.let { return it to first.content }
         Log.w(TAG, "job=${job.id} invalid JSON; retrying once")
         val second = callRaw(job, request)
+        kotlinx.coroutines.currentCoroutineContext()[ConsolidationTrace]?.takeIf { it.active }?.let { it.step = ConsolidationStep.PARSE_RESPONSE }
         if (second.truncated) throw TruncatedResponse()
         val parsed = runCatching { LlmJson.parse<T>(second.content) }.getOrNull()
             ?: throw LlmException.InvalidResponse("schema violation after retry")

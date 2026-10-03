@@ -121,7 +121,7 @@ fun DocumentScreen(
         if (doc == null) return@Scaffold
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             DocumentHeader(doc, counts.total, counts.known)
-            StatusBanner(doc, onRetry = vm::retry, onOpenSettings = onOpenSettings, onChooseLang = { chooseLang = it }, onCheckUpdates = onOpenSettings)
+            StatusBanner(doc, onRetryLocal = vm::retryLocalConsolidation, onRetry = vm::retry, onOpenSettings = onOpenSettings, onChooseLang = { chooseLang = it }, onCheckUpdates = onOpenSettings)
             if (tab == "text") {
                 TextTab(vm)
             } else {
@@ -205,7 +205,7 @@ private fun DocumentHeader(doc: DocumentEntity, total: Int, known: Int) {
 /** Обработка и ошибки с действием (SPEC: «Ошибка — повторить», конкретные сообщения по коду). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun StatusBanner(doc: DocumentEntity, onRetry: () -> Unit, onOpenSettings: () -> Unit, onChooseLang: (ErrorAction) -> Unit, onCheckUpdates: () -> Unit) {
+private fun StatusBanner(doc: DocumentEntity, onRetryLocal: () -> Unit, onRetry: () -> Unit, onOpenSettings: () -> Unit, onChooseLang: (ErrorAction) -> Unit, onCheckUpdates: () -> Unit) {
     val oldParameters = doc.modelsSnapshotJson?.let {
         runCatching { pro.perfectproduct.cramin.llm.ProcessingSnapshot.decode(it).legacyParametersUnknown }.getOrDefault(false)
     } == true
@@ -247,6 +247,12 @@ private fun StatusBanner(doc: DocumentEntity, onRetry: () -> Unit, onOpenSetting
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text(stringResource(errorMessageRes(code)), color = MaterialTheme.colorScheme.onErrorContainer)
+                    if (diagnostic?.stage == pro.perfectproduct.cramin.pipeline.FailureStage.CONSOLIDATING) {
+                        Text(stringResource(R.string.consolidation_local_hint), style = MaterialTheme.typography.bodyMedium)
+                        OutlinedButton(onClick = onRetryLocal, modifier = Modifier.testTag("retryLocalConsolidation")) {
+                            Text(stringResource(R.string.consolidation_local_retry))
+                        }
+                    }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
                         for (action in errorActions(code)) {
                             OutlinedButton(

@@ -11,13 +11,15 @@ data class FailureDiagnostic(val source: SourceType, val stage: FailureStage, va
     val rejection: pro.perfectproduct.cramin.llm.RequestRejection? = null,
     val httpStatus: Int? = null, val apiStatus: Int? = null, val observedAtEpochMs: Long? = null,
     val request: pro.perfectproduct.cramin.llm.RequestDiagnostic? = null,
+    val local: LocalFailureDiagnostic? = null,
 ) {
     fun encode(): String = Json.encodeToString(serializer(), this)
     fun copyText(version: String, api: Int): String =
         "Copied with Cramin: $version\nCopy device Android API: $api\nSource: $source\nStage: $stage\nCode: $code" +
             "\nRejection: ${rejection ?: "UNKNOWN"}\nHTTP: ${httpStatus ?: "UNKNOWN"}\nAPI status: ${apiStatus ?: "UNKNOWN"}" +
             "\nObserved at (epoch ms): ${observedAtEpochMs ?: "UNKNOWN"}" +
-            "\nRequest event: ${request?.copyText() ?: "UNKNOWN (not recorded)"}"
+            "\nRequest event: ${request?.copyText() ?: "UNKNOWN (not recorded)"}" +
+            "\nLocal event: ${local?.copyText() ?: "UNKNOWN (not recorded)"}"
     companion object {
         private val codec = Json { ignoreUnknownKeys = true }
         fun forDocument(doc: DocumentEntity): FailureDiagnostic? = doc.failureJson?.let {

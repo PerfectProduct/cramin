@@ -88,4 +88,31 @@ class ProcessDocumentWorkerTest {
         } finally { container.db.close() }
     }
 
+    @Test fun cacheOnlyWorkerCannotInvokeAnyModel() = runBlocking {
+        val container = TestContainer(context)
+        try {
+            val id = container.documentRepository.create(NewDocument.Text(Fixtures.text(Lang.EN), null, Lang.RU, null))
+            suspend fun work(local: Boolean) = TestListenableWorkerBuilder<ProcessDocumentWorker>(context)
+                .setInputData(workDataOf(ProcessDocumentWorker.KEY_DOCUMENT_ID to id,
+                    ProcessDocumentWorker.KEY_LOCAL_CONSOLIDATION to local))
+                .setWorkerFactory(container.workerFactory).build().doWork()
+            work(false)
+            val calls = container.fakeLlm.requests.size
+            container.fakeLlm.errorInjector = { _, _ -> AssertionError("API forbidden") }
+            container.documentRepository.requeue(id)
+            work(true)
+            assertEquals(DocStatus.READY, container.documentRepository.get(id)!!.status)
+            assertEquals(calls, container.fakeLlm.requests.size)
+            val job = container.db.jobDao().getByKind(id, pro.perfectproduct.cramin.data.db.JobKind.CONSOLIDATE).first()
+            container.db.jobDao().update(job.copy(status = pro.perfectproduct.cramin.data.db.JobStatus.PENDING, responseJson = null))
+            container.documentRepository.requeue(id)
+            work(true)
+            assertEquals(DocStatus.FAILED, container.documentRepository.get(id)!!.status)
+            val d = FailureDiagnostic.forDocument(container.documentRepository.get(id)!!)!!
+            assertEquals(ConsolidationStep.REQUEST, d.local!!.step)
+            assertEquals(0, d.local!!.clientInvocations)
+            assertEquals(calls, container.fakeLlm.requests.size)
+        } finally { container.db.close() }
+    }
+
 }

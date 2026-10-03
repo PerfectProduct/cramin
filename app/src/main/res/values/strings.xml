@@ -260,4 +260,6 @@
     <string name="licenses_inventory">Состав зависимостей сборки</string>
     <string name="diagnostic_rejection">Категория отказа запроса: %1$s</string>
     <string name="diagnostic_observed">Отказ зафиксирован: %1$s</string>
+    <string name="consolidation_local_retry">Повторить консолидацию без API</string>
+    <string name="consolidation_local_hint">Только сохранённые результаты, без платных запросов. Если данных недостаточно, обработка остановится с диагностикой. Обычный повтор может обращаться к API.</string>
 </resources>

@@ -121,6 +121,25 @@ class UiFlowsTest {
         assertEquals(DocStatus.FAILED, container.documentRepository.get(id)?.status)
     }
 
+    @Test fun consolidationFailureOffersExplicitNetworkFreeRecovery() = runBlocking<Unit> {
+        val id = seedDocument()
+        container.db.documentDao().setStatus(id, DocStatus.FAILED, .54f, "UNKNOWN", "PRIVATE", 2)
+        container.db.documentDao().setFailure(id,
+            """{"source":"URL","stage":"CONSOLIDATING","code":"UNKNOWN","observedAtEpochMs":1791027829315}""")
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithText("Riverside Library").performClick()
+        compose.onNodeWithTag("retryLocalConsolidation").assertIsDisplayed()
+        compose.onNodeWithText("Скопировать диагностику").performClick()
+        compose.runOnIdle {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val copied = clipboard.primaryClip!!.getItemAt(0).text.toString()
+            org.junit.Assert.assertTrue(copied.contains("Local event: UNKNOWN (not recorded)"))
+            org.junit.Assert.assertFalse(copied.contains("NOT_INVOKED"))
+        }
+        assertEquals(DocStatus.FAILED, container.documentRepository.get(id)?.status)
+        assertEquals(0, container.fakeLlm.requests.size)
+    }
+
     @Test
     fun libraryShowsDocumentAndPlayOpensCardsTab() = runBlocking<Unit> {
         val id = seedDocument()

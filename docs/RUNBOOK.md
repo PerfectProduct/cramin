@@ -168,3 +168,12 @@ fixture использует MediaStore.Downloads (API29+), поэтому API26
 проверки использовать только один BRIEF, с отключёнными автоматическими transport retries,
 предварительным расчётом верхней стоимости и сохранением только safe event. План и границы:
 [BRIEF-DIAGNOSTICS.md](BRIEF-DIAGNOSTICS.md). Обычный offline набор — `-Plive=false`.
+
+### CONSOLIDATING UNKNOWN / 0.1.24
+
+Порядок для владельца и границы диагностики: [CONSOLIDATION-DIAGNOSTICS.md](CONSOLIDATION-DIAGNOSTICS.md).
+Установить новый debug поверх старого без очистки. В ошибочной статье выбрать именно
+«Повторить консолидацию без API»; скопировать новое событие при отказе. Это действие не запускает
+LLM/STT/каталог; обычный retry и reprocess могут быть платными. Не запрашивать БД/текст на первом
+шаге. Старый last failure после успешного READY остаётся исторической диагностикой.
+Материалы: `/home/dev/cramin-completion/2026-10-03-consolidation/` (логи, HANDOFF, APK и подпись).

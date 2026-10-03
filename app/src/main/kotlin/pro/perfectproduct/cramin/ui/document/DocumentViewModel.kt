@@ -96,6 +96,14 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
 
     private val reprocessMutex = kotlinx.coroutines.sync.Mutex()
 
+    fun retryLocalConsolidation() = container.appScope.launch {
+        reprocessMutex.withLock {
+            container.processScheduler.cancelAndAwait(documentId)
+            container.documentRepository.requeue(documentId)
+            container.processScheduler.enqueue(documentId, localConsolidationOnly = true)
+        }
+    }
+
     fun reprocess() = container.appScope.launch {
         reprocessMutex.withLock {
             container.processScheduler.cancelAndAwait(documentId)

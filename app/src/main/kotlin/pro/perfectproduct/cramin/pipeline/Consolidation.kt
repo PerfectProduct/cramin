@@ -1,5 +1,8 @@
 package pro.perfectproduct.cramin.pipeline
 
+import kotlinx.serialization.json.*
+import pro.perfectproduct.cramin.llm.LlmJson
+import pro.perfectproduct.cramin.util.Hashing
 import pro.perfectproduct.cramin.llm.ConsolidateItemInput
 import pro.perfectproduct.cramin.llm.ConsolidateOccurrenceInput
 import pro.perfectproduct.cramin.llm.ConsolidateResponse
@@ -36,6 +39,27 @@ object Consolidation {
             )
         }
         return Batch(items, ids)
+    }
+
+    private fun inputHash(batch: Batch): String = Hashing.sha256Hex(
+        Json.encodeToString(kotlinx.serialization.builtins.ListSerializer(ConsolidateItemInput.serializer()), batch.items).toByteArray(Charsets.UTF_8))
+
+    /** Extra field is ignored by older readers; no new DB schema and no duplicate source text. */
+    fun encodeCached(batch: Batch, response: ConsolidateResponse): String {
+        val root = Json.encodeToJsonElement(ConsolidateResponse.serializer(), response).jsonObject
+        return JsonObject(root + ("cacheInputSha256" to JsonPrimitive(inputHash(batch)))).toString()
+    }
+
+    internal fun readCached(raw: String, batch: Batch, legacyBatch: Batch?, legacy: Boolean): ConsolidateResponse {
+        val root = LlmJson.parse<JsonObject>(raw)
+        val hash = root["cacheInputSha256"]?.jsonPrimitive?.content
+        if (hash != null) {
+            if (hash != inputHash(batch)) throw ConsolidationCacheInvalid()
+        } else if (legacy && legacyBatch?.items != batch.items) {
+            // v4 changed translation grouping. Batch-local occurrence IDs cannot be guessed after a shift.
+            throw ConsolidationCacheInvalid()
+        }
+        return LlmJson.parse(raw)
     }
 
     /**

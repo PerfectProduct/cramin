@@ -167,3 +167,28 @@ resulting history version. Production code unchanged; earlier 0.1.24 remains val
 Offline JVM after probe: 142 passed, 0 failures/errors/skipped (`offline.log`); live excluded.
 Production source unchanged. Evidence commit subject: “Record bounded live BRIEF diagnostic results”;
 exact SHA and post-commit debug artifact recorded in external HANDOFF.md to avoid version recursion.
+
+## 2026-10-03 — CONSOLIDATING UNKNOWN in phone 0.1.24
+
+Active task supersedes CLI troubleshooting. Baseline 9431fd8, clean feat/v1; installed production
+09c540c. No paid requests allowed/made. Phone cause remains unknown; historical error discarded type.
+
+Completed: reproduce length escape and cached fenced-response divergence (2 tests red before fix);
+conservative length fallback, consistent parse; bounded safe local events; durable cache-only Worker
+path and explicit FAILED button; incomplete/corrupt/ambiguous legacy cache guards and batch binding.
+Progress remains in existing transaction/snapshot; schemas 1–4 unchanged. See DL049 and
+CONSOLIDATION-DIAGNOSTICS.md (facts, hypotheses, retained intermediates and exact phone route).
+
+Checks: assembleDebug PASS; testDebugUnitTest -Plive=false: 151 passed, 0 failed/skipped;
+lintDebug: 0 errors, 31 warnings; full offline API34 instrumented set: 22 passed, 0 failed/skipped.
+Live annotation and PublicSourceTest explicitly excluded. New Worker test calls doWork through test
+builder; this task did not test real process death or paid providers. Unit fault injection is simulated.
+Expanded tests briefly failed on coroutine-added duplicate cause wrapper; assertion now accepts that
+actual chain while retaining its types. AVD: separate working copy, emulator-5580 API34; no phone.
+
+Evidence: /home/dev/cramin-completion/2026-10-03-consolidation/ (red/green logs, report, final artifact
+metadata). Commit this completed code/test/docs part with subject “Diagnose and recover consolidation
+without API calls”; exact SHA goes in external HANDOFF to avoid version-count recursion.
+Next: post-commit debug build, signature/key scan, controlled 0.1.24→new APK update on synthetic data,
+copy final artifact to unique Downloads folder, then owner uses only «Повторить консолидацию без API»
+and sends new local event if failed. Missing cache requires diagnosis before separate paid approval.
