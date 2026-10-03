@@ -39,7 +39,7 @@ data class LocalFailureDiagnostic(
 }
 
 /** Per-coroutine attempt state; never holds payloads or exception messages. */
-internal class ConsolidationTrace(val cacheOnly: Boolean) : AbstractCoroutineContextElement(Key) {
+internal class ConsolidationTrace(val cacheOnly: Boolean, val consolidationOnly: Boolean = cacheOnly) : AbstractCoroutineContextElement(Key) {
     companion object Key : CoroutineContext.Key<ConsolidationTrace>
     var active = false
     var step = ConsolidationStep.LOAD_SNAPSHOT
@@ -66,4 +66,10 @@ internal class ConsolidationTrace(val cacheOnly: Boolean) : AbstractCoroutineCon
 
 /** No arbitrary message: the type and current step explain missing/incompatible persisted inputs. */
 internal class ConsolidationCacheMissing : Exception()
-internal class ConsolidationCacheInvalid : Exception()
+internal class ConsolidationCacheInvalid(cause: Throwable? = null) : Exception(cause)
+
+internal inline fun <T> readConsolidationCache(read: () -> T): T = try { read() } catch (e: kotlinx.serialization.SerializationException) {
+    throw ConsolidationCacheInvalid(e)
+} catch (e: IllegalArgumentException) {
+    throw ConsolidationCacheInvalid(e)
+}

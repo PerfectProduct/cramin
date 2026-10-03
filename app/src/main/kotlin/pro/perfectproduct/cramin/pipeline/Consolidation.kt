@@ -41,7 +41,7 @@ object Consolidation {
         return Batch(items, ids)
     }
 
-    private fun inputHash(batch: Batch): String = Hashing.sha256Hex(
+    internal fun inputHash(batch: Batch): String = Hashing.sha256Hex(
         Json.encodeToString(kotlinx.serialization.builtins.ListSerializer(ConsolidateItemInput.serializer()), batch.items).toByteArray(Charsets.UTF_8))
 
     /** Extra field is ignored by older readers; no new DB schema and no duplicate source text. */
@@ -51,7 +51,7 @@ object Consolidation {
     }
 
     internal fun readCached(raw: String, batch: Batch, legacyBatch: Batch?, legacy: Boolean): ConsolidateResponse {
-        val root = LlmJson.parse<JsonObject>(raw)
+        val root = readConsolidationCache { LlmJson.parse<JsonObject>(raw) }
         val hash = root["cacheInputSha256"]?.jsonPrimitive?.content
         if (hash != null) {
             if (hash != inputHash(batch)) throw ConsolidationCacheInvalid()
@@ -59,7 +59,7 @@ object Consolidation {
             // v4 changed translation grouping. Batch-local occurrence IDs cannot be guessed after a shift.
             throw ConsolidationCacheInvalid()
         }
-        return LlmJson.parse(raw)
+        return readConsolidationCache { LlmJson.parse(raw) }
     }
 
     /**

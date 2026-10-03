@@ -125,7 +125,7 @@ class UiFlowsTest {
         val id = seedDocument()
         container.db.documentDao().setStatus(id, DocStatus.FAILED, .54f, "UNKNOWN", "PRIVATE", 2)
         container.db.documentDao().setFailure(id,
-            """{"source":"URL","stage":"CONSOLIDATING","code":"UNKNOWN","observedAtEpochMs":1791027829315}""")
+            """{"source":"URL","stage":"CONSOLIDATING","code":"UNKNOWN","observedAtEpochMs":1791027829315,"local":{"build":"0.1.26-debug","buildCode":26,"attemptId":"synthetic","cacheOnly":true,"step":"REQUEST","exceptionTypes":["pro.perfectproduct.cramin.pipeline.ConsolidationCacheMissing"],"appFrames":[],"counts":{},"clientInvocations":0,"clientResponses":0}}""")
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithText("Riverside Library").performClick()
         compose.onNodeWithTag("retryLocalConsolidation").assertIsDisplayed()
@@ -133,9 +133,14 @@ class UiFlowsTest {
         compose.runOnIdle {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             val copied = clipboard.primaryClip!!.getItemAt(0).text.toString()
-            org.junit.Assert.assertTrue(copied.contains("Local event: UNKNOWN (not recorded)"))
-            org.junit.Assert.assertFalse(copied.contains("NOT_INVOKED"))
+            org.junit.Assert.assertTrue(copied.contains("ConsolidationCacheMissing"))
+            org.junit.Assert.assertTrue(copied.contains("NOT_INVOKED"))
         }
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.err_consolidation_cache_unfinished)).assertIsDisplayed()
+        compose.onNodeWithTag("resumeConsolidationApi").performClick()
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.consolidation_api_confirm)).assertIsDisplayed()
+        assertEquals(0, container.fakeLlm.requests.size)
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.consolidation_api_cancel)).performClick()
         assertEquals(DocStatus.FAILED, container.documentRepository.get(id)?.status)
         assertEquals(0, container.fakeLlm.requests.size)
     }

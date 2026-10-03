@@ -44,7 +44,7 @@ class ProcessDocumentWorker(
         runCatching { setForeground(foregroundInfo(title, DocStatus.QUEUED, 0f)) }
             .onFailure { Log.w(TAG, "setForeground failed: ${it.javaClass.simpleName}") }
         var lastShown = -1
-        val outcome = processorFactory().process(documentId, inputData.getBoolean(KEY_LOCAL_CONSOLIDATION, false)) { status, progress ->
+        val outcome = processorFactory().process(documentId, inputData.getBoolean(KEY_LOCAL_CONSOLIDATION, false), inputData.getBoolean(KEY_CONSOLIDATION_ONLY, false)) { status, progress ->
             val percent = (progress * 100).toInt()
             if (percent != lastShown || status.isTerminal) {
                 lastShown = percent
@@ -78,6 +78,7 @@ class ProcessDocumentWorker(
 
     companion object {
         private const val TAG = "Worker"
+        const val KEY_CONSOLIDATION_ONLY = "consolidationOnly"
         const val KEY_LOCAL_CONSOLIDATION = "localConsolidationOnly"
         const val KEY_DOCUMENT_ID = "documentId"
         const val KEY_CARDS = "cards"
@@ -89,9 +90,9 @@ class ProcessDocumentWorker(
 
 /** Постановка обработки в очередь WorkManager. */
 class ProcessScheduler(private val workManager: WorkManager) {
-    fun enqueue(documentId: Long, localConsolidationOnly: Boolean = false) {
+    fun enqueue(documentId: Long, localConsolidationOnly: Boolean = false, consolidationOnly: Boolean = false) {
         val request = OneTimeWorkRequestBuilder<ProcessDocumentWorker>()
-            .setInputData(workDataOf(ProcessDocumentWorker.KEY_DOCUMENT_ID to documentId, ProcessDocumentWorker.KEY_LOCAL_CONSOLIDATION to localConsolidationOnly))
+            .setInputData(workDataOf(ProcessDocumentWorker.KEY_DOCUMENT_ID to documentId, ProcessDocumentWorker.KEY_LOCAL_CONSOLIDATION to localConsolidationOnly, ProcessDocumentWorker.KEY_CONSOLIDATION_ONLY to consolidationOnly))
             .setConstraints(Constraints.Builder().setRequiredNetworkType(if (localConsolidationOnly) NetworkType.NOT_REQUIRED else NetworkType.CONNECTED).build())
             .addTag(TAG_PROCESS)
             .build()

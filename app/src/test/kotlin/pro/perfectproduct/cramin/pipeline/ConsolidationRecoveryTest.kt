@@ -19,7 +19,7 @@ class ConsolidationRecoveryTest {
     private suspend fun TestPipeline.create() = documents.create(NewDocument.Text(
         "The bank beside the river holds water. The bank accepts money from customers.", null, Lang.RU, Lang.EN))
 
-    @Test fun lengthOnFirstAndRetryConsolidationUsesConservativeFallback() = runTest {
+    @Test fun lengthOnIndivisibleGroupStopsWithoutLosingOccurrences() = runTest {
         for (invalidFirst in listOf(false, true)) {
             val fake = FakeLlmClient()
             var n = 0
@@ -29,10 +29,12 @@ class ConsolidationRecoveryTest {
             } else null }
             TestPipeline(tmp.newFolder(), fake).use { p ->
                 val id = p.create()
-                assertTrue(p.processor().process(id) is ProcessOutcome.Ready)
+                assertEquals(ErrorCode.CONSOLIDATION_LIMIT, (p.processor().process(id) as ProcessOutcome.Failed).code)
                 assertEquals(if (invalidFirst) 2 else 1, n)
-                assertEquals(2, p.db.cardDao().getByDocument(id).count { it.lemma == "bank" })
-                assertEquals("fallback", p.db.jobDao().getByKind(id, JobKind.CONSOLIDATE).single().finishReason)
+                assertTrue(p.db.cardDao().getByDocument(id).isEmpty())
+                val before = fake.requests.size
+                assertEquals(ErrorCode.CONSOLIDATION_LIMIT, (p.processor().process(id) as ProcessOutcome.Failed).code)
+                assertEquals(before, fake.requests.size)
             }
         }
     }
@@ -100,7 +102,7 @@ class ConsolidationRecoveryTest {
             assertEquals(ConsolidationStep.REQUEST, diagnostic.local!!.step)
             assertEquals(0, diagnostic.local!!.clientInvocations)
             assertTrue(diagnostic.copyText("copy-version", 34).contains("NOT_INVOKED"))
-            assertTrue(diagnostic.local!!.exceptionTypes.first().endsWith("ConsolidationCacheMissing"))
+            assertTrue(diagnostic.local!!.exceptionTypes.first().endsWith("ConsolidationCacheUnfinished"))
         }
     }
 
@@ -119,7 +121,8 @@ class ConsolidationRecoveryTest {
             assertEquals(before, p.db.cardDao().getByDocument(id))
             val diagnostic = FailureDiagnostic.forDocument(p.documents.get(id)!!)!!
             assertEquals(ConsolidationStep.READ_EXTRACTION, diagnostic.local!!.step)
-            assertTrue(diagnostic.local!!.exceptionTypes.first().contains("JsonDecodingException"))
+            assertEquals(ErrorCode.CONSOLIDATION_CACHE_INVALID, diagnostic.code)
+            assertTrue(diagnostic.local!!.exceptionTypes.any { it.contains("JsonDecodingException") })
             assertTrue(diagnostic.local!!.appFrames.isNotEmpty())
             assertEquals(1, diagnostic.local!!.counts["extractionDone"])
             val text = diagnostic.encode() + diagnostic.copyText("COPY_VERSION", 34)

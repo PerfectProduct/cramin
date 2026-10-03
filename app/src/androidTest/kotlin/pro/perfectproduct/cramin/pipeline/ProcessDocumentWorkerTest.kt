@@ -115,4 +115,24 @@ class ProcessDocumentWorkerTest {
         } finally { container.db.close() }
     }
 
+    @Test fun addressedWorkerSkipsFailedBriefWithoutSpendingOnEarlierStages() = runBlocking {
+        val container = TestContainer(context)
+        try {
+            val id = container.documentRepository.create(NewDocument.Text(Fixtures.text(Lang.EN), null, Lang.RU, null))
+            suspend fun work(only: Boolean) = TestListenableWorkerBuilder<ProcessDocumentWorker>(context)
+                .setInputData(workDataOf(ProcessDocumentWorker.KEY_DOCUMENT_ID to id,
+                    ProcessDocumentWorker.KEY_CONSOLIDATION_ONLY to only))
+                .setWorkerFactory(container.workerFactory).build().doWork()
+            work(false)
+            val brief = container.db.jobDao().getByKind(id, pro.perfectproduct.cramin.data.db.JobKind.BRIEF).single()
+            container.db.jobDao().update(brief.copy(status = pro.perfectproduct.cramin.data.db.JobStatus.FAILED))
+            val calls = container.fakeLlm.requests.size
+            container.fakeLlm.errorInjector = { _, _ -> AssertionError("No earlier stage may run") }
+            container.documentRepository.requeue(id)
+            work(true)
+            assertEquals(DocStatus.READY, container.documentRepository.get(id)!!.status)
+            assertEquals(calls, container.fakeLlm.requests.size)
+        } finally { container.db.close() }
+    }
+
 }

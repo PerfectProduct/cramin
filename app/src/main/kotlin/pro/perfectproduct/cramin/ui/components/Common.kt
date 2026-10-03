@@ -72,6 +72,10 @@ fun errorMessageRes(code: ErrorCode): Int = when (code) {
     ErrorCode.YOUTUBE_NO_LANG -> R.string.err_youtube_no_lang
     ErrorCode.TRANSCRIPTION -> R.string.err_transcription
     ErrorCode.STORAGE -> R.string.err_storage
+    ErrorCode.CONSOLIDATION_CACHE_MISSING -> R.string.err_consolidation_cache_missing
+    ErrorCode.CONSOLIDATION_CACHE_UNFINISHED -> R.string.err_consolidation_cache_unfinished
+    ErrorCode.CONSOLIDATION_CACHE_INVALID -> R.string.err_consolidation_cache_invalid
+    ErrorCode.CONSOLIDATION_LIMIT -> R.string.err_consolidation_limit
     ErrorCode.UNKNOWN -> R.string.err_unknown
 }
 

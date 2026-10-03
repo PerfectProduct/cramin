@@ -262,4 +262,12 @@
     <string name="diagnostic_observed">Отказ зафиксирован: %1$s</string>
     <string name="consolidation_local_retry">Повторить консолидацию без API</string>
     <string name="consolidation_local_hint">Только сохранённые результаты, без платных запросов. Если данных недостаточно, обработка остановится с диагностикой. Обычный повтор может обращаться к API.</string>
+    <string name="err_consolidation_cache_missing">Сохранённых промежуточных данных недостаточно. Бесплатное завершение недоступно. Скопируйте диагностику перед обработкой через API.</string>
+    <string name="err_consolidation_cache_unfinished">Объединение значений не завершено. Готового ответа для части данных нет; для продолжения потребуется API. Сохранённые переводы и извлечённые слова будут использованы повторно.</string>
+    <string name="err_consolidation_cache_invalid">Сохранённые результаты несовместимы или повреждены. Карточки не заменены. Скопируйте диагностику; автоматический платный повтор не запущен.</string>
+    <string name="err_consolidation_limit">Группа одного слова или лимит ответа не помещается в допустимый запрос. Готовые части сохранены. Скопируйте диагностику; повтор с теми же параметрами не поможет.</string>
+    <string name="consolidation_api_resume">Продолжить консолидацию через API</string>
+    <string name="consolidation_api_confirm">Будут запрошены только недостающие части консолидации. Перевод, извлечение слов и бриф повторяться не будут. Используются сохранённые модели и параметры. Возможны расходы OpenRouter; денежный предел не установлен.</string>
+    <string name="consolidation_api_start">Продолжить с расходами</string>
+    <string name="consolidation_api_cancel">Не запускать</string>
 </resources>

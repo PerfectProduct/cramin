@@ -121,7 +121,7 @@ fun DocumentScreen(
         if (doc == null) return@Scaffold
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             DocumentHeader(doc, counts.total, counts.known)
-            StatusBanner(doc, onRetryLocal = vm::retryLocalConsolidation, onRetry = vm::retry, onOpenSettings = onOpenSettings, onChooseLang = { chooseLang = it }, onCheckUpdates = onOpenSettings)
+            StatusBanner(doc, onResumeApi = vm::resumeConsolidationWithApi, onRetryLocal = vm::retryLocalConsolidation, onRetry = vm::retry, onOpenSettings = onOpenSettings, onChooseLang = { chooseLang = it }, onCheckUpdates = onOpenSettings)
             if (tab == "text") {
                 TextTab(vm)
             } else {
@@ -205,7 +205,15 @@ private fun DocumentHeader(doc: DocumentEntity, total: Int, known: Int) {
 /** Обработка и ошибки с действием (SPEC: «Ошибка — повторить», конкретные сообщения по коду). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun StatusBanner(doc: DocumentEntity, onRetryLocal: () -> Unit, onRetry: () -> Unit, onOpenSettings: () -> Unit, onChooseLang: (ErrorAction) -> Unit, onCheckUpdates: () -> Unit) {
+private fun StatusBanner(doc: DocumentEntity, onResumeApi: () -> Unit, onRetryLocal: () -> Unit, onRetry: () -> Unit, onOpenSettings: () -> Unit, onChooseLang: (ErrorAction) -> Unit, onCheckUpdates: () -> Unit) {
+    var confirmApi by remember { mutableStateOf(false) }
+    if (confirmApi) AlertDialog(
+        onDismissRequest = { confirmApi = false },
+        title = { Text(stringResource(R.string.consolidation_api_resume)) },
+        text = { Text(stringResource(R.string.consolidation_api_confirm)) },
+        confirmButton = { TextButton(onClick = { confirmApi = false; onResumeApi() }) { Text(stringResource(R.string.consolidation_api_start)) } },
+        dismissButton = { TextButton(onClick = { confirmApi = false }) { Text(stringResource(R.string.consolidation_api_cancel)) } },
+    )
     val oldParameters = doc.modelsSnapshotJson?.let {
         runCatching { pro.perfectproduct.cramin.llm.ProcessingSnapshot.decode(it).legacyParametersUnknown }.getOrDefault(false)
     } == true
@@ -246,15 +254,26 @@ private fun StatusBanner(doc: DocumentEntity, onRetryLocal: () -> Unit, onRetry:
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).testTag("errorBanner"),
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
-                    Text(stringResource(errorMessageRes(code)), color = MaterialTheme.colorScheme.onErrorContainer)
+                    val effectiveCode = if (code == ErrorCode.UNKNOWN && diagnostic?.local?.exceptionTypes?.any { it.endsWith(".ConsolidationCacheMissing") } == true)
+                        if (diagnostic.local?.step == pro.perfectproduct.cramin.pipeline.ConsolidationStep.REQUEST)
+                            ErrorCode.CONSOLIDATION_CACHE_UNFINISHED else ErrorCode.CONSOLIDATION_CACHE_MISSING
+                    else code
+                    Text(stringResource(errorMessageRes(effectiveCode)), color = MaterialTheme.colorScheme.onErrorContainer)
                     if (diagnostic?.stage == pro.perfectproduct.cramin.pipeline.FailureStage.CONSOLIDATING) {
                         Text(stringResource(R.string.consolidation_local_hint), style = MaterialTheme.typography.bodyMedium)
                         OutlinedButton(onClick = onRetryLocal, modifier = Modifier.testTag("retryLocalConsolidation")) {
                             Text(stringResource(R.string.consolidation_local_retry))
                         }
+                        if (effectiveCode !in listOf(ErrorCode.CONSOLIDATION_CACHE_MISSING, ErrorCode.CONSOLIDATION_CACHE_INVALID, ErrorCode.CONSOLIDATION_LIMIT)) {
+                            OutlinedButton(onClick = { confirmApi = true }, modifier = Modifier.testTag("resumeConsolidationApi")) {
+                                Text(stringResource(R.string.consolidation_api_resume))
+                            }
+                        }
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                        for (action in errorActions(code)) {
+                        for (action in errorActions(code).filterNot {
+                            it == ErrorAction.RETRY && diagnostic?.stage == pro.perfectproduct.cramin.pipeline.FailureStage.CONSOLIDATING
+                        }) {
                             OutlinedButton(
                                 onClick = {
                                     when (action) {

@@ -208,3 +208,23 @@ Details appended to CONSOLIDATION-DIAGNOSTICS.md. Evidence:
 Next: commit test/docs-only coverage; run full offline JVM and assemble corresponding history-version
 APK for traceability. Owner continues with existing 0.1.26 (identical production source); no replacement
 APK required for the requested phone checks. External HANDOFF records final SHA/build/test result.
+
+## 2026-10-03 — real UNFINISHED_LENGTH events; addressed recovery
+
+Baseline 412ac5d feat/v1 clean. Two phone cache-only events prove unfinished root jobs with persisted
+length; no API was invoked by those new attempts. Old v24 handler explains UNKNOWN, exact older event
+identity/provider parameters remain unavailable. rawUnits was last job, not total; corrected names.
+Implemented deterministic whole-lemma/POS split, persisted hash-bound parts/active path in Job JSON,
+input+output budget check, explicit indivisible limit, typed cache errors, confirmed consolidation-only
+API UI/WorkData path skipping FAILED brief and every earlier stage. Room stays v4; no key/model changes.
+No paid calls. Decisions DL050; analysis/call bounds/remaining cost data: LENGTH-RECOVERY.md.
+
+Red test reproduced whole-parent resubmission for historical attempts1/3. Final precommit checks:
+assembleDebug PASS; JVM 160 passed, 0 failed/skipped; lintDebug PASS; API34 offline device 23 passed,
+0 failed/skipped. Explicit live/PublicSource exclusion; separate AVD emulator-5580. Local injected
+exception is not Android process death. New cache-only/API confirmation tested without real provider.
+Commit subject: “Resume truncated consolidation in durable lexical-group parts”. Next: postcommit APK
+build/signature/secret scan, synthetic 0.1.26→new upgrade, Downloads copy and external HANDOFF. No paid
+start: owner stops before «Продолжить с расходами» until a separate decision. Do not use reprocess.
+Evidence /home/dev/cramin-completion/2026-10-03-length-recovery/; final SHA/artifacts stored externally
+so no subsequent version-changing commit is necessary.

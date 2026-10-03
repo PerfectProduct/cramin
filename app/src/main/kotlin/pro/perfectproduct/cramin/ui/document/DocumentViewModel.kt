@@ -104,6 +104,14 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
         }
     }
 
+    fun resumeConsolidationWithApi() = container.appScope.launch {
+        reprocessMutex.withLock {
+            container.processScheduler.cancelAndAwait(documentId)
+            container.documentRepository.requeue(documentId)
+            container.processScheduler.enqueue(documentId, consolidationOnly = true)
+        }
+    }
+
     fun reprocess() = container.appScope.launch {
         reprocessMutex.withLock {
             container.processScheduler.cancelAndAwait(documentId)

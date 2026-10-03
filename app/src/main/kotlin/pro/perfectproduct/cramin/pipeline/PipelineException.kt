@@ -27,6 +27,10 @@ enum class ErrorCode {
     YOUTUBE_NO_LANG,
     TRANSCRIPTION,
     STORAGE,
+    CONSOLIDATION_CACHE_MISSING,
+    CONSOLIDATION_CACHE_UNFINISHED,
+    CONSOLIDATION_CACHE_INVALID,
+    CONSOLIDATION_LIMIT,
     UNKNOWN,
     ;
 
@@ -40,6 +44,10 @@ class PipelineException(val code: ErrorCode, message: String, cause: Throwable? 
     companion object {
         fun from(t: Throwable): PipelineException = when (t) {
             is PipelineException -> t
+            is ConsolidationCacheMissing -> PipelineException(ErrorCode.CONSOLIDATION_CACHE_MISSING, "cache missing", t)
+            is ConsolidationCacheUnfinished -> PipelineException(ErrorCode.CONSOLIDATION_CACHE_UNFINISHED, "cache unfinished", t)
+            is ConsolidationCacheInvalid -> PipelineException(ErrorCode.CONSOLIDATION_CACHE_INVALID, "cache incompatible", t)
+            is ConsolidationLimit -> PipelineException(ErrorCode.CONSOLIDATION_LIMIT, "indivisible group or output limit", t)
             is LlmException.Auth -> PipelineException(if (t.status == 0) ErrorCode.NO_KEY else ErrorCode.AUTH, t.javaClass.simpleName, t)
             is LlmException.Payment -> PipelineException(ErrorCode.PAYMENT, t.javaClass.simpleName, t)
             is LlmException.Network -> PipelineException(ErrorCode.NETWORK, t.javaClass.simpleName, t)

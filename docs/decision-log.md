@@ -399,3 +399,17 @@ match reconstructed pre-v4 grouping to avoid reassigned occurrence IDs. Corrupt/
 fail before atomic replacement. No Room schema change. Add explicit network-free consolidation retry,
 persisted in WorkData, which stops if cache is missing and never calls earlier stages/catalog/LLM.
 Ordinary retry can still cost money. Details and phone procedure: CONSOLIDATION-DIAGNOSTICS.md.
+
+## DL050 — Durable subdivision of CONSOLIDATE and addressed API recovery (2026-10-03)
+
+Real 0.1.26 events show unfinished first jobs with last recorded length (attempts 1/3), all extraction
+jobs DONE; current cache-only failures are expected and made zero calls. Ordinary retry resubmitted
+the whole batch. Split deterministically between lexical groups, never inside one lemma/POS; persist
+partial results/tree/active path in existing Job JSON, hash-bound to input. At single-group length or
+local size/output limit, preserve data and stop explicitly; no endless length retry or increased output.
+Completed parent folds to backward-readable normal response. No Room change; no destructive migration.
+Use serialized UTF8 bytes + output +1024 as conservative context proxy; unknown context local cap32768,
+not a claim about model capacity. Missing output defaults bounded to min(4000, known cap). No dollar cap.
+Add distinct missing/unfinished/incompatible cache codes and a separately confirmed consolidation-only
+API action that skips even FAILED BRIEF and uses saved config. No paid calls authorized/performed.
+See LENGTH-RECOVERY.md for exact semantics, call bounds, unavoidable HTTP→DB window and phone route.
