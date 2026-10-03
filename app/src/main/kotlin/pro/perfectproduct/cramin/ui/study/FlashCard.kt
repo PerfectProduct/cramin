@@ -199,7 +199,7 @@ private fun SourceSide(card: StudyCard) {
     }
 }
 
-/** Оборот: переводы смыслов крупно и пример на каждый смысл; при TGT_FRONT — лемма, часть речи и примеры. Прокручивается. */
+/** Оборот: одно значение и его пример; при TGT_FRONT — лемма и тот же пример. Прокручивается. */
 @Composable
 private fun BackSide(card: StudyCard, showSource: Boolean) {
     val highlight = MaterialTheme.colorScheme.primary

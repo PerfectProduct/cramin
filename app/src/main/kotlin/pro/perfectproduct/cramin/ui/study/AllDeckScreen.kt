@@ -3,10 +3,15 @@ package pro.perfectproduct.cramin.ui.study
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -82,7 +87,7 @@ class AllDeckViewModel(private val container: AppContainer) : ViewModel() {
 }
 
 /** Общая колода «Все невыученные» (SPEC §10.6): чипы пар языков, направление, «Учить». */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AllDeckScreen(onBack: () -> Unit, onStudy: (String, Boolean) -> Unit, vm: AllDeckViewModel = craminViewModel { AllDeckViewModel(it) }) {
     val pairs by vm.pairs.collectAsState()
@@ -98,12 +103,12 @@ fun AllDeckScreen(onBack: () -> Unit, onStudy: (String, Boolean) -> Unit, vm: Al
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
             if (pairs.isEmpty()) {
                 EmptyState("🗂", stringResource(R.string.alldeck_empty))
                 return@Column
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (p in pairs) {
                     FilterChip(selected = current?.first == p, onClick = { vm.select(p) }, label = { Text("${p.lang.uppercase()} → ${p.targetLang.uppercase()}") })
                 }
@@ -123,7 +128,7 @@ fun AllDeckScreen(onBack: () -> Unit, onStudy: (String, Boolean) -> Unit, vm: Al
                 Button(
                     onClick = { onStudy(DeckKey.All(Lang.requireCode(cur.first.lang), Lang.requireCode(cur.first.targetLang)).key, shuffle) },
                     enabled = cur.second > 0 || canResume,
-                    modifier = Modifier.fillMaxWidth().height(52.dp).testTag("allDeckStudy"),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("allDeckStudy"),
                 ) { Text(stringResource(R.string.cards_study), style = MaterialTheme.typography.titleMedium) }
                 if (cur.second == 0) {
                     Spacer(Modifier.height(12.dp))

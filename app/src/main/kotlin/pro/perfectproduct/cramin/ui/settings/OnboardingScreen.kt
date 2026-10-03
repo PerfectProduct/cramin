@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -43,7 +44,7 @@ fun OnboardingScreen(onDone: () -> Unit, vm: SettingsViewModel = craminViewModel
             Text("${roleLabel(role)}: ${effective?.roles?.get(role)?.model ?: "—"}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
         }
         Spacer(Modifier.height(28.dp))
-        Button(onClick = { vm.finishOnboarding(); onDone() }, modifier = Modifier.fillMaxWidth().height(52.dp).testTag("onboardingStart")) {
+        Button(onClick = { vm.finishOnboarding(); onDone() }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("onboardingStart")) {
             Text(stringResource(if (hasKey) R.string.onboarding_start else R.string.onboarding_skip))
         }
     }

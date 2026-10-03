@@ -13,7 +13,7 @@ Cramin — Android-приложение для зубрёжки слов из р
 - **Документ** — один импортированный источник со всем производным: текстом, переводом, карточками.
 - **Лемма** — словарная форма лексической единицы в языке источника.
 - **Лексическая единица** — слово или многословное выражение: фразовый глагол, идиома, коллокация.
-- **Смысл (sense)** — одно значение леммы с контекстным переводом. Карточка может нести несколько смыслов.
+- **Смысл (sense)** — одно значение леммы с контекстным переводом. Одна учебная карточка содержит ровно один смысл; повторные упоминания с ним связаны через Occurrence.
 - **Вхождение (occurrence)** — место в тексте, где встретилась единица; служит примером.
 - **Карточка** — одна лемма одной части речи в одном документе. Лицевая и оборотная стороны зависят от направления.
 - **Колода** — набор карточек для сессии: карточки документа или общая колода «Все невыученные».
@@ -460,7 +460,7 @@ OkHttp GET (User-Agent обычного мобильного браузера, �
 
 - `LazyColumn` по абзацам. Единица отображения — сегмент перевода: его исходные предложения обычным шрифтом, перевод сегмента под ними вторичным цветом.
 - Переключатель вида в панели: «Пары / Только оригинал / Только перевод».
-- Слова с карточками подчёркнуты пунктиром. Тап открывает bottom sheet: лемма (для `he` с огласовками), часть речи, смыслы, статус (чипы «Новое / Учу / Знаю» — меняют статус), звезда, 🔊.
+- Слова с карточками подчёркнуты пунктиром. Тап открывает bottom sheet: лемма (для `he` с огласовками), часть речи, значение выбранного вхождения, статус (чипы «Новое / Учу / Знаю» — меняют статус), звезда, 🔊.
 - RTL по содержимому для каждого текстового блока.
 
 ### 9.5. Вкладка «Карточки» (старт колоды)
@@ -598,10 +598,10 @@ OkHttp GET (User-Agent обычного мобильного браузера, �
 
 - `fallbackToDestructiveMigration` запрещён; тест проверяет, что билдер Room его не вызывает.
 - Каждое изменение схемы — версия, `Migration` и тест `MigrationTestHelper`.
-- Схема v1 экспортирована и закоммичена.
+- Схемы v1–v4 экспортированы и закоммичены; старые схемы не переписываются.
 - Настройки DataStore меняются только добавлением ключей с дефолтами.
 
-## 13. Модель данных (Room, схема v1)
+## 13. Модель данных (Room, схема v4; схемы v1–v3 сохранены)
 
 ```
 Document(
@@ -609,7 +609,7 @@ Document(
   status[QUEUED|FETCHING|TRANSCRIBING|BRIEFING|TRANSLATING|EXTRACTING|CONSOLIDATING|READY|FAILED], progress REAL,
   errorCode NULL, errorMessage NULL, direction[SRC_FRONT|TGT_FRONT] NULL, pipelineVersion INT,
   briefJson NULL, modelsSnapshotJson NULL, promptTokens INT, completionTokens INT, costUsd REAL NULL, audioSeconds INT,
-  wordCount INT, createdAt, updatedAt)
+  wordCount INT, createdAt, updatedAt, failureJson NULL, studyNotice BOOL)
 
 Sentence(id PK, documentId FK CASCADE, idx, paragraphIdx, text, segmentId NULL)
   INDEX(documentId, idx) UNIQUE
@@ -633,6 +633,8 @@ Occurrence(id PK, cardId FK CASCADE, senseId NULL FK SET NULL, sentenceId FK CAS
   surface, targetSurface NULL, start NULL, end NULL,
   targetStart NULL, targetEnd NULL,        -- смещения внутри Segment.translation
   isExample BOOL)
+
+ReprocessState(documentId PK FK CASCADE, snapshotJson, pending BOOL)
 
 StudySession(deckKey PK, stateJson, updatedAt)
 ```
@@ -661,7 +663,7 @@ StudySession(deckKey PK, stateJson, updatedAt)
 
 ### 14.2. Инструментированные тесты (эмулятор)
 
-- Room: схема v1 создаётся `MigrationTestHelper`; тест-заготовка для будущих миграций.
+- Room: `MigrationTestHelper` проверяет 1→current и 3→4 с сохранением значений/прогресса/вхождений.
 - `SecretStore`: шифрование, расшифровка, отсутствие ключа в открытом виде в файле DataStore.
 - Compose UI сессии: тап переворачивает, свайп вправо и влево меняет счётчики и статус в БД, ↶ возвращает, конец раунда показывает сводку.
 - Библиотека: документ из фейкового репозитория виден, ▶ открывает вкладку «Карточки».

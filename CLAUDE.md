@@ -67,7 +67,7 @@ scripts/build-release.sh                                  # подписанны
 - Только через `util.Log`. В release это no-op. В debug — только идентификаторы, счётчики, статусы.
 - Ни ключ, ни заголовок `Authorization`, ни тексты документов/переводов в лог не попадают.
   Тест подменяет sink и проверяет это на фейковом пайплайне.
-- OkHttp `HttpLoggingInterceptor` — только debug, уровень `BASIC`, `Authorization` редактируется.
+- OkHttp `HttpLoggingInterceptor` — уровень `NONE`: URL/query и provider body не должны попадать в журналы.
 
 ## Жёсткие ограничения
 

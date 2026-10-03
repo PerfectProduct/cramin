@@ -15,13 +15,13 @@
 | Задача | Статус |
 |---|---|
 | Диагностика AUD-004/008 + промежуточный APK | Завершено, 12a283a, APK 0.1.14-debug передан |
-| Учебная единица, миграция, reprocess, Undo | Проверено:112 JVM,6 UI; миграция API34 |
-| Оформление, ft, AUD-011/014 | 116 JVM и 7 UI passed; расширенный font/RTL smoke и снимки впереди |
+| Учебная единица, миграция, reprocess, Undo | Реализовано 29754a2; свежие JVM131/API34-19 passed, миграции API26/34/36 |
+| Оформление, ft, AUD-011/014 | Реализовано 2e8856f/63a18ec; EN/HE font150/200 проверены API26/34/36; снимки готовятся |
 | Отмена HTTP, snapshot, retries AUD-009/010/013 | 0267a6b: сеть; snapshot и STT resume проверены |
-| Обновление и release workflow AUD-005/006 | 131 JVM и assembleDebug passed; реальный installer впереди |
+| Обновление и release workflow AUD-005/006 | 98d9a58; реальный N19→N20 installer, pending SIGKILL и данные passed; workflow только локально |
 | Положительные источники | PDF picker/share и NASA HTTP→fake READY passed; YouTube blocked (SignInConfirmNotBotException) |
-| Лицензии AUD-007 | Ожидает; возможен выбор владельца о распространении |
-| Сценарии AUD-012, API34/26/36, финальные артефакты | Ожидает |
+| Лицензии AUD-007 | 86282e5: inventory/notices/source kit; условия публичного распространения требуют решения |
+| Сценарии AUD-012, API34/26/36, финальные артефакты | 19/8/8 passed; 6 SIGKILL + force-stop; финальная упаковка впереди |
 
 ## Коммиты и проверки
 
@@ -38,7 +38,7 @@
 
 ## Следующий шаг
 
-Завершить notices/source kit, затем API26/36 smoke, полный финальный набор API34 и снимки; собрать APK из финального коммита.
+Сверить `/home/dev/cramin-completion/2026-10-03/HANDOFF.md`: там фиксируется заключительный этап после этого коммита (APK, SHA, подписи, Downloads, финальный git status). Если HANDOFF отсутствует — собрать debug/release из HEAD и завершить упаковку. Если он заполнен — доступный проход завершён; следующий внешний шаг требует исходных PDF/ссылок/диагностики владельца и решения AUD-007, а публикация отдельной команды.
 
 Коммит диагностики: `12a283a776412d3184709726a859e5f8b8a3feca`. Промежуточный APK и SHA в
 `/mnt/c/Users/impor/Downloads/cramin-completion/2026-10-03-diagnostics-12a283a/`.
@@ -91,3 +91,21 @@ comma-separated notAnnotation и остановились на opt-in guard до
 «Продолжить с 2/2»; исправлено. Последний полный main: 131 JVM passed; lint 0 errors / 31 warnings
 (версии, ресурсы, рекомендации и классы trust manager внутри BouncyCastle; приложение их не подключает
 как TLS trust manager). API26/36 запущены последовательно на собственных новых AVD.
+
+API26 и API36: по 8 targeted smoke passed, 0 failures (logs/smoke-api26.log, smoke-api36.log); отдельные AVD, последовательно. Workflow: YAML invariants и bash -n всех run-блоков passed (workflow-local.log). Не GitHub CI. Коммит notices: 86282e5.
+
+
+## Заключительный контроль
+
+39 оригинальных PNG + 5 контактных листов сохранены в `ui/`; EN/RU/HE, оба направления,
+светлая/тёмная темы, 100/150/200%, отдельные значения берег/крен. UI-INDEX описывает синтетические
+данные и SHA снимков. REPORT.md разделяет проверенное, внешне непроверенное и остаточные блокеры.
+После последних адаптивных правок: final-adaptive-main.log — assembleDebug/131 JVM/lint passed;
+final-adaptive-device34.log — 19 passed / 0 failed/errors/skipped. Снимок общей колоды200% проверен.
+Последующие действия — только коммит этого завершённого пакета и сборка/подпись/упаковка из него.
+Результаты после коммита записываются в HANDOFF.md вне репозитория, без изменения вычисляемой версии.
+
+Коммиты прохода: 12a283a (diagnostics), 29754a2 (meaning), 2e8856f (UI/Unicode),
+0267a6b (HTTP/retries), 6fa1b28 (config), 98d9a58 (updater/release), ea2f21d (source/lifecycle),
+63a18ec (large font), 86282e5 (notices/offline tests), заключительный пакет docs/adaptive controls.
+Полный финальный список SHA находится в HANDOFF.md/COMMITS.txt.

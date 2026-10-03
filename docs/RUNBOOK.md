@@ -22,7 +22,7 @@
 ## 2. Локальная сборка и тесты
 
 ```bash
-./gradlew assembleDebug testDebugUnitTest lintDebug      # зелёный набор CI
+./gradlew assembleDebug testDebugUnitTest lintDebug -Plive=false > /permanent/path/main.log 2>&1
 scripts/test-device.sh                                    # инструментированные без @LiveApi (эмулятор emulator-5554)
 ./gradlew testDebugUnitTest -Plive=true                   # живые JVM-тесты (ключ из .env, бюджет LIVE_BUDGET_USD)
 scripts/test-device.sh --live                             # живые на эмуляторе: пайплайн, статья, YouTube, STT
@@ -58,7 +58,7 @@ scripts/build-release.sh                                  # подписанны
 1. Статья по ссылке (например, страница Википедии) → «Карточки готовы».
 2. Видео YouTube с авторскими субтитрами (TED-Ed) → текст субтитров, абзацы по паузам.
 3. Видео без авторских субтитров (1–3 мин) → транскрипция (статус «Транскрипция…»), затем карточки.
-4. PDF с текстовым слоем через «📁 Файл PDF» и через «Поделиться» из файлового менеджера.
+4. PDF с текстовым слоем через «Файл PDF» и через «Поделиться» из файлового менеджера.
 5. Скопированный текст; текст на языке перевода должен блокироваться с предложением сменить язык.
 6. Иврит в обе стороны: he→ru и en→he (RTL по содержимому, огласованная лемма на карточке, 🔊).
 7. Сессия: тап — переворот, свайпы, ↶ отмена (возврат статуса и счётчика), ▶ автопроигрывание, сводка раунда,
@@ -89,7 +89,7 @@ scripts/build-release.sh                                  # подписанны
 
 ## 8. Если что-то сломалось
 
-- «YouTube изменил формат» — обновите NewPipeExtractor (`gradle/libs.versions.toml`, `newpipe`) и выпустите релиз.
+- При отказе источника откройте документ и скопируйте безопасную диагностику. FETCHING/YOUTUBE_RESTRICTED означает ограничение доступа сервиса; YOUTUBE_FORMAT — ошибку разбора. Это разные категории, автоматическое обновление зависимости не является доказанным исправлением исходного видео.
 - Странный красный в UI-тестах на эмуляторе: `adb -s emulator-5554 shell dumpsys window | grep mCurrentFocus`;
   если фокус у системного диалога — `scripts/test-device.sh --wipe`.
 - Ключ после восстановления из резервной копии не расшифровывается (другой Keystore) — введите заново.
@@ -139,3 +139,22 @@ qemu и наличие receiver, создаёт новый синтетичес�
 после шести SIGKILL и отдельного force-stop. Затем собрать обычный APK **без** свойства probe.
 При финальной упаковке проверить отсутствие ProbeApp/ProbeReceiver/FakeLlmClient в APK.
 PublicSourceTest запускается отдельно с `-e freeSources true`; это бесплатная сеть, не live LLM.
+
+## Офлайн-набор на выбранном AVD
+
+```bash
+adb start-server
+ANDROID_SERIAL=emulator-5580 ./gradlew connectedDebugAndroidTest -Plive=false \
+  -Pandroid.testInstrumentationRunnerArguments.notAnnotation=pro.perfectproduct.cramin.LiveApi \
+  -Pandroid.testInstrumentationRunnerArguments.notClass=pro.perfectproduct.cramin.ingest.PublicSourceTest \
+  > /permanent/path/device.log 2>&1
+```
+
+Проверяйте XML counts, не только успешное завершение Gradle. Бесплатные HTTP/YouTube тесты запускаются
+отдельно с opt-in freeSources=true; они используют fake LLM и не вызывают платный STT. PDF picker/share
+fixture использует MediaStore.Downloads (API29+), поэтому API26 smoke проверяет другие сценарии.
+
+Перед любой публикацией выполните требования docs/THIRD_PARTY_NOTICES.md: согласуйте условия
+распространения комбинированного APK и комплект соответствующих исходников для точного SHA.
+Текущий release workflow сам не составляет полный source kit: его два APK-ассета недостаточны для
+публикации с NewPipe. Не запускайте публикацию до выполнения этого пункта.

@@ -338,3 +338,11 @@ Preserve full primary notices in offline assets and provide pinned source archiv
 do not change the root licence. Proposed combined APK distribution with NewPipe requires GPL-compatible
 terms/source delivery; owner decision remains a publication gate (see THIRD_PARTY_NOTICES.md).
 Source availability is recorded separately from rebuilding every dependency or proving identical binaries.
+
+## DL-047 — Final verification boundaries and large-font controls
+
+Onboarding/общая колода используют minimum button height; общая колода прокручивается,
+пары в FlowRow. API26/36 smoke выполнены на новых отдельных AVD, API34 — на рабочей копии.
+Финальные APK собираются только после последнего коммита, их SHA/version/cert и свежие проверки
+фиксируются вне git в HANDOFF.md, чтобы отчёт сам не менял вычисляемую из истории версию.
+Демонстрационные снимки используют синтетическую Room4; они не подтверждают реальную LLM-семантику.
