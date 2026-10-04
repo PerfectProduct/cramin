@@ -1,6 +1,9 @@
 package pro.perfectproduct.cramin.data.repo
 
 import java.io.File
+import pro.perfectproduct.cramin.ingest.TextProvenance
+import pro.perfectproduct.cramin.llm.LlmJson
+import pro.perfectproduct.cramin.util.Hashing
 
 /**
  * Файлы документа в `files/docs/{id}/` (SPEC §6.11): входные данные и извлечённый текст.
@@ -13,8 +16,19 @@ class DocumentFiles(private val filesRoot: File) {
     fun sourceText(documentId: Long): File = File(dir(documentId), "source.txt")
 
     /** A killed writer must never leave a partial file that resume mistakes for a completed source. */
-    fun writeSourceText(documentId: Long, text: String) {
-        val target = sourceText(documentId)
+    fun writeSourceText(documentId: Long, text: String, provenance: TextProvenance = TextProvenance()) {
+        val record = provenance.copy(sourceHash = Hashing.sha256Hex(text.toByteArray(Charsets.UTF_8)))
+        // Write metadata first; a crash or replacement cannot attach it to different source bytes.
+        atomicWrite(File(dir(documentId), "text-provenance.json"), LlmJson.strict.encodeToString(TextProvenance.serializer(), record))
+        atomicWrite(sourceText(documentId), text)
+    }
+
+    fun textProvenance(documentId: Long): TextProvenance = runCatching {
+        val record = LlmJson.strict.decodeFromString<TextProvenance>(File(dir(documentId), "text-provenance.json").readText())
+        record.takeIf { it.sourceHash == Hashing.sha256Hex(sourceText(documentId)) } ?: TextProvenance()
+    }.getOrDefault(TextProvenance())
+
+    private fun atomicWrite(target: File, text: String) {
         val temporary = File(target.path + ".part")
         try {
             java.io.FileOutputStream(temporary).use { out ->

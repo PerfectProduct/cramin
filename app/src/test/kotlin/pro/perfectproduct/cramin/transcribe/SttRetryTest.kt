@@ -15,6 +15,24 @@ import java.nio.file.Files
 
 @RunWith(RobolectricTestRunner::class)
 class SttRetryTest {
+    @Test fun sendsTranscriptionLanguageAndModelWithoutTranslationOrPromptAndPreservesResponse() = runBlocking {
+        val server = MockWebServer()
+        val file = Files.createTempFile("synthetic-audio", ".m4a").toFile().apply { writeBytes(byteArrayOf(0, 1, 2)) }
+        server.start()
+        try {
+            server.enqueue(MockResponse(body = """{"text":"  В simple terms Cancer RAG. в ней в ней  "}"""))
+            val stt = OpenRouterSttTranscriber(OkHttpClient(), { "synthetic-test-key" }, server.url("/").toString().trimEnd('/'))
+            assertEquals("  В simple terms Cancer RAG. в ней в ней  ", stt.transcribe(AudioPart(file, 1), Lang.RU, "fake/stt").text)
+            val request = server.takeRequest()
+            assertEquals("/audio/transcriptions", request.url.encodedPath)
+            val body = pro.perfectproduct.cramin.llm.LlmJson.strict.parseToJsonElement(request.body!!.utf8()).toString()
+            assertTrue(body.contains("\"language\":\"ru\""))
+            assertTrue(body.contains("\"model\":\"fake/stt\""))
+            assertFalse(body.contains("prompt"))
+            assertFalse(body.contains("translate"))
+        } finally { server.close(); file.delete() }
+    }
+
     @Test fun honorsBothRetryAfterFormatsWithoutLiveStt() = runBlocking {
         val server = MockWebServer()
         val file = Files.createTempFile("synthetic-audio", ".m4a").toFile().apply { writeBytes(byteArrayOf(0, 1, 2)) }

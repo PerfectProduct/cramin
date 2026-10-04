@@ -87,7 +87,7 @@ class OpenRouterSttTranscriber(
                 val transcript = root["text"]?.jsonPrimitive?.contentOrNull ?: throw PipelineException(ErrorCode.TRANSCRIPTION, "no text")
                 val cost = root["usage"]?.jsonObject?.get("cost")?.jsonPrimitive?.doubleOrNull
                 Log.i(TAG, "transcribed ${part.durationSeconds}s → ${transcript.length} chars, cost=$cost")
-                return Transcript(transcript.trim(), cost)
+                return Transcript(transcript, cost)
             }
         } catch (e: IOException) {
             throw PipelineException(ErrorCode.NETWORK, e.javaClass.simpleName, e)

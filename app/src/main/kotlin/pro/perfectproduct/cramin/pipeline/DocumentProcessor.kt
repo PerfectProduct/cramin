@@ -224,7 +224,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             val extractor = deps.extractors[doc.sourceType] ?: throw PipelineException(ErrorCode.UNKNOWN, "no extractor for ${doc.sourceType}")
             when (val extracted = extractor.extract(doc, deps.files)) {
                 is Extracted.Text -> {
-                    deps.files.writeSourceText(id, extracted.text)
+                    deps.files.writeSourceText(id, extracted.text, extracted.provenance)
                     title = extracted.title
                     langHint = langHint ?: extracted.langHint
                 }
@@ -232,7 +232,8 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                     title = extracted.title
                     langHint = langHint ?: extracted.langHint
                     val text = transcribeStage(doc, extracted, langHint, config, progress, onProgress)
-                    deps.files.writeSourceText(id, text)
+                    deps.files.writeSourceText(id, text, extracted.provenance.copy(
+                        sttLanguage = langHint?.code, sttModel = config.role(ModelRole.STT).model))
                 }
             }
             onProgress(DocStatus.FETCHING, progress.within(DocStatus.FETCHING, 1f))
@@ -263,6 +264,14 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         val parts = segmenter.split(audio.file, deps.files.audioDir(id))
         if (parts.isEmpty()) throw PipelineException(ErrorCode.TRANSCRIPTION, "no audio parts")
         val model = config.role(ModelRole.STT).model
+        // A retry downloads audio again. Bind cached parts to bytes, language and model,
+        // before making any new request; index alone is not an identity.
+        val audioHash = pro.perfectproduct.cramin.util.Hashing.sha256Hex(audio.file)
+        val binding = "stt-v1:$audioHash:${lang.code}:$model:${parts.size}"
+        val previous = db.jobDao().getByKind(id, JobKind.STT).filter { it.status == JobStatus.DONE }
+        if (previous.any { it.finishReason != binding || it.idx !in parts.indices }) {
+            throw PipelineException(ErrorCode.TRANSCRIPTION, "cached audio identity unavailable or changed")
+        }
         val texts = ArrayList<String>()
         for ((i, part) in parts.withIndex()) {
             val job = ensureJob(id, JobKind.STT, i, part.durationSeconds, null, model)
@@ -275,7 +284,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                     db.jobDao().update(job.copy(status = JobStatus.FAILED, attempts = job.attempts + 1, updatedAt = now))
                     throw e
                 }
-                db.jobDao().update(job.copy(status = JobStatus.DONE, attempts = job.attempts + 1, responseJson = t.text, costUsd = t.costUsd, updatedAt = now))
+                db.jobDao().update(job.copy(status = JobStatus.DONE, attempts = job.attempts + 1, responseJson = t.text, finishReason = binding, costUsd = t.costUsd, updatedAt = now))
                 deps.usage.refreshDocumentTotals(id)
                 t.text
             }

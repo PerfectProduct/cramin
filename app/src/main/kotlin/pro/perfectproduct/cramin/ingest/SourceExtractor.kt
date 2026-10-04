@@ -10,10 +10,10 @@ sealed interface Extracted {
     val title: String?
     val langHint: Lang?
 
-    data class Text(val text: String, override val title: String?, override val langHint: Lang?) : Extracted
+    data class Text(val text: String, override val title: String?, override val langHint: Lang?, val provenance: TextProvenance = TextProvenance()) : Extracted
 
     /** Аудиофайл AAC/M4A во временном каталоге документа; удаляется после транскрипции. */
-    data class Audio(val file: File, override val title: String?, override val langHint: Lang?, val durationSeconds: Int) : Extracted
+    data class Audio(val file: File, override val title: String?, override val langHint: Lang?, val durationSeconds: Int, val provenance: TextProvenance = TextProvenance()) : Extracted
 }
 
 /** Источник за интерфейсом (SPEC §5.2): статья, YouTube, PDF, вставленный текст. Ошибки — PipelineException. */

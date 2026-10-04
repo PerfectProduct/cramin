@@ -92,7 +92,7 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
     fun copyDiagnostics(context: android.content.Context) = viewModelScope.launch {
         val text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             pro.perfectproduct.cramin.pipeline.DocumentStateSummary.copyText(container.db, documentId, container.stoplists,
-                pro.perfectproduct.cramin.BuildConfig.VERSION_NAME, android.os.Build.VERSION.SDK_INT)
+                pro.perfectproduct.cramin.BuildConfig.VERSION_NAME, android.os.Build.VERSION.SDK_INT, container.files)
         }
         val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
         clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Cramin", text))

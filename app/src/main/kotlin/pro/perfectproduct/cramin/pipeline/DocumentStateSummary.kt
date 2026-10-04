@@ -7,7 +7,7 @@ import pro.perfectproduct.cramin.util.Lang
 
 /** Read-only coherent database snapshot. Export only enum values, times and counts, never content. */
 object DocumentStateSummary {
-    suspend fun copyText(db: CraminDatabase, id: Long, stoplists: Stoplists, version: String, api: Int): String = db.withTransaction {
+    suspend fun copyText(db: CraminDatabase, id: Long, stoplists: Stoplists, version: String, api: Int, files: pro.perfectproduct.cramin.data.repo.DocumentFiles? = null): String = db.withTransaction {
         val doc = db.documentDao().getById(id) ?: return@withTransaction "Document state: NOT_FOUND"
         val sentences = db.sentenceDao().getByDocument(id)
         val segments = db.segmentDao().getByDocument(id)
@@ -87,6 +87,11 @@ object DocumentStateSummary {
             append("State snapshot copied with Cramin: $version\nCopy device Android API: $api")
             append("\nState observed at: ${System.currentTimeMillis()}\nDocument status: ${doc.status}\nProgress: ${doc.progress}")
             append("\nDocument updated at (not completion timestamp): ${doc.updatedAt}\nSource: ${doc.sourceType}")
+            append("\n" + (files?.textProvenance(id) ?: pro.perfectproduct.cramin.ingest.TextProvenance()).safeSummary())
+            val stt = jobs.filter { it.kind == JobKind.STT && it.status == JobStatus.DONE }
+            append("\nSaved STT evidence: completedParts=${stt.size}; models=" +
+                stt.map { pro.perfectproduct.cramin.ingest.TextProvenance.safe(it.model) }.distinct().joinToString(",").ifEmpty { "UNKNOWN" })
+            append("\nLegacy STT jobs alone do not identify the current source track or request language")
             append("\nStructural check: $proof\nSemantic completeness: NOT_VERIFIABLE_FROM_CACHE")
             append("\nConsolidation policy: ALL_OCCURRENCES_OR_CONSERVATIVE_FALLBACK; historical fallback provenance may be unavailable")
             append("\nCounts: ${numbers.entries.joinToString { "${it.key}=${it.value}" }}")
