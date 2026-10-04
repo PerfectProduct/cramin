@@ -1,0 +1,59 @@
+{
+  "apkSha256": "2cbb062c47d410b435dcd2178db6447f5437b113a28cec3957fc79112261c3b1",
+  "emulator": "emulator-5580",
+  "synthetic": true,
+  "clearBetweenVersions": false,
+  "upgrades": [
+    {
+      "before": "0.1.36-debug",
+      "after": "0.1.37-debug",
+      "tables": {
+        "Card": {
+          "rows": 6,
+          "unchanged": true
+        },
+        "Document": {
+          "rows": 7,
+          "unchanged": true
+        },
+        "Job": {
+          "rows": 0,
+          "unchanged": true
+        },
+        "Occurrence": {
+          "rows": 6,
+          "unchanged": true
+        },
+        "ReprocessState": {
+          "rows": 0,
+          "unchanged": true
+        },
+        "Segment": {
+          "rows": 8,
+          "unchanged": true
+        },
+        "Sense": {
+          "rows": 6,
+          "unchanged": true
+        },
+        "Sentence": {
+          "rows": 8,
+          "unchanged": true
+        },
+        "StudySession": {
+          "rows": 1,
+          "unchanged": true
+        },
+        "android_metadata": {
+          "rows": 1,
+          "unchanged": true
+        },
+        "room_master_table": {
+          "rows": 1,
+          "unchanged": true
+        }
+      },
+      "settingsUnchanged": true
+    }
+  ]
+}

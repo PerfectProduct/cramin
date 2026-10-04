@@ -64,6 +64,9 @@ interface JobDao {
     @Query("SELECT * FROM Job WHERE documentId = :documentId ORDER BY kind, idx")
     suspend fun getByDocument(documentId: Long): List<JobEntity>
 
+    @Query("SELECT * FROM Job WHERE documentId = :documentId ORDER BY kind, idx")
+    fun observeByDocument(documentId: Long): Flow<List<JobEntity>>
+
     @Query("SELECT * FROM Job WHERE documentId = :documentId AND kind = :kind ORDER BY idx")
     suspend fun getByKind(documentId: Long, kind: JobKind): List<JobEntity>
 

@@ -47,7 +47,7 @@ import pro.perfectproduct.cramin.ui.components.contentTextStyle
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TextTab(vm: DocumentViewModel, header: @Composable () -> Unit = {}) {
-    val paragraphs by vm.paragraphs.collectAsState()
+    val state by vm.reading.collectAsState()
     val mode by vm.viewMode.collectAsState()
     var sheetCard by remember { mutableStateOf<StudyCard?>(null) }
     var loadingCardId by remember { mutableStateOf<Long?>(null) }
@@ -58,22 +58,48 @@ fun TextTab(vm: DocumentViewModel, header: @Composable () -> Unit = {}) {
         loadingCardId = null
     }
 
+    TextContent(state, mode, vm::setViewMode, vm::retryReading, header) { loadingCardId = it }
+
+    sheetCard?.let { card ->
+        ModalBottomSheet(onDismissRequest = { sheetCard = null }) {
+            WordSheet(card = card, vm = vm, onChanged = { updated -> sheetCard = updated })
+        }
+    }
+}
+
+@Composable
+internal fun TextContent(
+    state: ReadingState,
+    mode: TextViewMode,
+    onMode: (TextViewMode) -> Unit,
+    onRetry: () -> Unit,
+    header: @Composable () -> Unit = {},
+    onWordClick: (Long) -> Unit = {},
+) {
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(28.dp), modifier = Modifier.testTag("textList")) {
         item(key = "documentHeader") {
             Column {
                 header()
-                pro.perfectproduct.cramin.ui.components.SingleChoice(TextViewMode.entries, mode, { stringResource(when(it) { TextViewMode.PAIRS -> R.string.doc_view_pairs; TextViewMode.SOURCE_ONLY -> R.string.doc_view_source; TextViewMode.TARGET_ONLY -> R.string.doc_view_target }) }, vm::setViewMode, Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+                pro.perfectproduct.cramin.ui.components.SingleChoice(TextViewMode.entries, mode, { stringResource(when(it) { TextViewMode.PAIRS -> R.string.doc_view_pairs; TextViewMode.SOURCE_ONLY -> R.string.doc_view_source; TextViewMode.TARGET_ONLY -> R.string.doc_view_target }) }, onMode, Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
             }
         }
-        if (paragraphs.isEmpty()) {
+        if (state.error) item(key = "error") {
+            Column(Modifier.padding(horizontal = 20.dp)) {
+                Text(stringResource(R.string.doc_text_error))
+                androidx.compose.material3.TextButton(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
+            }
+        }
+        if (state.loading) {
+            item(key = "loading") { Text(stringResource(R.string.doc_text_loading), Modifier.padding(20.dp).testTag("readingLoading")) }
+        } else if (state.paragraphs.isEmpty() && !state.error) {
             item(key = "empty") { EmptyState("📄", stringResource(R.string.doc_text_empty)) }
         } else {
-            items(paragraphs, key = { it.paragraphIdx }) { paragraph ->
+            items(state.paragraphs, key = { it.paragraphIdx }) { paragraph ->
                 Column(modifier = Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     for (segment in paragraph.segments) {
                         Column {
                             if (mode != TextViewMode.TARGET_ONLY) {
-                                UnderlinedSentences(segment.sentences, onWordClick = { loadingCardId = it })
+                                UnderlinedSentences(segment.sentences, onWordClick = { onWordClick(it) })
                             }
                             if (mode != TextViewMode.SOURCE_ONLY && segment.translation != null) {
                                 Text(
@@ -90,11 +116,6 @@ fun TextTab(vm: DocumentViewModel, header: @Composable () -> Unit = {}) {
         }
     }
 
-    sheetCard?.let { card ->
-        ModalBottomSheet(onDismissRequest = { sheetCard = null }) {
-            WordSheet(card = card, vm = vm, onChanged = { updated -> sheetCard = updated })
-        }
-    }
 }
 
 /** Предложения сегмента одним текстом; слова с карточками подчёркнуты пунктиром и кликабельны. */

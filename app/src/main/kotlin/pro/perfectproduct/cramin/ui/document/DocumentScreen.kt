@@ -81,9 +81,10 @@ fun DocumentScreen(
     onOpenSettings: () -> Unit,
     vm: DocumentViewModel = craminViewModel(key = "doc-$documentId") { DocumentViewModel(it, documentId) },
 ) {
+    androidx.compose.runtime.key(documentId) {
     val row by vm.document.collectAsState()
     val counts by vm.counts.collectAsState()
-    var tab by rememberSaveable { mutableStateOf(initialTab) }
+    var tab by rememberSaveable(documentId) { mutableStateOf(initialTab) }
     var menuOpen by remember { mutableStateOf(false) }
     var diagnosticsOpen by rememberSaveable { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
@@ -106,15 +107,7 @@ fun DocumentScreen(
                         DropdownMenuItem(text = { Text(stringResource(R.string.action_rename)) }, onClick = { menuOpen = false; renaming = true })
                         DropdownMenuItem(text = { Text(stringResource(R.string.action_reprocess)) }, onClick = { menuOpen = false; reprocessing = true })
                         DropdownMenuItem(text = { Text(stringResource(R.string.action_delete)) }, onClick = { menuOpen = false; deleting = true })
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    if (doc?.costUsd != null) stringResource(R.string.doc_cost, formatUsd(doc.costUsd), modelsSummary(doc)) else stringResource(R.string.doc_cost_unknown),
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            },
-                            onClick = { menuOpen = false },
-                        )
+
                     }
                 },
             )
@@ -149,12 +142,14 @@ fun DocumentScreen(
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
                     header()
                     Text(statusLabel(doc.status), Modifier.padding(horizontal = 20.dp))
+                    val requestModels by vm.requestModels.collectAsState()
+                    DocumentCosts(doc, requestModels)
                     val summary by androidx.compose.runtime.produceState("", doc.id, doc.updatedAt, doc.status) { value = vm.diagnostics() }
                     androidx.compose.foundation.text.selection.SelectionContainer {
                         Text(summary, Modifier.padding(20.dp), style = MaterialTheme.typography.bodySmall)
                     }
                 }
-            } else tabState.SaveableStateProvider(tab) {
+            } else tabState.SaveableStateProvider("$documentId:$tab") {
                 if (tab == "text") TextTab(vm, header)
                 else if (doc.status != DocStatus.READY) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) { header() }
                 else CardsTab(vm, counts, onStudy = onStudy, header = header)
@@ -213,9 +208,39 @@ fun DocumentScreen(
     }
 }
 
-private fun modelsSummary(doc: DocumentEntity): String = doc.modelsSnapshotJson?.let { json ->
-    Regex("\"model\":\"([^\"]+)\"").findAll(json).map { it.groupValues[1] }.distinct().joinToString(", ")
-}?.takeIf { it.isNotEmpty() } ?: "—"
+}
+
+@Composable
+private fun DocumentCosts(doc: DocumentEntity, requestModels: List<String>) {
+    val snapshotModels = remember(doc.modelsSnapshotJson) {
+        doc.modelsSnapshotJson?.let { json ->
+            runCatching {
+                fun models(element: kotlinx.serialization.json.JsonElement): List<String> = when (element) {
+                    is kotlinx.serialization.json.JsonObject -> element.flatMap { (key, value) ->
+                        if (key == "model" && value is kotlinx.serialization.json.JsonPrimitive) listOf(value.content)
+                        else models(value)
+                    }
+                    is kotlinx.serialization.json.JsonArray -> element.flatMap { models(it) }
+                    else -> emptyList()
+                }
+                models(kotlinx.serialization.json.Json.parseToJsonElement(json)).distinct()
+            }.getOrDefault(emptyList())
+        }.orEmpty()
+    }
+    Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(stringResource(R.string.doc_cost_group), style = MaterialTheme.typography.titleMedium)
+        Text(if (doc.costUsd == null) stringResource(R.string.doc_cost_unknown)
+            else stringResource(R.string.doc_cost_amount, formatUsd(doc.costUsd)), style = MaterialTheme.typography.bodyLarge)
+        Text(stringResource(R.string.doc_cost_incomplete), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.doc_models_requested), style = MaterialTheme.typography.titleSmall)
+        if (requestModels.isEmpty()) Text(stringResource(R.string.doc_models_missing), style = MaterialTheme.typography.bodyMedium)
+        requestModels.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        if (snapshotModels.isNotEmpty()) {
+            Text(stringResource(R.string.doc_models_snapshot), style = MaterialTheme.typography.titleSmall)
+            snapshotModels.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        }
+    }
+}
 
 @Composable
 private fun DocumentHeader(doc: DocumentEntity) {

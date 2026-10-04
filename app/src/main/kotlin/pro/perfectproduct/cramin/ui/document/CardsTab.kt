@@ -88,7 +88,7 @@ fun CardsTab(vm: DocumentViewModel, counts: CardCounts, onStudy: (String, Boolea
             if (doc.status == DocStatus.READY && mask != 0 && deckSize == 0 && canResume) {
                 TextButton(onClick = { onStudy(vm.deckKey(), shuffle) }, modifier = Modifier.testTag("resumeSaved")) { Text(stringResource(R.string.session_resume_saved)) }
             }
-            if (doc.status == DocStatus.READY && deckSize == 0 && mask != 0) Text(stringResource(R.string.cards_empty_deck), style = MaterialTheme.typography.bodySmall)
+            if (doc.status == DocStatus.READY && deckSize == 0 && mask != 0) Text(stringResource(if (counts.total > 0) R.string.cards_empty_filter else R.string.cards_empty_deck), style = MaterialTheme.typography.bodySmall)
         }
     }
     if (options && src != null && tgt != null) ModalBottomSheet(onDismissRequest = { options = false }) {

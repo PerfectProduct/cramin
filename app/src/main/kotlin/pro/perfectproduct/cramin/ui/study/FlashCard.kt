@@ -238,11 +238,14 @@ private fun BackSide(card: StudyCard, showSource: Boolean) {
 private fun ExampleBlock(ex: StudyExample, highlight: Color) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = 18.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainerLow).padding(16.dp)) {
         Text(highlighted(ex.sentence, ex.start, ex.end, highlight), style = contentTextStyle(MaterialTheme.typography.bodyMedium))
-        if (ex.translation != null) {
+        if (!ex.translation.isNullOrBlank()) {
+            if (ex.sentence.isNotBlank()) androidx.compose.material3.HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp).testTag("exampleDivider"),
+                color = MaterialTheme.colorScheme.outlineVariant,
+            )
             Text(
                 highlighted(ex.translation, ex.targetStart, ex.targetEnd, highlight),
                 style = contentTextStyle(MaterialTheme.typography.bodyMedium), color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 12.dp),
             )
         }
     }

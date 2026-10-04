@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -43,11 +44,21 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
     val counts: StateFlow<CardCounts> = container.cardRepository.observeCounts(documentId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CardCounts(0, 0, 0, 0, 0))
 
-    val paragraphs: StateFlow<List<TextParagraph>> = combine(
-        container.db.sentenceDao().observeByDocument(documentId),
-        container.db.segmentDao().observeByDocument(documentId),
-        container.cardRepository.observeOccurrences(documentId),
-    ) { sentences, segments, occurrences -> buildParagraphs(sentences, segments, occurrences) }
+    private val readingRetry = MutableStateFlow(0)
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val reading = readingRetry.flatMapLatest {
+        readingStates(
+            container.db.sentenceDao().observeByDocument(documentId),
+            container.db.segmentDao().observeByDocument(documentId),
+            container.cardRepository.observeOccurrences(documentId),
+        )
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default)
+        // Start on first visit, then retain the subscription and data for this document's lifetime.
+        .stateIn(viewModelScope, SharingStarted.Lazily, ReadingState())
+    fun retryReading() { readingRetry.value++ }
+
+    val requestModels = container.db.jobDao().observeByDocument(documentId)
+        .map { jobs -> jobs.filter { it.attempts > 0 }.map { it.model }.distinct() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _viewMode = MutableStateFlow(TextViewMode.PAIRS)

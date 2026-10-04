@@ -69,7 +69,6 @@
     <!-- Экран документа (§9.3) -->
     <string name="doc_tab_text">Читать</string>
     <string name="doc_tab_cards">Учить</string>
-    <string name="doc_cost">Учтено: $%1$s · модели: %2$s. Это нижняя граница: часть расходов провайдер мог не передать.</string>
     <string name="doc_cost_unknown">Стоимость обработки пока неизвестна</string>
     <string name="doc_processing_body">%1$s — %2$d %%</string>
     <string name="doc_big_warning">Большой документ: %1$d слов. Обработка может быть долгой и дорогой.</string>
@@ -310,4 +309,13 @@
     <string name="topic_saved_subset">Сохранён тематический отбор. Чтобы включить слова без категории, откройте полный набор. Отбор невыученных и избранных сохраняется.</string>
     <string name="topic_open_full">Открыть полный набор</string>
     <string name="topic_paid_short">Через платный API · карточки и прогресс сохранятся.</string>
+    <string name="cards_empty_filter">Нет карточек по выбранным фильтрам</string>
+    <string name="doc_text_loading">Загрузка текста…</string>
+    <string name="doc_text_error">Не удалось загрузить текст полностью</string>
+    <string name="doc_cost_group">Расходы и модели</string>
+    <string name="doc_cost_amount">Учтённые расходы: $%1$s</string>
+    <string name="doc_cost_incomplete">Сумма может быть неполной: провайдер мог не передать часть расходов.</string>
+    <string name="doc_models_requested">Модели выполненных запросов</string>
+    <string name="doc_models_missing">Нет сохранённых сведений о выполненных запросах</string>
+    <string name="doc_models_snapshot">Модели в сохранённых параметрах обработки</string>
 </resources>

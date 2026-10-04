@@ -244,3 +244,11 @@ MATCHES_SAVED_PIPELINE_RESULTS — структурное совпадение �
 классификация показывает число карточек без категории и продолжение через API.
 Панель слова отдаёт тексту полную ширину, действия — отдельной строке.
 Материалы для архитектора и ограничения: [отчёт](ui-finish/report.md).
+
+### Завершение UI 0.1.36 → 0.1.37
+
+Отчёт: [UI polish](ui-polish/report.md). Целевые JVM: ReadingStateTest,
+SelectionRegressionTest, SettingsStoreTest. Android: AcceptedUiPolishTest
+(параметр `dark=false` для светлой темы, системные font_scale 1/2 и ширина ~412/320 dp).
+Первую выдачу чтения удерживает тестовый Flow; задержек в production нет.
+Контактные листы и оригиналы — отдельная папка Downloads для архитектора.
