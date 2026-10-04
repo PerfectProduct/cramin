@@ -94,6 +94,28 @@ class SchemaMigrationTest {
         }
     }
 
+    @Test fun v4ToV5PreservesIdsExamplesProgressAndSessionExactly() {
+        helper.createDatabase(TEST_DB, 4).use { db ->
+            db.execSQL("INSERT INTO Document(id,title,emoji,sourceType,sourceRef,sourceLang,targetLang,status,progress,pipelineVersion,promptTokens,completionTokens,audioSeconds,wordCount,createdAt,updatedAt) VALUES(1,'synthetic','','TEXT','','en','ru','READY',1,1,0,0,0,16,1,1)")
+            db.execSQL("INSERT INTO Card(id,documentId,lemmaKey,meaningKey,lemma,pos,lang,targetLang,status,starred,firstSentenceIdx,updatedAt,dueAt,reps) VALUES(7,1,'bank|NOUN','банк','bank','NOUN','en','ru','KNOWN',1,0,123,456,9)")
+            db.execSQL("INSERT INTO Sentence(id,documentId,idx,paragraphIdx,text) VALUES(1,1,0,0,'bank')")
+            db.execSQL("INSERT INTO Sense(id,cardId,idx,translation,exampleOccurrenceId) VALUES(2,7,0,'банк',3)")
+            db.execSQL("INSERT INTO Occurrence(id,cardId,senseId,sentenceId,surface,isExample) VALUES(3,7,2,1,'bank',1)")
+            db.execSQL("INSERT INTO StudySession(deckKey,stateJson,updatedAt) VALUES('doc:1:all','unchanged-session',789)")
+        }
+        helper.runMigrationsAndValidate(TEST_DB, 5, true, *CraminDatabase.MIGRATIONS).use { db ->
+            db.query("SELECT id,status,starred,updatedAt,dueAt,reps,category FROM Card").use { c ->
+                assertTrue(c.moveToFirst()); assertEquals(7L,c.getLong(0)); assertEquals("KNOWN",c.getString(1))
+                assertEquals(1,c.getInt(2)); assertEquals(123L,c.getLong(3)); assertEquals(456L,c.getLong(4)); assertEquals(9,c.getInt(5)); assertTrue(c.isNull(6))
+            }
+            db.query("SELECT s.id,s.exampleOccurrenceId,o.id,o.cardId FROM Sense s JOIN Occurrence o ON o.senseId=s.id").use { c ->
+                assertTrue(c.moveToFirst()); assertEquals(2L,c.getLong(0)); assertEquals(3L,c.getLong(1)); assertEquals(3L,c.getLong(2)); assertEquals(7L,c.getLong(3))
+            }
+            db.query("SELECT stateJson,updatedAt FROM StudySession").use { c -> assertTrue(c.moveToFirst()); assertEquals("unchanged-session",c.getString(0)); assertEquals(789L,c.getLong(1)) }
+            db.query("SELECT categoryMask,topicSnapshotJson,topicError FROM Document").use { c -> assertTrue(c.moveToFirst());assertEquals(7,c.getInt(0));assertTrue(c.isNull(1));assertTrue(c.isNull(2)) }
+        }
+    }
+
     companion object {
         private const val TEST_DB = "migration-test.db"
     }

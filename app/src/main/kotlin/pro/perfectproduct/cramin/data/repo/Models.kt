@@ -63,27 +63,27 @@ data class StudyCard(
 sealed interface DeckKey {
     val key: String
 
-    data class Document(val documentId: Long, val filter: DeckFilter) : DeckKey {
-        override val key: String get() = "doc:$documentId:${filter.key}"
+    data class Document(val documentId: Long, val filter: DeckFilter, val categoryMask: Int = 7) : DeckKey {
+        override val key: String get() = "doc:$documentId:${filter.key}" + if (categoryMask == 7) "" else ":$categoryMask"
     }
 
-    data class All(val lang: Lang, val targetLang: Lang) : DeckKey {
-        override val key: String get() = "all:${lang.code}-${targetLang.code}"
+    data class All(val lang: Lang, val targetLang: Lang, val categoryMask: Int = 7) : DeckKey {
+        override val key: String get() = "all:${lang.code}-${targetLang.code}" + if (categoryMask == 7) "" else ":$categoryMask"
     }
 
     companion object {
         fun parse(key: String): DeckKey? {
             val parts = key.split(":")
             return when {
-                parts.size == 3 && parts[0] == "doc" -> {
+                parts.size in 3..4 && parts[0] == "doc" -> {
                     val id = parts[1].toLongOrNull() ?: return null
                     val filter = DeckFilter.fromKey(parts[2]) ?: return null
-                    Document(id, filter)
+                    Document(id, filter, if (parts.size == 4) parts[3].toIntOrNull()?.takeIf { it in 0..7 } ?: return null else 7)
                 }
-                parts.size == 2 && parts[0] == "all" -> {
+                parts.size in 2..3 && parts[0] == "all" -> {
                     val langs = parts[1].split("-")
                     if (langs.size != 2) return null
-                    All(Lang.fromCode(langs[0]) ?: return null, Lang.fromCode(langs[1]) ?: return null)
+                    All(Lang.fromCode(langs[0]) ?: return null, Lang.fromCode(langs[1]) ?: return null, if (parts.size == 3) parts[2].toIntOrNull()?.takeIf { it in 0..7 } ?: return null else 7)
                 }
                 else -> null
             }

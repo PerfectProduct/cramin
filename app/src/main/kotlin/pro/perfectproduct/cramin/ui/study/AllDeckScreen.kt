@@ -61,16 +61,26 @@ class AllDeckViewModel(private val container: AppContainer) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private val selected = kotlinx.coroutines.flow.MutableStateFlow<LangPair?>(null)
 
+    val categoryMask = container.settingsStore.allCategoryMask.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 7)
+    fun toggleCategory(bit: Int) = viewModelScope.launch { container.settingsStore.toggleAllCategory(bit) }
+    val unknown = kotlinx.coroutines.flow.MutableStateFlow(0)
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val current: StateFlow<Pair<LangPair, Int>?> = combine(pairs, selected) { all, sel -> sel?.takeIf { it in all } ?: all.firstOrNull() }
         .flatMapLatest { pair ->
-            if (pair == null) flowOf(null) else container.cardRepository.observeUnlearnedCountForPair(Lang.requireCode(pair.lang), Lang.requireCode(pair.targetLang)).map { count -> pair to count }
+            if (pair == null) flowOf(null) else combine(
+                container.cardRepository.observePairCards(Lang.requireCode(pair.lang), Lang.requireCode(pair.targetLang)), categoryMask
+            ) { cards, mask ->
+                unknown.value = cards.count { it.category == null }
+                pair to cards.filter { pro.perfectproduct.cramin.data.repo.CategoryFilter.accepts(it.category, mask) }
+                    .groupBy { it.lemmaKey to it.meaningKey }.values.count { group -> group.any { it.status != pro.perfectproduct.cramin.data.db.CardStatus.KNOWN } }
+            }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val canResume: StateFlow<Boolean> = current.flatMapLatest { cur ->
+    val canResume: StateFlow<Boolean> = combine(current, categoryMask) { c, m -> c to m }.flatMapLatest { (cur, mask) ->
         if (cur == null) flowOf(false) else container.studyRepository.observeResumable(
-            DeckKey.All(Lang.requireCode(cur.first.lang), Lang.requireCode(cur.first.targetLang)).key)
+            DeckKey.All(Lang.requireCode(cur.first.lang), Lang.requireCode(cur.first.targetLang), mask).key)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -94,6 +104,8 @@ fun AllDeckScreen(onBack: () -> Unit, onStudy: (String, Boolean) -> Unit, vm: Al
     val current by vm.current.collectAsState()
     val direction by vm.direction.collectAsState()
     val canResume by vm.canResume.collectAsState()
+    val mask by vm.categoryMask.collectAsState()
+    val unknown by vm.unknown.collectAsState()
     var shuffle by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
@@ -116,6 +128,8 @@ fun AllDeckScreen(onBack: () -> Unit, onStudy: (String, Boolean) -> Unit, vm: Al
             Spacer(Modifier.height(20.dp))
             val cur = current
             if (cur != null) {
+                pro.perfectproduct.cramin.ui.document.TopicFilters(mask, vm::toggleCategory)
+                if (unknown > 0) Text(stringResource(R.string.topic_incomplete, unknown))
                 Text(stringResource(R.string.alldeck_count, cur.second), style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(16.dp))
                 DirectionToggle(Lang.requireCode(cur.first.lang), Lang.requireCode(cur.first.targetLang), direction, vm::setDirection, Modifier.align(Alignment.CenterHorizontally))
@@ -126,10 +140,10 @@ fun AllDeckScreen(onBack: () -> Unit, onStudy: (String, Boolean) -> Unit, vm: Al
                 }
                 Spacer(Modifier.height(16.dp))
                 Button(
-                    onClick = { onStudy(DeckKey.All(Lang.requireCode(cur.first.lang), Lang.requireCode(cur.first.targetLang)).key, shuffle) },
-                    enabled = cur.second > 0 || canResume,
+                    onClick = { onStudy(DeckKey.All(Lang.requireCode(cur.first.lang), Lang.requireCode(cur.first.targetLang), mask).key, shuffle) },
+                    enabled = mask != 0 && (cur.second > 0 || canResume),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("allDeckStudy"),
-                ) { Text(stringResource(R.string.cards_study), style = MaterialTheme.typography.titleMedium) }
+                ) { Text(stringResource(R.string.cards_study) + " · ${cur.second}", style = MaterialTheme.typography.titleMedium) }
                 if (cur.second == 0) {
                     Spacer(Modifier.height(12.dp))
                     Text(stringResource(R.string.alldeck_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)

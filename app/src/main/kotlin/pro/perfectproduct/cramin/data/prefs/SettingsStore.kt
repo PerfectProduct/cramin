@@ -50,6 +50,12 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         )
     }
 
+    val allCategoryMask = dataStore.data.map { it[intPreferencesKey("all_category_mask")] ?: 7 }
+    suspend fun toggleAllCategory(bit: Int) = edit {
+        val key = intPreferencesKey("all_category_mask")
+        it[key] = (it[key] ?: 7) xor bit
+    }
+
     suspend fun current(): Settings = settings.first()
 
     suspend fun setOnboardingDone(done: Boolean) = edit { it[Keys.ONBOARDING_DONE] = done }

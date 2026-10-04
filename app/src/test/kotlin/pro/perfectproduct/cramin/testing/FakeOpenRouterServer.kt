@@ -60,6 +60,7 @@ class FakeOpenRouterServer(private val fake: FakeLlmClient = FakeLlmClient()) : 
             Schemas.TRANSLATE_NAME -> ModelRole.TRANSLATE
             Schemas.EXTRACT_NAME -> ModelRole.EXTRACT
             Schemas.CONSOLIDATE_NAME -> ModelRole.CONSOLIDATE
+            "card_topic_categories" -> ModelRole.TOPIC
             else -> return MockResponse(code = 400, body = """{"error":{"code":400,"message":"unknown schema"}}""")
         }
         val response = runBlocking {

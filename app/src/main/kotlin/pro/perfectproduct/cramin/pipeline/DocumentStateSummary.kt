@@ -99,6 +99,9 @@ object DocumentStateSummary {
                 val group = jobs.filter { it.kind == kind }
                 append("\nJobs $kind: total=${group.size}, done=${group.count { it.status == JobStatus.DONE }}, pending=${group.count { it.status == JobStatus.PENDING }}, failed=${group.count { it.status == JobStatus.FAILED }}")
             }
+            val topic = doc.topicSnapshotJson?.let { runCatching { kotlinx.serialization.json.Json.decodeFromString<TopicSnapshot>(it) }.getOrNull() }
+            append("\nTopic classification: classified=${savedCards.count { it.category != null }}/${savedCards.size}; selectedMask=${doc.categoryMask}")
+            append("\nTopic model=${topic?.role?.model ?: "NONE"}; prompt=${topic?.promptVersion ?: "NONE"}; reasoning=${topic?.role?.reasoning ?: "NONE"}; error=${doc.topicError ?: "NONE"}")
             append("\nHistorical diagnostic disposition: ${failure?.disposition(doc.status) ?: "NONE"}")
             append("\nHistorical diagnostic (not current status):\n${failure?.copyText(version, api) ?: "NONE"}")
         }

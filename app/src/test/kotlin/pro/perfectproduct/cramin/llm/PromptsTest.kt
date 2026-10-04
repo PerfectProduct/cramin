@@ -11,7 +11,7 @@ import pro.perfectproduct.cramin.util.Hashing
  */
 class PromptsTest {
     private val expected = mapOf(
-        "brief" to "d0a9a2b3098f9ed469f07a044d7ce5a6e36d83d7aad7157591f392e0405aaee0",
+        "brief" to "5f5483da98377d600e43a6cd3cdb3ede153b09bf3e9068cf0e52f539c442d1c5",
         "translate" to "be8427039874e354fd4cb9552424b57aa71f4fbe0762f290afc8f9adc5f99f77",
         "extract" to "f9e5a3104f05148b2efa7018307746c5c204ae78aa51503f9fc1db225e258eb1",
         "consolidate" to "54e2286fbe81f47f4e224879db44a5338bd91d88eb988d73101fbad2f7ac7e39",

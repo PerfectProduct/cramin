@@ -22,19 +22,15 @@ class CardRepository(
     fun observeCounts(documentId: Long): Flow<CardCounts> = cards.observeCounts(documentId)
     fun observeCards(documentId: Long): Flow<List<CardEntity>> = cards.observeByDocument(documentId)
     fun observeOccurrences(documentId: Long): Flow<List<OccurrenceRow>> = cards.observeOccurrencesByDocument(documentId)
+    fun observePairCards(lang: Lang, target: Lang) = cards.observeCardsForPair(lang.code, target.code)
     fun observeLangPairs(): Flow<List<LangPair>> = cards.observeLangPairs()
     fun observeUnlearnedCountForPair(lang: Lang, targetLang: Lang): Flow<Int> =
         cards.observeUnlearnedCountForPair(lang.code, targetLang.code)
 
     /** Колода документа в порядке первого появления в тексте (SPEC §10.3). */
-    suspend fun deckCards(documentId: Long, filter: DeckFilter): List<StudyCard> {
-        val entities = cards.getByDocument(documentId).filter {
-            when (filter) {
-                DeckFilter.UNLEARNED -> it.status != CardStatus.KNOWN
-                DeckFilter.ALL -> true
-                DeckFilter.STARRED -> it.starred
-            }
-        }
+    suspend fun deckCards(documentId: Long, filter: DeckFilter, categoryMask: Int? = null): List<StudyCard> {
+        val mask = categoryMask ?: db.documentDao().getById(documentId)?.categoryMask ?: CategoryFilter.ALL
+        val entities = cards.getByDocument(documentId).filter { CategoryFilter.accepts(it, mask, filter) }
         return build(entities)
     }
 
@@ -43,8 +39,8 @@ class CardRepository(
      * дедупликация по (srcLang, tgtLang, lemmaKey, meaningKey) — остаётся карточка из самого свежего документа,
      * один смысл и его пример берутся у представителя группы.
      */
-    suspend fun sharedDeckCards(lang: Lang, targetLang: Lang, requiredIds: List<Long> = emptyList(), originalGroups: Map<Long, List<Long>> = emptyMap()): List<StudyCard> = db.withTransaction {
-        val all = cards.getCardsForPair(lang.code, targetLang.code)
+    suspend fun sharedDeckCards(lang: Lang, targetLang: Lang, requiredIds: List<Long> = emptyList(), originalGroups: Map<Long, List<Long>> = emptyMap(), categoryMask: Int = CategoryFilter.ALL): List<StudyCard> = db.withTransaction {
+        val all = cards.getCardsForPair(lang.code, targetLang.code).filter { CategoryFilter.accepts(it.category, categoryMask) }
         val byKey = LinkedHashMap<String, MutableList<CardEntity>>()
         for (c in all) byKey.getOrPut(c.lemmaKey + "\u0000" + c.meaningKey) { mutableListOf() }.add(c)
         // Карточка считается невыученной, если хотя бы один дубликат не KNOWN (свайп ставит статус всем).
@@ -83,7 +79,7 @@ class CardRepository(
         override suspend fun snapshot(cardId: Long): Map<Long, CardStatus> {
             val group = if (shared) sharedCard(cardId) else null
             return if (group == null) statusSnapshot(cardId, shared)
-            else cards.getMeaningCards(group.lang.code, group.targetLang.code, group.lemmaKey, group.meaningKey).associate { it.id to it.status }
+            else (listOf(group.id) + group.duplicateIds).distinct().chunked(CHUNK).flatMap { cards.getCards(it) }.associate { it.id to it.status }
         }
         override suspend fun set(cardId: Long, status: CardStatus) { setStatus(cardId, status) }
     }

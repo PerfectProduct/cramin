@@ -40,6 +40,12 @@ class OpenRouterClientTest {
         pro.perfectproduct.cramin.util.Log.install(null)
     }
 
+    @Test fun refusalWithStopAndContentIsRejected() = runTest {
+        server.scripted += MockResponse(body = """{"choices":[{"finish_reason":"stop","message":{"content":"{}","refusal":"declined"}}]}""")
+        try { client.complete(request); fail("refusal accepted") }
+        catch (e: LlmException.InvalidResponse) { assertEquals("refusal", e.reason) }
+    }
+
     @Test
     fun sendsStructuredOutputRequestAndParsesUsage() = runTest {
         val resp = client.complete(request)

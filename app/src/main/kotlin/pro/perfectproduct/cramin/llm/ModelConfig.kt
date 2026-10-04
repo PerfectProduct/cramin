@@ -158,6 +158,11 @@ object ModelConfigResolver {
         val warnings = mutableListOf<String>()
         val roles = LinkedHashMap<ModelRole, EffectiveRole>()
         for (role in ModelRole.entries) {
+            // Classification is a pinned role; never inherit a user/remote model substitution.
+            if (role == ModelRole.TOPIC) {
+                embedded.roles[role.key]?.let { r -> roles[role] = EffectiveRole(role, r.model, r.temperature, r.maxTokens, ConfigSource.EMBEDDED, r.reasoning) }
+                continue
+            }
             val candidates = buildList {
                 overrides?.roles?.get(role.key)?.model?.let { add(Triple(ConfigSource.OVERRIDE, it, overrides.roles.getValue(role.key).let { o -> RoleConfig(it, o.temperature, o.maxTokens) })) }
                 remote?.roles?.get(role.key)?.let { add(Triple(ConfigSource.REMOTE, it.model, it)) }

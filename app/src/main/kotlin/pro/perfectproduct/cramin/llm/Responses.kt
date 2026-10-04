@@ -40,6 +40,7 @@ data class Brief(
     val domain: String,
     val register: String,
     val glossary: List<GlossaryEntry> = emptyList(),
+    val subtopics: List<String> = emptyList(),
 )
 
 @Serializable
@@ -69,7 +70,7 @@ data class ConsolidateResponse(val items: List<ConsolidatedItem> = emptyList())
 data class ConsolidatedItem(val k: String, val senses: List<ConsolidatedSense> = emptyList())
 
 @Serializable
-data class ConsolidatedSense(val g: String, val ids: List<Int> = emptyList())
+data class ConsolidatedSense(val g: String, val ids: List<Int> = emptyList(), val category: pro.perfectproduct.cramin.data.db.TopicCategory? = null)
 
 /** Вход консолидации (SPEC §6.8): `{k, l, p, o: [{id, g, s}]}`. */
 @Serializable

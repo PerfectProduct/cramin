@@ -130,6 +130,8 @@ class DocumentRepository(
                 if (!alreadyPending) {
                     db.cardDao().deleteByDocument(id)
                     db.jobDao().deleteByDocument(id)
+                    db.documentDao().setTopicSnapshot(id, null)
+                    db.documentDao().setTopicError(id, null)
                     db.segmentDao().deleteByDocument(id)
                     db.sentenceDao().deleteByDocument(id)
                     db.studySessionDao().deleteByPrefix("doc:$id:")

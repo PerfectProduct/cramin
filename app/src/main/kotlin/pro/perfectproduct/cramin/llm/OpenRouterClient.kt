@@ -143,6 +143,10 @@ class OpenRouterClient(
         val choice = root["choices"]?.jsonArray?.firstOrNull()?.jsonObject
             ?: return Attempt.Fail(LlmException.InvalidResponse("no choices"))
         val message = choice["message"]?.jsonObject
+        val refusal = message?.get("refusal")
+        if (refusal != null && refusal != kotlinx.serialization.json.JsonNull &&
+            (refusal !is JsonPrimitive || !refusal.contentOrNull.isNullOrBlank()))
+            return Attempt.Fail(LlmException.InvalidResponse("refusal"))
         val content = message?.get("content")?.let { c ->
             if (c is JsonPrimitive) c.contentOrNull else null
         } ?: return Attempt.Fail(LlmException.InvalidResponse("empty content"))

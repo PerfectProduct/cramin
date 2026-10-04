@@ -1,0 +1,20 @@
+{
+  "baselineVersion": "0.1.32-debug",
+  "roomBefore": 4,
+  "roomAfter": 5,
+  "sameSigningCertificate": true,
+  "preserved": {
+    "Document": true,
+    "Card": true,
+    "Sense": true,
+    "Occurrence": true,
+    "Sentence": true,
+    "StudySession": true,
+    "Job": true,
+    "ReprocessState": true
+  },
+  "legacyCategoriesAreNull": true,
+  "defaultCategoryMask": 7,
+  "updatedVersion": "0.1.33-debug",
+  "apkSha256": "ac4551acc941d01120e02ef781ff2ec3bf3f7c3f3f918d3e4c5b2835ca344bcd"
+}

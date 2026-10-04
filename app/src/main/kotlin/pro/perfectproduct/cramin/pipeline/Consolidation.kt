@@ -8,13 +8,26 @@ import pro.perfectproduct.cramin.llm.ConsolidateOccurrenceInput
 import pro.perfectproduct.cramin.llm.ConsolidateResponse
 
 /** Смысл карточки: перевод и индексы единиц (в `MergedCard.units`), которые к нему относятся. */
-data class SenseDraft(val translation: String, val unitIndices: List<Int>)
+data class SenseDraft(val translation: String, val unitIndices: List<Int>, val category: pro.perfectproduct.cramin.data.db.TopicCategory? = null)
 
 /**
  * Консолидация смыслов (SPEC §6.8): пакеты до 40 лемм, разбор ответа, инвариант «каждый id ровно
  * один раз», фолбэк «каждый различный перевод — отдельный смысл», сортировка по числу вхождений.
  */
 object Consolidation {
+    fun validateCategories(batch: Batch, response: ConsolidateResponse) {
+        val expected = batch.items.map { it.k }.toSet()
+        if (response.items.size != expected.size || response.items.map { it.k }.toSet() != expected)
+            throw pro.perfectproduct.cramin.llm.LlmException.InvalidResponse("topic consolidation keys")
+        for (item in response.items) {
+            val ids = item.senses.flatMap { it.ids }
+            val expectedIds = batch.ids.filterValues { it.first == item.k }.keys
+            if (ids.size != expectedIds.size || ids.toSet() != expectedIds ||
+                item.senses.any { it.category == null || it.ids.isEmpty() || it.g.isBlank() })
+                throw pro.perfectproduct.cramin.llm.LlmException.InvalidResponse("topic consolidation senses")
+        }
+    }
+
     const val BATCH_SIZE = 40
 
     fun batches(cards: List<MergedCard>): List<List<MergedCard>> =
@@ -90,7 +103,7 @@ object Consolidation {
                         valid = false
                         break
                     }
-                    drafts += SenseDraft(g, idx)
+                    drafts += SenseDraft(g, idx, s.category)
                 }
                 if (valid && seen.size == expected.size) drafts else null
             }

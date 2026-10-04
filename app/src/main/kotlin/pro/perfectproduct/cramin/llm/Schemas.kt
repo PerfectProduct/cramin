@@ -11,10 +11,10 @@ object Schemas {
     val BRIEF: JsonObject = parse(
         """
         {"type":"object","additionalProperties":false,
-         "required":["title","emoji","summary","domain","register","glossary"],
+         "required":["title","emoji","summary","domain","register","glossary","subtopics"],
          "properties":{
           "title":{"type":"string"},"emoji":{"type":"string"},"summary":{"type":"string"},
-          "domain":{"type":"string"},
+          "domain":{"type":"string"},"subtopics":{"type":"array","items":{"type":"string"}},
           "register":{"type":"string","enum":["formal","neutral","informal","technical","literary","conversational"]},
           "glossary":{"type":"array","items":{"type":"object","additionalProperties":false,
             "required":["src","tgt","note"],

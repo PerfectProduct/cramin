@@ -9,6 +9,7 @@ enum class ModelRole(val key: String) {
     EXTRACT("extract"),
     CONSOLIDATE("consolidate"),
     STT("stt"),
+    TOPIC("topic"),
     ;
 
     /** Текстовые роли требуют structured outputs; STT — нет. */
@@ -33,6 +34,7 @@ data class LlmRequest(
     val reasoning: JsonObject? = null,
     val supportedParameters: Set<String>? = null,
     val parametersFrozen: Boolean = false,
+    val strictTopic: Boolean = false,
     val configOrigin: ConfigOrigin = ConfigOrigin.UNKNOWN,
     val processingAttemptId: String? = null,
     val logicalRequestId: String? = null,

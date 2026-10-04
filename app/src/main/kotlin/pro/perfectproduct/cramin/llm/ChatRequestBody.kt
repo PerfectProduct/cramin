@@ -30,8 +30,8 @@ object ChatRequestBody {
         put("usage", buildJsonObject { put("include", true) })
         if (r.temperature != null && (supported == null || "temperature" in supported)) put("temperature", r.temperature)
         r.maxTokens?.let { put("max_tokens", it) }
-        if (r.reasoning != null && (supported == null || "reasoning" in supported)) put("reasoning", r.reasoning)
-        if (requireParameters) {
+        if (r.reasoning != null && (r.strictTopic || supported == null || "reasoning" in supported)) put("reasoning", r.reasoning)
+        if (requireParameters || r.strictTopic) {
             // Роутинг только к провайдерам, которые честно поддерживают structured outputs (CRM-DL-011).
             put("provider", buildJsonObject { put("require_parameters", true) })
         }

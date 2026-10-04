@@ -18,9 +18,12 @@ enum class DocStatus {
 
 enum class Direction { SRC_FRONT, TGT_FRONT }
 
-enum class JobKind { BRIEF, TRANSLATE, EXTRACT, CONSOLIDATE, STT }
+enum class JobKind { BRIEF, TRANSLATE, EXTRACT, CONSOLIDATE, STT, TOPIC }
 
 enum class JobStatus { PENDING, DONE, FAILED }
+
+@kotlinx.serialization.Serializable
+enum class TopicCategory(val bit: Int) { CORE(1), RELATED(2), GENERAL(4) }
 
 enum class CardStatus { NEW, LEARNING, KNOWN }
 
@@ -54,6 +57,9 @@ data class DocumentEntity(
     val updatedAt: Long,
     val failureJson: String? = null,
     @androidx.room.ColumnInfo(defaultValue = "0") val studyNotice: Boolean = false,
+    @androidx.room.ColumnInfo(defaultValue = "7") val categoryMask: Int = 7,
+    val topicSnapshotJson: String? = null,
+    val topicError: String? = null,
 )
 
 @Entity(
@@ -144,6 +150,7 @@ data class CardEntity(
     val reps: Int? = null,
     val lapses: Int? = null,
     @androidx.room.ColumnInfo(defaultValue = "''") val meaningKey: String = "",
+    val category: TopicCategory? = null,
 )
 
 @Entity(

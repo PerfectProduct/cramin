@@ -51,6 +51,7 @@ class StudyViewModel(private val container: AppContainer, val deckKeyRaw: String
     private var machine: StudySessionMachine? = null
     private var autoplayJob: Job? = null
     private var freshIds: List<Long> = emptyList()
+    private var freshGroups: Map<Long, List<Long>> = emptyMap()
     private var sessionJob: Job? = null
     private val deckKey: DeckKey? = DeckKey.parse(deckKeyRaw)
 
@@ -67,12 +68,18 @@ class StudyViewModel(private val container: AppContainer, val deckKeyRaw: String
         val saved = rawSaved?.let { SessionState.fromJson(it) }
         val required = saved?.let { s -> (s.order + s.initialOrder + s.roundOrders.values.flatten()).distinct() }.orEmpty()
         val freshCards = when (key) {
-            is DeckKey.Document -> container.cardRepository.deckCards(key.documentId, key.filter)
-            is DeckKey.All -> container.cardRepository.sharedDeckCards(key.lang, key.targetLang)
+            is DeckKey.Document -> container.cardRepository.deckCards(key.documentId, key.filter, key.categoryMask)
+            is DeckKey.All -> container.cardRepository.sharedDeckCards(key.lang, key.targetLang, categoryMask = key.categoryMask)
         }
         freshIds = freshCards.map { it.id }
-        val cards = if (key is DeckKey.All && required.isNotEmpty())
-            container.cardRepository.sharedDeckCards(key.lang, key.targetLang, required, saved?.undoStack.orEmpty().associate { it.cardId to it.previousStatuses.orEmpty().keys.toList() }) else freshCards
+        freshGroups = freshCards.associate { it.id to (listOf(it.id) + it.duplicateIds) }
+        val cards = if (key is DeckKey.All && required.isNotEmpty()) {
+            if (!saved?.sourceGroups.isNullOrEmpty()) {
+                val originals = container.cardRepository.cardsByIds(required).associateBy { it.id }
+                freshCards + required.mapNotNull { id -> originals[id]?.copy(duplicateIds = saved?.sourceGroups?.get(id).orEmpty().filter { it != id }) }
+            } else container.cardRepository.sharedDeckCards(key.lang, key.targetLang, required,
+                saved?.undoStack.orEmpty().associate { it.cardId to it.previousStatuses.orEmpty().keys.toList() })
+        } else freshCards
         val direction = when (key) {
             is DeckKey.Document -> container.documentRepository.get(key.documentId)?.direction ?: settings.defaultDirection
             is DeckKey.All -> container.settingsStore.allDeckDirection(key.lang.code, key.targetLang.code).first() ?: settings.defaultDirection
@@ -112,12 +119,15 @@ class StudyViewModel(private val container: AppContainer, val deckKeyRaw: String
         }
         val seed = if (shuffleRequested) System.nanoTime() else null
         val order = if (seed != null) DeckBuilder.shuffle(ids, seed) else ids
-        install(SessionState(deckKey = deckKeyRaw, order = order, shuffleSeed = seed), ids)
+        install(SessionState(deckKey = deckKeyRaw, order = order, shuffleSeed = seed,
+            sourceGroups = ids.associateWith { id -> freshGroups[id] ?: listOf(id) }), ids)
     }
 
     private suspend fun install(initial: SessionState, fullOrder: List<Long>) {
         val key = deckKey ?: return
-        val store = container.cardRepository.statusStore(key is DeckKey.All) { _state.value.cards[it] }
+        val store = container.cardRepository.statusStore(key is DeckKey.All) { id ->
+            _state.value.cards[id]?.let { card -> initial.sourceGroups[id]?.let { sources -> card.copy(duplicateIds = sources.filter { it != id }) } ?: card }
+        }
         val m = StudySessionMachine(initial, store,
             persist = { s -> container.studyRepository.save(key.key, s.toJson()) },
             fullOrder = fullOrder, transaction = { block -> container.db.withTransaction { block() } })
@@ -182,7 +192,8 @@ class StudyViewModel(private val container: AppContainer, val deckKeyRaw: String
         viewModelScope.launch {
             val ids = _state.value.session?.initialOrder ?: freshIds
             val seed = System.nanoTime()
-            install(SessionState(deckKey = deckKeyRaw, order = DeckBuilder.shuffle(ids, seed), shuffleSeed = seed), ids)
+            install(SessionState(deckKey = deckKeyRaw, order = DeckBuilder.shuffle(ids, seed), shuffleSeed = seed,
+                sourceGroups = _state.value.session?.sourceGroups.orEmpty()), ids)
         }
     }
 

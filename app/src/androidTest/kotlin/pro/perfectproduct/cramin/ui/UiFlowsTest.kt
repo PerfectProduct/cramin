@@ -221,7 +221,7 @@ class UiFlowsTest {
         compose.onNodeWithTag("allUnlearned").assertIsDisplayed()
         compose.onNodeWithTag("play-$id").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("studyButton").assertIsDisplayed()
+        compose.onNodeWithTag("studyButton").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -251,7 +251,7 @@ class UiFlowsTest {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithTag("play-$id").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("studyButton").performClick()
+        compose.onNodeWithTag("studyButton").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
         // Accessibility action has no preceding pointer-down.
         compose.onNodeWithTag("autoplay").performClick()
@@ -274,7 +274,7 @@ class UiFlowsTest {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithTag("play-$id").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("studyButton").performClick()
+        compose.onNodeWithTag("studyButton").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
 
         // Тап переворачивает.
@@ -320,14 +320,14 @@ class UiFlowsTest {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithTag("play-$id").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("studyButton").performClick()
+        compose.onNodeWithTag("studyButton").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("flashCard").performTouchInput { swipeRight() }
         compose.waitUntil(5_000) { runBlocking { container.cardRepository.getStatus(cardId(id, "bank")) } == CardStatus.KNOWN }
         compose.onNodeWithTag("studyClose").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
         // Колода «невыученные» теперь из одной карточки, но сессия продолжается со своих 2 (SPEC §9.6).
-        compose.onNodeWithTag("studyButton").performClick()
+        compose.onNodeWithTag("studyButton").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("resume")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("resume").assertTextContains("2/2", substring = true).performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("counter")).fetchSemanticsNodes().isNotEmpty() }

@@ -43,6 +43,12 @@ data class LangPair(val lang: String, val targetLang: String)
 
 @Dao
 interface CardDao {
+    @Query("SELECT c.* FROM Card c JOIN Document d ON d.id = c.documentId WHERE c.lang = :lang AND c.targetLang = :target AND d.status = 'READY' ORDER BY d.createdAt DESC, c.firstSentenceIdx")
+    fun observeCardsForPair(lang: String, target: String): Flow<List<CardEntity>>
+
+    @Query("UPDATE Card SET category = :category WHERE id = :id AND documentId = :documentId")
+    suspend fun setCategory(documentId: Long, id: Long, category: TopicCategory)
+
     // --- Запись -------------------------------------------------------------
 
     @Insert

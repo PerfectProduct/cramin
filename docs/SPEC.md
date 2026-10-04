@@ -144,6 +144,7 @@ and turned into vocabulary flashcards. Read the text and return:
 - emoji: one emoji that fits the topic;
 - summary: 2-4 sentences in TARGET language describing what the text is about;
 - domain: short label (e.g. "AI economics", "medicine", "everyday conversation");
+- subtopics: significant subtopics explicitly supported by the supplied text; do not infer absent topics from general knowledge;
 - register: one of formal, neutral, informal, technical, literary, conversational;
 - glossary: up to 80 recurring or domain-specific terms, multiword expressions and named entities
   that must be translated consistently. For each: src (as in text, dictionary form),

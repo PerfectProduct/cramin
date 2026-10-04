@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -57,9 +58,23 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
     val deckFilter: StateFlow<DeckFilter> = _deckFilter
     fun setDeckFilter(f: DeckFilter) { _deckFilter.value = f }
 
+    val categoryMask = document.map { it?.document?.categoryMask ?: 7 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 7)
+    fun toggleCategory(bit: Int) = viewModelScope.launch {
+        container.db.documentDao().toggleCategory(documentId, bit)
+    }
+    val selection = combine(container.cardRepository.observeCards(documentId), deckFilter, categoryMask) { cards, filter, mask ->
+        cards.count { pro.perfectproduct.cramin.data.repo.CategoryFilter.accepts(it, mask, filter) } to cards.count { it.category == null }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0 to 0)
+    val categoryWorkRunning = container.workManager.getWorkInfosForUniqueWorkFlow(
+        pro.perfectproduct.cramin.pipeline.ProcessDocumentWorker.uniqueName(documentId))
+        .map { infos -> infos.any { !it.state.isFinished } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    fun determineCategories() { container.processScheduler.enqueue(documentId, topicOnly = true) }
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val canResume = deckFilter.flatMapLatest { filter ->
-        container.studyRepository.observeResumable(DeckKey.Document(documentId, filter).key)
+    val canResume = combine(deckFilter, categoryMask) { f, m -> f to m }.flatMapLatest { (filter, mask) ->
+        container.studyRepository.observeResumable(DeckKey.Document(documentId, filter, mask).key)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _shuffle = MutableStateFlow(false)
@@ -75,7 +90,7 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
     val ttsAvailable: StateFlow<Set<Lang>> get() = container.tts.available
     fun speak(text: String, lang: Lang) = viewModelScope.launch { container.tts.speak(text, lang, container.settingsStore.current().ttsRate) }
 
-    fun deckKey(): String = DeckKey.Document(documentId, _deckFilter.value).key
+    fun deckKey(): String = DeckKey.Document(documentId, _deckFilter.value, categoryMask.value).key
 
     suspend fun card(cardId: Long): StudyCard? = container.cardRepository.card(cardId)
 

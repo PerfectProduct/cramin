@@ -77,6 +77,7 @@ class TestPipeline(
                 "extract" to RoleConfig("fake/extract", 0.1, 8000),
                 "consolidate" to RoleConfig("fake/consolidate", 0.1, 4000),
                 "stt" to RoleConfig("fake/stt"),
+                "topic" to RoleConfig("fake/topic", 0.1, null, kotlinx.serialization.json.buildJsonObject { put("effort", kotlinx.serialization.json.JsonPrimitive("low")) }),
             ),
             pipeline = PipelineParamsJson(
                 briefMaxInputWords = 60_000,

@@ -1,6 +1,6 @@
 package pro.perfectproduct.cramin.testing
 
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.*
 import pro.perfectproduct.cramin.llm.Brief
 import pro.perfectproduct.cramin.llm.ConsolidateItemInput
 import pro.perfectproduct.cramin.llm.ConsolidateResponse
@@ -60,6 +60,11 @@ class FakeLlmClient(
             ModelRole.TRANSLATE -> translate(request.user)
             ModelRole.EXTRACT -> extract(request.user)
             ModelRole.CONSOLIDATE -> consolidate(request.user)
+            ModelRole.TOPIC -> buildJsonObject { put("items", buildJsonArray {
+                Json.parseToJsonElement(request.user).jsonObject.getValue("items").jsonArray.forEach { item ->
+                    add(buildJsonObject { put("id", item.jsonObject.getValue("id")); put("category", "CORE") })
+                }
+            }) }.toString()
             ModelRole.STT -> throw LlmException.BadRequest(400, "STT is not a chat role")
         }
         return LlmResponse(
@@ -135,14 +140,16 @@ class FakeLlmClient(
     }
 
     private fun consolidate(user: String): String {
-        val itemsJson = user.substringAfter("ITEMS:\n", "[]")
+        val integrated = user.trimStart().startsWith("{")
+        val payload = if (integrated) Json.parseToJsonElement(user).jsonObject.getValue("consolidation").jsonPrimitive.content else user
+        val itemsJson = payload.substringAfter("ITEMS:\n", "[]")
         val items = json.decodeFromString<List<ConsolidateItemInput>>(itemsJson)
         return json.encodeToString(
             ConsolidateResponse(
                 items.map { item ->
                     ConsolidatedItem(
                         k = item.k,
-                        senses = item.o.groupBy { it.g }.map { (g, occ) -> ConsolidatedSense(g, occ.map { it.id }) },
+                        senses = item.o.groupBy { it.g }.map { (g, occ) -> ConsolidatedSense(g, occ.map { it.id }, if (integrated) pro.perfectproduct.cramin.data.db.TopicCategory.RELATED else null) },
                     )
                 },
             ),

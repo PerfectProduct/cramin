@@ -274,4 +274,17 @@
     <string name="diagnostic_failed_state">Обработка остановлена</string>
     <string name="diagnostic_processing_state">Обработка продолжается · диагностика предыдущих событий</string>
     <string name="diagnostic_history">История диагностики</string>
+    <string name="role_topic">Категории · reasoning low · topic-category-v1</string>
+    <string name="topic_core">Основные</string>
+    <string name="topic_related">Связанные</string>
+    <string name="topic_general">Общие</string>
+    <string name="topic_choose">Выберите хотя бы одну категорию</string>
+    <string name="topic_selected">В выбранном наборе: %1$d</string>
+    <string name="topic_document_totals">Весь документ</string>
+    <string name="topic_incomplete">Без категории: %1$d. Тематическая подборка пока неполная. Полный набор доступен при включении всех трёх категорий.</string>
+    <string name="topic_error">Не удалось завершить классификацию. Сохранённые части доступны; можно продолжить.</string>
+    <string name="topic_api_notice">Определение категорий обращается к платному API OpenRouter. Фильтры и обучение работают офлайн.</string>
+    <string name="topic_determine">Определить категории</string>
+    <string name="topic_continue">Продолжить определение категорий</string>
+    <string name="topic_running">Определение категорий…</string>
 </resources>

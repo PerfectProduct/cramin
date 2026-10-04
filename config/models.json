@@ -2,17 +2,59 @@
   "schemaVersion": 1,
   "updatedAt": "2026-09-30",
   "roles": {
-    "brief":       {"model": "openai/gpt-5.6-luna", "temperature": 0.2, "maxTokens": 6000, "reasoning": {"effort": "none"}},
-    "translate":   {"model": "openai/gpt-5.6-luna", "temperature": 0.3, "maxTokens": null, "reasoning": {"effort": "none"}},
-    "extract":     {"model": "google/gemini-3.8-flash", "temperature": 0.1, "maxTokens": 8000, "reasoning": {"effort": "low"}},
-    "consolidate": {"model": "google/gemini-3.1-flash-lite", "temperature": 0.1, "maxTokens": 4000, "reasoning": {"effort": "low"}},
-    "stt":         {"model": "openai/whisper-large-v3-turbo"}
+    "brief": {
+      "model": "openai/gpt-5.6-luna",
+      "temperature": 0.2,
+      "maxTokens": 6000,
+      "reasoning": {
+        "effort": "none"
+      }
+    },
+    "translate": {
+      "model": "openai/gpt-5.6-luna",
+      "temperature": 0.3,
+      "maxTokens": null,
+      "reasoning": {
+        "effort": "none"
+      }
+    },
+    "extract": {
+      "model": "google/gemini-3.8-flash",
+      "temperature": 0.1,
+      "maxTokens": 8000,
+      "reasoning": {
+        "effort": "low"
+      }
+    },
+    "consolidate": {
+      "model": "google/gemini-3.1-flash-lite",
+      "temperature": 0.1,
+      "maxTokens": null,
+      "reasoning": {
+        "effort": "low"
+      }
+    },
+    "stt": {
+      "model": "openai/whisper-large-v3-turbo"
+    },
+    "topic": {
+      "model": "google/gemini-3.1-flash-lite",
+      "temperature": 0.1,
+      "maxTokens": null,
+      "reasoning": {
+        "effort": "low"
+      }
+    }
   },
   "pipeline": {
     "brief.maxInputWords": 60000,
     "translate.maxSectionWords": 4000,
     "extract.chunkWords": 700,
     "extract.concurrency": 3,
-    "tokensPerWord": {"en": 1.4, "ru": 2.6, "he": 2.6}
+    "tokensPerWord": {
+      "en": 1.4,
+      "ru": 2.6,
+      "he": 2.6
+    }
   }
 }

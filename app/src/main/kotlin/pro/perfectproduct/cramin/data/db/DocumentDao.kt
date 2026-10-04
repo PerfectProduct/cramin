@@ -23,6 +23,15 @@ data class UsageTotals(
 
 @Dao
 interface DocumentDao {
+    @Query("UPDATE Document SET categoryMask = (categoryMask | :bit) - (categoryMask & :bit) WHERE id = :id")
+    suspend fun toggleCategory(id: Long, bit: Int)
+    @Query("UPDATE Document SET categoryMask = :mask WHERE id = :id")
+    suspend fun setCategoryMask(id: Long, mask: Int)
+    @Query("UPDATE Document SET topicSnapshotJson = :snapshot WHERE id = :id")
+    suspend fun setTopicSnapshot(id: Long, snapshot: String?)
+    @Query("UPDATE Document SET topicError = :error WHERE id = :id")
+    suspend fun setTopicError(id: Long, error: String?)
+
     @Insert
     suspend fun insert(document: DocumentEntity): Long
 

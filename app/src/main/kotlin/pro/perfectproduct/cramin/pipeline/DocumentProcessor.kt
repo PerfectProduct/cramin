@@ -96,6 +96,34 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         }
     }
 
+    suspend fun enrichCategories(documentId: Long): ProcessOutcome = db.documentLock(documentId).withLock {
+        val doc = db.documentDao().getById(documentId) ?: return@withLock ProcessOutcome.Skipped
+        if (doc.status != DocStatus.READY) return@withLock ProcessOutcome.Skipped
+        try {
+            db.documentDao().setTopicError(documentId, null)
+            val classifier = TopicClassifier(deps)
+            val saved = doc.topicSnapshotJson
+            val topic = if (saved != null) Json.decodeFromString<TopicSnapshot>(saved)
+                else classifier.snapshot(documentId, deps.configProvider(), deps.catalogProvider())
+            val repository = pro.perfectproduct.cramin.data.repo.CardRepository(db, deps.clock)
+            val cards = db.cardDao().getByDocument(documentId).filter { it.category == null }
+            val items = repository.cardsByIds(cards.map { it.id }).map { c ->
+                pro.perfectproduct.cramin.llm.TopicItem(c.id.toString(), c.lemma, c.pos.name,
+                    c.senses.joinToString("; ") { it.translation }, c.senses.joinToString("; ") { it.translation },
+                    c.senses.mapNotNull { it.example?.sentence })
+            }
+            classifier.classify(documentId, topic, items) { part ->
+                part.forEach { (id, category) -> db.cardDao().setCategory(documentId, id.toLong(), category) }
+            }
+            ProcessOutcome.Ready(db.cardDao().getByDocument(documentId).size)
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) {
+            val code = PipelineException.from(e).code
+            db.documentDao().setTopicError(documentId, code.name)
+            ProcessOutcome.Failed(code, code.name)
+        }
+    }
+
     private suspend fun processLocked(documentId: Long, onProgress: suspend (DocStatus, Float) -> Unit): ProcessOutcome {
         val doc = db.documentDao().getById(documentId) ?: return ProcessOutcome.Skipped
         if (doc.status == DocStatus.READY) return ProcessOutcome.Skipped
@@ -151,6 +179,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
     ) {
         val byIdx: Map<Int, SentenceDraft> = sentences.associateBy { it.idx }
         var brief: Brief? = null
+        var topic: TopicSnapshot? = null
         fun sentence(idx: Int): String? = byIdx[idx]?.text
         fun text(range: IntRange): String = sentences.filter { it.idx in range }.joinToString(" ") { it.text }
     }
@@ -564,6 +593,14 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         trace.counts["lexicalGroups"] = cards.size
         Log.i(TAG, "doc=$id units=${units.size} cards=${cards.size} toConsolidate=${cards.count { it.needsConsolidation }}")
 
+        val classifier = TopicClassifier(deps)
+        if (trace.cacheOnly) {
+            ctx.topic = ctx.doc.topicSnapshotJson?.let { Json.decodeFromString<TopicSnapshot>(it) }
+            if (ctx.doc.pipelineVersion >= 2 && ctx.topic == null) throw ConsolidationCacheUnfinished()
+        } else {
+            val config = if (ModelRole.TOPIC in ctx.config.roles) ctx.config else deps.configProvider()
+            ctx.topic = classifier.snapshot(id, config, ctx.catalog)
+        }
         val senses = HashMap<String, List<SenseDraft>>()
         for (card in cards) if (!card.needsConsolidation) senses[card.lemmaKey] = Consolidation.single(card)
         val batches = Consolidation.batches(cards)
@@ -599,6 +636,24 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             ctx.onProgress(DocStatus.CONSOLIDATING, ctx.progress.within(DocStatus.CONSOLIDATING, (i + 1f) / (batches.size + 1)))
         }
 
+        // Normalize final meanings BEFORE classification; category never participates in identity.
+        for (card in cards) senses[card.lemmaKey] = senses.getValue(card.lemmaKey)
+            .groupBy { MeaningKey.of(it.translation) }.values.map { same ->
+                SenseDraft(same.first().translation, same.flatMap { it.unitIndices }.distinct(),
+                    same.map { it.category }.distinct().singleOrNull())
+            }
+        if (ctx.topic != null) {
+            fun itemId(card: MergedCard, sense: SenseDraft) = pro.perfectproduct.cramin.util.Hashing.sha256Hex(
+                (card.lemmaKey + "\u0000" + MeaningKey.of(sense.translation)).toByteArray())
+            val missing = cards.flatMap { card -> senses.getValue(card.lemmaKey).filter { it.category == null }.map { sense ->
+                pro.perfectproduct.cramin.llm.TopicItem(itemId(card, sense), card.lemma, card.pos.name,
+                    sense.translation, sense.translation, sense.unitIndices.mapNotNull { ctx.sentence(card.units[it].sentenceIdx) }.distinct().take(3))
+            } }
+            val classified = classifier.classify(id, requireNotNull(ctx.topic), missing, allowNetwork = !trace.cacheOnly)
+            for (card in cards) senses[card.lemmaKey] = senses.getValue(card.lemmaKey).map { sense ->
+                sense.copy(category = sense.category ?: classified.getValue(itemId(card, sense)))
+            }
+        }
         trace.step = ConsolidationStep.CAPTURE_PROGRESS
         val snapshot = db.withTransaction { ReprocessProgress(db, deps.files).capture(id) }
         val count = writeCards(ctx, cards, senses, snapshot)
@@ -647,6 +702,16 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             var request = LlmRequest(ModelRole.CONSOLIDATE, role.model, Prompts.CONSOLIDATE,
                 Messages.consolidate(ctx.lang, ctx.targetLang, built.items), Schemas.CONSOLIDATE_NAME,
                 Schemas.CONSOLIDATE, role.temperature, role.maxTokens, role.reasoning)
+            val integrated = ctx.topic?.takeIf { it.role.model == role.model }
+            if (integrated != null) request = request.copy(
+                system = request.system + "\n" + pro.perfectproduct.cramin.llm.TopicCategories.integratedPrompt,
+                user = kotlinx.serialization.json.buildJsonObject {
+                    put("document", Json.encodeToJsonElement(pro.perfectproduct.cramin.llm.TopicContext.serializer(), integrated.context))
+                    put("consolidation", kotlinx.serialization.json.JsonPrimitive(request.user))
+                }.toString(), schema = pro.perfectproduct.cramin.llm.TopicCategories.consolidationSchema,
+                reasoning = integrated.role.reasoning, strictTopic = true)
+            val expectedOutput = 1024 + built.items.sumOf { item -> item.k.toByteArray().size + item.o.sumOf { 80 + it.g.toByteArray().size } }
+            request = request.copy(maxTokens = role.maxTokens ?: minOf(expectedOutput, ctx.catalog?.find(role.model)?.maxCompletionTokens ?: 8192))
             val budget = ConsolidationBudget.evaluate(request, ctx.catalog?.find(role.model))
             trace.counts["requestBytes"] = budget.inputBytes
             trace.counts["outputLimit"] = budget.output
@@ -657,7 +722,9 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             // Durable active path lets a subsequent process associate saved finishReason=length with this part.
             save(state.copy(active = path))
             val response = try {
-                parseOrRetry<ConsolidateResponse>(job, request, callRaw(job, request)).first
+                parseOrRetry<ConsolidateResponse>(job, request, callRaw(job, request)).first.also { parsed ->
+                    if (integrated != null) Consolidation.validateCategories(built, parsed)
+                }
             } catch (_: TruncatedResponse) {
                 return split()
             } catch (_: LlmException.InvalidResponse) {
@@ -674,7 +741,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             pro.perfectproduct.cramin.llm.ConsolidatedItem(card.lemmaKey, result.getValue(card.lemmaKey).map { sense ->
                 pro.perfectproduct.cramin.llm.ConsolidatedSense(sense.translation, root.ids.filterValues {
                     it.first == card.lemmaKey && it.second in sense.unitIndices
-                }.keys.toList())
+                }.keys.toList(), sense.category)
             })
         })
         markJob(db.jobDao().getById(job.id) ?: job, JobStatus.DONE, Consolidation.encodeCached(root, response), "stop")
@@ -694,7 +761,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             for (card in cards) {
                 val drafts = (senses[card.lemmaKey] ?: Consolidation.fallback(card))
                     .groupBy { MeaningKey.of(it.translation) }.values.map { same ->
-                        SenseDraft(same.first().translation, same.flatMap { it.unitIndices }.distinct())
+                        SenseDraft(same.first().translation, same.flatMap { it.unitIndices }.distinct(), same.first().category)
                     }
                 for (draft in drafts) {
                     val key = MeaningKey.of(draft.translation)
@@ -705,7 +772,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                         status = progress?.status ?: CardStatus.NEW, starred = progress?.starred ?: false,
                         firstSentenceIdx = draft.unitIndices.minOf { card.units[it].sentenceIdx }, updatedAt = t,
                         dueAt = progress?.dueAt, intervalDays = progress?.intervalDays, ease = progress?.ease,
-                        reps = progress?.reps, lapses = progress?.lapses,
+                        reps = progress?.reps, lapses = progress?.lapses, category = draft.category,
                     ))
                     if (progress != null) unmatched.remove(progress)
                     trace.step = ConsolidationStep.WRITE_SENSE
@@ -791,6 +858,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                         ModelRole.EXTRACT -> FailureStage.EXTRACTING
                         ModelRole.CONSOLIDATE -> FailureStage.CONSOLIDATING
                         ModelRole.STT -> FailureStage.TRANSCRIBING
+                        ModelRole.TOPIC -> FailureStage.CONSOLIDATING
                     }
                     val code = if (event.rejection != null) ErrorCode.BAD_REQUEST else ErrorCode.UNKNOWN
                     db.documentDao().setFailure(job.documentId, FailureDiagnostic(doc.sourceType, stage, code,
@@ -822,11 +890,13 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
     private suspend inline fun <reified T> parseOrRetry(job: JobEntity, request: LlmRequest, first: LlmResponse): Pair<T, String> {
         kotlinx.coroutines.currentCoroutineContext()[ConsolidationTrace]?.takeIf { it.active }?.let { it.step = ConsolidationStep.PARSE_RESPONSE }
         if (first.truncated) throw TruncatedResponse()
+        if (request.strictTopic && first.finishReason != "stop") throw LlmException.InvalidResponse("unfinished categories")
         runCatching { LlmJson.parse<T>(first.content) }.getOrNull()?.let { return it to first.content }
         Log.w(TAG, "job=${job.id} invalid JSON; retrying once")
         val second = callRaw(job, request)
         kotlinx.coroutines.currentCoroutineContext()[ConsolidationTrace]?.takeIf { it.active }?.let { it.step = ConsolidationStep.PARSE_RESPONSE }
         if (second.truncated) throw TruncatedResponse()
+        if (request.strictTopic && second.finishReason != "stop") throw LlmException.InvalidResponse("unfinished categories")
         val parsed = runCatching { LlmJson.parse<T>(second.content) }.getOrNull()
             ?: throw LlmException.InvalidResponse("schema violation after retry")
         return parsed to second.content
@@ -859,7 +929,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
 
     companion object {
         private const val TAG = "Processor"
-        const val PIPELINE_VERSION = 1
+        const val PIPELINE_VERSION = 2
         const val MAX_TITLE = 120
         const val DEFAULT_EMOJI = "📄"
         const val DEFAULT_MAX_COMPLETION_TOKENS = 8_000

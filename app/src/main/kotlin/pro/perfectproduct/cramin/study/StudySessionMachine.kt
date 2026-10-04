@@ -46,6 +46,7 @@ data class SessionState(
     val initialOrder: List<Long> = order,
     val roundOrders: Map<Int, List<Long>> = mapOf(round to order),
     val baseLearningIds: Map<Int, List<Long>> = emptyMap(),
+    val sourceGroups: Map<Long, List<Long>> = emptyMap(),
 ) {
     val finished: Boolean get() = position >= order.size
     val currentCardId: Long? get() = order.getOrNull(position)
@@ -173,13 +174,13 @@ class StudySessionMachine(
     private fun restart(s: SessionState): SessionState {
         val seed = s.shuffleSeed?.let { seedSource() }
         val order = if (seed != null) DeckBuilder.shuffle(fullOrder, seed) else fullOrder
-        return SessionState(deckKey = s.deckKey, order = order, round = 1, shuffleSeed = seed, roundSize = order.size)
+        return SessionState(deckKey = s.deckKey, order = order, round = 1, shuffleSeed = seed, roundSize = order.size, sourceGroups = s.sourceGroups)
     }
 
     private fun repeatLearning(s: SessionState): SessionState {
         if (s.learningIdsThisRound.isEmpty()) return s.copy(autoplay = false)
         val order = s.learningIdsThisRound
-        return SessionState(deckKey = s.deckKey, order = order, round = s.round + 1, shuffleSeed = s.shuffleSeed, roundSize = order.size, undoStack = s.undoStack, initialOrder = s.initialOrder, roundOrders = s.roundOrders + (s.round + 1 to order), baseLearningIds = s.baseLearningIds)
+        return SessionState(deckKey = s.deckKey, order = order, round = s.round + 1, shuffleSeed = s.shuffleSeed, roundSize = order.size, undoStack = s.undoStack, initialOrder = s.initialOrder, roundOrders = s.roundOrders + (s.round + 1 to order), baseLearningIds = s.baseLearningIds, sourceGroups = s.sourceGroups)
     }
 }
 

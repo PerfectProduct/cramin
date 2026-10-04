@@ -1,0 +1,332 @@
+{
+  "promptVersion": "topic-category-v1",
+  "annotation": "Preliminary manual labels; not evidence of real model quality.",
+  "documents": [
+    {
+      "id": "en-regression",
+      "document": {
+        "title": "Training linear regression",
+        "brief": "How coefficients are fitted by minimizing squared error. A short section explains regularization.",
+        "subtopics": [
+          "gradient descent",
+          "regularization"
+        ]
+      },
+      "items": [
+        {
+          "id": "en-regression-1",
+          "lemma": "coefficient",
+          "pos": "NOUN",
+          "meaning": "parameter of regression",
+          "translation": "коэффициент",
+          "examples": [
+            "We fit each coefficient to minimize prediction error."
+          ],
+          "expected": "CORE"
+        },
+        {
+          "id": "en-regression-2",
+          "lemma": "train",
+          "pos": "VERB",
+          "meaning": "fit model parameters",
+          "translation": "обучать",
+          "examples": [
+            "We train linear regression by minimizing squared error."
+          ],
+          "expected": "CORE"
+        },
+        {
+          "id": "en-regression-3",
+          "lemma": "compare",
+          "pos": "VERB",
+          "meaning": "compare validation scores",
+          "translation": "сравнивать",
+          "examples": [
+            "After training, compare validation scores to check the fit."
+          ],
+          "expected": "RELATED"
+        },
+        {
+          "id": "en-regression-4",
+          "lemma": "today",
+          "pos": "ADV",
+          "meaning": "time reference",
+          "translation": "сегодня",
+          "examples": [
+            "Today we will train a regression model."
+          ],
+          "expected": "GENERAL"
+        },
+        {
+          "id": "en-regression-5",
+          "lemma": "table",
+          "pos": "NOUN",
+          "meaning": "household furniture in an analogy",
+          "translation": "стол",
+          "examples": [
+            "Imagine arranging stones on your kitchen table to explain the coefficients."
+          ],
+          "expected": "GENERAL"
+        },
+        {
+          "id": "en-regression-6",
+          "lemma": "model",
+          "pos": "NOUN",
+          "meaning": "regression function",
+          "translation": "модель",
+          "examples": [
+            "Our model predicts price from area."
+          ],
+          "expected": "CORE"
+        },
+        {
+          "id": "en-regression-7",
+          "lemma": "model",
+          "pos": "NOUN",
+          "meaning": "toy scale model in a digression",
+          "translation": "макет",
+          "examples": [
+            "Before the lesson I painted a model of a boat."
+          ],
+          "expected": "GENERAL"
+        },
+        {
+          "id": "en-regression-8",
+          "lemma": "regularize",
+          "pos": "VERB",
+          "meaning": "penalize coefficient magnitude",
+          "translation": "регуляризовать",
+          "examples": [
+            "We regularize coefficients with an L2 penalty to reduce overfitting."
+          ],
+          "expected": "CORE"
+        },
+        {
+          "id": "en-regression-9",
+          "lemma": "stable",
+          "pos": "ADJ",
+          "meaning": "estimates insensitive to small data changes",
+          "translation": "устойчивый",
+          "examples": [
+            "The regularized estimates are stable when the input data changes slightly."
+          ],
+          "expected": "CORE"
+        },
+        {
+          "id": "en-regression-10",
+          "lemma": "record",
+          "pos": "VERB",
+          "meaning": "save scores for later reporting",
+          "translation": "записывать",
+          "examples": [
+            "Record validation scores in the experiment log."
+          ],
+          "expected": "RELATED"
+        }
+      ]
+    },
+    {
+      "id": "ru-furniture",
+      "document": {
+        "title": "Изготовление деревянного стола",
+        "brief": "Изготовление стола: раскрой, соединение деталей и отделка. Отдельная часть посвящена безопасности при распиле.",
+        "subtopics": [
+          "крепление ножек",
+          "отделка",
+          "безопасность распила"
+        ]
+      },
+      "items": [
+        {
+          "id": "ru-furniture-1",
+          "lemma": "стол",
+          "pos": "NOUN",
+          "meaning": "изготавливаемое изделие",
+          "translation": "table",
+          "examples": [
+            "Собираем стол из столешницы и четырёх ножек."
+          ],
+          "expected": "CORE"
+        },
+        {
+          "id": "ru-furniture-2",
+          "lemma": "соединять",
+          "pos": "VERB",
+          "meaning": "скреплять детали изделия",
+          "translation": "join",
+          "examples": [
+            "Соединяем ножки с царгами на шипах."
+          ],
+          "expected": "CORE"
+        },
+        {
+          "id": "ru-furniture-3",
+          "lemma": "прочный",
+          "pos": "ADJ",
+          "meaning": "устойчивый к механической нагрузке",
+          "translation": "strong",
+          "examples": [
+            "Соединение должно быть прочным, чтобы стол выдерживал нагрузку."
+          ],
+          "expected": "CORE"
+        },
+        {
+          "id": "ru-furniture-4",
+          "lemma": "измерять",
+          "pos": "VERB",
+          "meaning": "определять размер заготовки перед раскроем",
+          "translation": "measure",
+          "examples": [
+            "Измеряем заготовку и размечаем линию распила."
+          ],
+          "expected": "CORE"
+        },
+        {
+          "id": "ru-furniture-5",
+          "lemma": "доставка",
+          "pos": "NOUN",
+          "meaning": "перевозка материалов в мастерскую",
+          "translation": "delivery",
+          "examples": [
+            "Стоимость доставки досок включили в смету."
+          ],
+          "expected": "RELATED"
+        },
+        {
+          "id": "ru-furniture-6",
+          "lemma": "вчера",
+          "pos": "ADV",
+          "meaning": "время случайного события",
+          "translation": "yesterday",
+          "examples": [
+            "Вчера я встретил знакомого по дороге в мастерскую."
+          ],
+          "expected": "GENERAL"
+        },
+        {
+          "id": "ru-furniture-7",
+          "lemma": "регрессия",
+          "pos": "NOUN",
+          "meaning": "статистический метод в случайном отступлении",
+          "translation": "regression",
+          "examples": [
+            "Между делом автор вспомнил экзамен по регрессии."
+          ],
+          "expected": "GENERAL"
+        },
+        {
+          "id": "ru-furniture-8",
+          "lemma": "кожух",
+          "pos": "NOUN",
+          "meaning": "защитная деталь пилы",
+          "translation": "guard",
+          "examples": [
+            "В разделе безопасности проверяем защитный кожух пилы."
+          ],
+          "expected": "CORE"
+        }
+      ]
+    },
+    {
+      "id": "he-solar",
+      "document": {
+        "title": "מערכת חשמל סולארית",
+        "brief": "הסבר על המרת אור לחשמל ועל אגירת החשמל בסוללה.",
+        "subtopics": [
+          "תאים פוטו-וולטאיים",
+          "אגירת אנרגיה"
+        ]
+      },
+      "items": [
+        {
+          "id": "he-solar-1",
+          "lemma": "תא",
+          "pos": "NOUN",
+          "meaning": "תא פוטו-וולטאי שממיר אור לחשמל",
+          "translation": "солнечный элемент",
+          "examples": [
+            "תא פוטו-וולטאי ממיר אור לחשמל."
+          ],
+          "expected": "CORE"
+        },
+        {
+          "id": "he-solar-2",
+          "lemma": "המיר",
+          "pos": "VERB",
+          "meaning": "הפך אור לאנרגיה חשמלית",
+          "translation": "преобразовывать",
+          "examples": [
+            "התא המיר את אנרגיית האור לחשמל."
+          ],
+          "expected": "CORE"
+        },
+        {
+          "id": "he-solar-3",
+          "lemma": "סוללה",
+          "pos": "NOUN",
+          "meaning": "רכיב לאגירת אנרגיה במערכת",
+          "translation": "аккумулятор",
+          "examples": [
+            "הסוללה אוגרת את החשמל לשימוש בלילה."
+          ],
+          "expected": "CORE"
+        },
+        {
+          "id": "he-solar-4",
+          "lemma": "מדד",
+          "pos": "VERB",
+          "meaning": "בדק את תפוקת המערכת",
+          "translation": "измерять",
+          "examples": [
+            "הטכנאי מדד את תפוקת המערכת כדי לבדוק את ביצועיה."
+          ],
+          "expected": "RELATED"
+        },
+        {
+          "id": "he-solar-5",
+          "lemma": "גג",
+          "pos": "NOUN",
+          "meaning": "משטח שעליו מותקנים הלוחות",
+          "translation": "крыша",
+          "examples": [
+            "הלוחות מותקנים על הגג שפונה דרומה."
+          ],
+          "expected": "RELATED"
+        },
+        {
+          "id": "he-solar-6",
+          "lemma": "היום",
+          "pos": "ADV",
+          "meaning": "ציון זמן של ההסבר",
+          "translation": "сегодня",
+          "examples": [
+            "היום נסביר כיצד פועלת המערכת."
+          ],
+          "expected": "GENERAL"
+        },
+        {
+          "id": "he-solar-7",
+          "lemma": "שולחן",
+          "pos": "NOUN",
+          "meaning": "רהיט בדוגמה ביתית",
+          "translation": "стол",
+          "examples": [
+            "כדי להמחיש את הרעיון הניח המורה אבנים על שולחן המטבח."
+          ],
+          "expected": "GENERAL"
+        },
+        {
+          "id": "he-solar-8",
+          "lemma": "תא",
+          "pos": "NOUN",
+          "meaning": "תא אחסון באוטובוס בסטייה מהנושא",
+          "translation": "отсек",
+          "examples": [
+            "בדרך לשיעור שכחתי תיק בתא האחסון של האוטובוס."
+          ],
+          "expected": "GENERAL"
+        }
+      ]
+    }
+  ]
+}

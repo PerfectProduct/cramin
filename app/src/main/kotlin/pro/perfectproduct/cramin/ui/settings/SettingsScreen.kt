@@ -137,7 +137,7 @@ private fun ModelsSection(vm: SettingsViewModel, onPickModel: (String) -> Unit) 
     Column {
         for (role in ModelRole.entries) {
             val r = effective?.roles?.get(role)
-            Row(modifier = Modifier.fillMaxWidth().clickable { onPickModel(role.key) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = Modifier.fillMaxWidth().clickable(enabled = role != ModelRole.TOPIC) { onPickModel(role.key) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(roleLabel(role), style = MaterialTheme.typography.titleSmall)
                     Text(r?.model ?: "—", style = MaterialTheme.typography.bodyMedium)
@@ -146,7 +146,7 @@ private fun ModelsSection(vm: SettingsViewModel, onPickModel: (String) -> Unit) 
                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (role != ModelRole.TOPIC) Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         effective?.warnings?.forEach { w -> Text("⚠ $w", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
@@ -169,6 +169,7 @@ fun roleLabel(role: ModelRole): String = stringResource(
         ModelRole.EXTRACT -> R.string.role_extract
         ModelRole.CONSOLIDATE -> R.string.role_consolidate
         ModelRole.STT -> R.string.role_stt
+        ModelRole.TOPIC -> R.string.role_topic
     },
 )
 
