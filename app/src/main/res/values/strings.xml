@@ -24,9 +24,9 @@
 
     <!-- Онбординг (U1) -->
     <string name="onboarding_title">Учите слова из своих текстов</string>
-    <string name="onboarding_body">Дайте ссылку на статью, видео YouTube, PDF или вставьте текст. Cramin переведёт его и соберёт двусторонние карточки: слово в контексте — перевод. Изучение работает офлайн; для подготовки карточек нужен ключ OpenRouter.</string>
-    <string name="onboarding_models_title">Модели</string>
-    <string name="onboarding_models_hint">Модели по ролям заданы конфигом репозитория; поменять их можно в настройках.</string>
+    <string name="onboarding_body">Cramin превращает ваши материалы в карточки с примерами.</string>
+    <string name="onboarding_models_title">Дополнительные настройки</string>
+    <string name="onboarding_models_hint">Модели обработки можно изменить в настройках приложения.</string>
     <string name="onboarding_skip">Позже, без ключа</string>
     <string name="onboarding_start">Начать</string>
 
@@ -154,9 +154,9 @@
     <string name="role_stt">Транскрипция</string>
     <string name="settings_study">Обучение</string>
     <string name="settings_default_target">Язык перевода по умолчанию</string>
-    <string name="settings_default_direction">Направление по умолчанию</string>
-    <string name="settings_direction_src">Лицом слово оригинала</string>
-    <string name="settings_direction_tgt">Лицом перевод</string>
+    <string name="settings_default_direction">Что показывать первым</string>
+    <string name="settings_direction_src">Слово на языке исходного материала</string>
+    <string name="settings_direction_tgt">Перевод слова</string>
     <string name="settings_autospeak">Автоозвучка карточек</string>
     <string name="settings_tts_rate">Скорость речи</string>
     <string name="settings_tts_missing">Голоса для %1$s нет — установите его в настройках синтеза речи Android</string>
@@ -253,7 +253,6 @@
     <string name="topic_choose">Выберите хотя бы одну категорию</string>
     <string name="topic_incomplete">Без категории: %1$d. Тематическая подборка пока неполная. Полный набор доступен при включении всех трёх категорий.</string>
     <string name="topic_error">Не удалось завершить классификацию. Сохранённые части доступны; можно продолжить.</string>
-    <string name="topic_api_notice">Определение категорий обращается к платному API OpenRouter. Фильтры и обучение работают офлайн.</string>
     <string name="topic_determine">Определить категории</string>
     <string name="topic_continue">Продолжить определение категорий</string>
     <string name="topic_running">Определение категорий…</string>
@@ -305,4 +304,10 @@
     <string name="settings_defaults_summary">Для новых материалов и занятий</string>
     <string name="settings_processing_summary">API-ключ, модели и расходы</string>
     <string name="settings_app_summary">Обновления, версия и лицензии</string>
+    <string name="onboarding_access">Создание карточек требует ключа OpenRouter и может быть платным. Готовые карточки можно учить офлайн.</string>
+    <string name="topic_not_defined">Категории ещё не определены</string>
+    <string name="topic_not_defined_help">Можно учить все слова или выделить тематические категории.</string>
+    <string name="topic_saved_subset">Сохранён тематический отбор. Чтобы включить слова без категории, откройте полный набор. Отбор невыученных и избранных сохраняется.</string>
+    <string name="topic_open_full">Открыть полный набор</string>
+    <string name="topic_paid_short">Через платный API · карточки и прогресс сохранятся.</string>
 </resources>

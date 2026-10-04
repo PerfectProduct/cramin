@@ -4,8 +4,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.FilterChip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,19 +33,18 @@ import pro.perfectproduct.cramin.ui.components.contentTextStyle
 import pro.perfectproduct.cramin.ui.components.posLabel
 
 /** Мини-карточка слова (SPEC §9.4): лемма (иврит с огласовками), часть речи, смыслы, статус, звезда, 🔊. */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun WordSheet(card: StudyCard, vm: DocumentViewModel, onChanged: (StudyCard) -> Unit) {
     val tts by vm.ttsAvailable.collectAsState()
     Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                if (card.lemmaVocalized != null) {
-                    Text(card.lemmaVocalized, style = contentTextStyle(MaterialTheme.typography.bodyMedium), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Text(card.lemma, style = contentTextStyle(MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold)))
-                Text(posLabel(card.pos), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (card.lemmaVocalized != null) {
+                Text(card.lemmaVocalized, style = contentTextStyle(MaterialTheme.typography.bodyMedium), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            Text(card.lemma, style = contentTextStyle(MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold)))
+            Text(posLabel(card.pos), modifier = Modifier.fillMaxWidth().testTag("wordPartOfSpeech"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
             if (card.lang in tts) {
                 IconButton(onClick = { vm.speak(card.lemmaVocalized ?: card.lemma, card.lang) }) { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_action_volume), stringResource(R.string.action_speak)) }
             }

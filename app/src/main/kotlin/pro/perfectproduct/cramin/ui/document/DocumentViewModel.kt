@@ -63,6 +63,10 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
     fun toggleCategory(bit: Int) = viewModelScope.launch {
         container.db.documentDao().toggleCategory(documentId, bit)
     }
+    /** Explicit UI action only; opening a legacy document never resets its saved selection. */
+    fun openFullCategorySet() = viewModelScope.launch {
+        container.db.documentDao().setCategoryMask(documentId, pro.perfectproduct.cramin.data.repo.CategoryFilter.ALL)
+    }
     val selection = combine(container.cardRepository.observeCards(documentId), deckFilter, categoryMask) { cards, filter, mask ->
         cards.count { pro.perfectproduct.cramin.data.repo.CategoryFilter.accepts(it, mask, filter) } to cards.count { it.category == null }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0 to 0)

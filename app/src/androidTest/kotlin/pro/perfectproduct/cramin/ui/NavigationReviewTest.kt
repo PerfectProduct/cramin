@@ -216,7 +216,7 @@ class NavigationReviewTest {
         go(Routes.LICENSES); shot("extra-licenses")
         go(Routes.modelPicker("stt")); shot("extra-model-picker")
         go(Routes.ONBOARDING); shot("extra-onboarding")
-        compose.onNodeWithTag("onboardingStart").performScrollTo().assertIsDisplayed(); shot("extra-onboarding-bottom")
+        compose.onNodeWithTag("onboardingStart").assertIsDisplayed(); shot("extra-onboarding-bottom")
         assertTrue(container.fakeLlm.requests.isEmpty())
     }
     private fun awaitTag(tag: String) { compose.waitUntil(5000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1 } }

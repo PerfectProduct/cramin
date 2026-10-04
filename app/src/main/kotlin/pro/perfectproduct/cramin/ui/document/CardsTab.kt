@@ -53,12 +53,20 @@ fun CardsTab(vm: DocumentViewModel, counts: CardCounts, onStudy: (String, Boolea
                 Text(stringResource(R.string.doc_progress_summary, counts.known, counts.total) + if (totals) " ▴" else " ▾")
             }
             if (totals) Text(stringResource(R.string.doc_progress_details, counts.newCount, counts.learning, counts.known, counts.starred))
-            TopicFilters(mask, vm::toggleCategory)
+            val noCategories = counts.total > 0 && selection.second == counts.total
+            if (noCategories) {
+                Text(stringResource(R.string.topic_not_defined), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp).testTag("noCategories"))
+                Text(stringResource(R.string.topic_not_defined_help), style = MaterialTheme.typography.bodyMedium)
+            } else TopicFilters(mask, vm::toggleCategory)
             if (selection.second > 0) {
-                Text(stringResource(R.string.topic_incomplete, selection.second), style = MaterialTheme.typography.bodySmall)
+                if (!noCategories) Text(stringResource(R.string.topic_incomplete, selection.second), style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("unclassifiedCount"))
+                if (mask != pro.perfectproduct.cramin.data.repo.CategoryFilter.ALL) {
+                    if (noCategories) Text(stringResource(R.string.topic_saved_subset), style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = vm::openFullCategorySet, modifier = Modifier.testTag("openFullCategorySet")) { Text(stringResource(R.string.topic_open_full)) }
+                }
                 if (doc.topicError != null) Text(stringResource(R.string.topic_error))
-                Text(stringResource(R.string.topic_api_notice), style = MaterialTheme.typography.bodySmall)
-                OutlinedButton(onClick = { enrichment = true }, enabled = doc.status == DocStatus.READY && !categoryWorkRunning) {
+                Text(stringResource(R.string.topic_paid_short), style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick = { enrichment = true }, enabled = doc.status == DocStatus.READY && !categoryWorkRunning, modifier = Modifier.testTag("enrichCategories")) {
                     Text(stringResource(if (categoryWorkRunning) R.string.topic_running else if (selection.second == counts.total) R.string.topic_determine else R.string.topic_continue))
                 }
             }
