@@ -439,3 +439,20 @@ cancelled API confirmation. Evidence: /home/dev/cramin-completion/2026-10-04-doc
 Validation also exposed an existing UI-test synchronization race: autoplay transitions publish only
 after Room commit. Await the expected description (5s bound), retaining all gesture/state assertions;
 production autoplay is unchanged. Failed attempts are retained in external evidence.
+
+
+## DL053 — Learning-first material navigation (2026-10-04)
+
+Owner-approved UI hierarchy replaces the §9 layout while preserving processing, classifiers, prompts,
+models, Room schema and the study machine. Material tabs are Учить/Читать; full title occurs once;
+READY diagnostics move behind the document menu. Primary FAILED recovery stays visible, alternative
+cache-only/API actions and safe provenance remain in diagnostics. Library add action reserves its own
+Scaffold area so it cannot cover rows on narrow screens. Preparation has independent category checkboxes,
+compact document totals, independent starred selection and a separate session-options sheet.
+
+Keep old `doc:{id}:starred` meaning and resumability; add `unlearned_starred` only for the new intersection.
+DataStore adds document filter/shuffle keys with old defaults; category masks retain their original storage.
+An empty fresh selection never starts study; a separate saved-session action retains recovery of a round
+whose cards have all become known. No automatic enrichment. Autoplay timers, TTS sequence, interaction
+cancellation and ViewModel lifecycle remain unchanged. Accessibility card actions expose existing flip/swipes.
+See [UI report](ui-reorganization/report.md) for the function map and verification evidence.

@@ -1,0 +1,53 @@
+{
+  "before": "0.1.33-debug",
+  "after": "0.1.34-debug",
+  "tables": {
+    "Card": {
+      "rows": 6,
+      "unchanged": true
+    },
+    "Document": {
+      "rows": 7,
+      "unchanged": true
+    },
+    "Job": {
+      "rows": 0,
+      "unchanged": true
+    },
+    "Occurrence": {
+      "rows": 6,
+      "unchanged": true
+    },
+    "ReprocessState": {
+      "rows": 0,
+      "unchanged": true
+    },
+    "Segment": {
+      "rows": 8,
+      "unchanged": true
+    },
+    "Sense": {
+      "rows": 6,
+      "unchanged": true
+    },
+    "Sentence": {
+      "rows": 8,
+      "unchanged": true
+    },
+    "StudySession": {
+      "rows": 1,
+      "unchanged": true
+    },
+    "room_master_table": {
+      "rows": 1,
+      "unchanged": true
+    }
+  },
+  "settingsUnchanged": true,
+  "settingsSha256": "0c91792916f080efea6c453b2a7200b4834a84f892ae5795dda7fcf71e7e681a",
+  "emulator": "emulator-5580",
+  "synthetic": true,
+  "package": "pro.perfectproduct.cramin.debug",
+  "apkSha256": "6ca54912fb14d87bd0243914ddfc8bbad8ce87aee4b34c0c2d36558b1b30eaf3",
+  "baselineApkSha256": "ac4551acc941d01120e02ef781ff2ec3bf3f7c3f3f918d3e4c5b2835ca344bcd"
+}

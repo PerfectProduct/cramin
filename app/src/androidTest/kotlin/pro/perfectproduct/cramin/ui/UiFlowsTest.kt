@@ -91,7 +91,13 @@ class UiFlowsTest {
         return docId
     }
 
+    private fun openDiagnostics() {
+        compose.onNodeWithTag("docMenu").performClick()
+        compose.onNodeWithTag("diagnosticsMenuItem").performClick()
+    }
+
     private fun copyStateAndWait() {
+        if (compose.onAllNodes(hasTestTag("tabCards")).fetchSemanticsNodes().isNotEmpty()) openDiagnostics()
         compose.runOnIdle {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             clipboard.setPrimaryClip(android.content.ClipData.newPlainText("test", ""))
@@ -113,6 +119,8 @@ class UiFlowsTest {
         container.db.documentDao().setFailure(id, raw)
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithText("Riverside Library").performClick()
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.diagnostic_recovered)).assertDoesNotExist()
+        openDiagnostics()
         compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.diagnostic_recovered)).assertIsDisplayed()
         compose.onNodeWithTag("errorBanner").assertDoesNotExist()
         copyStateAndWait()
@@ -131,6 +139,7 @@ class UiFlowsTest {
         container.db.documentDao().setStatus(id, DocStatus.CONSOLIDATING, .9f, null, null, 3)
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithText("Riverside Library").performClick()
+        openDiagnostics()
         compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.diagnostic_processing_state)).assertIsDisplayed()
         compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.diagnostic_recovered)).assertDoesNotExist()
     }
@@ -142,7 +151,7 @@ class UiFlowsTest {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithText("Riverside Library").performClick()
         compose.onNodeWithTag("errorBanner").assertIsDisplayed()
-        compose.onNodeWithText("Скопировать диагностику").assertIsDisplayed()
+        compose.onNodeWithText("Сведения и диагностика").assertIsDisplayed()
         assertEquals(DocStatus.FAILED, container.documentRepository.get(id)?.status)
         compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.action_choose_target_lang)).performClick()
         compose.onNodeWithText("EN").assertIsDisplayed()
@@ -178,20 +187,15 @@ class UiFlowsTest {
             """{"source":"URL","stage":"CONSOLIDATING","code":"UNKNOWN","observedAtEpochMs":1791027829315,"local":{"build":"0.1.26-debug","buildCode":26,"attemptId":"synthetic","cacheOnly":true,"step":"REQUEST","exceptionTypes":["pro.perfectproduct.cramin.pipeline.ConsolidationCacheMissing"],"appFrames":[],"counts":{},"clientInvocations":0,"clientResponses":0}}""")
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithText("Riverside Library").performClick()
+        compose.onNodeWithTag("resumeConsolidationApi").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("retryLocalConsolidation").assertDoesNotExist()
+        openDiagnostics()
         compose.onNodeWithTag("retryLocalConsolidation").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.err_consolidation_cache_unfinished)).performScrollTo().assertIsDisplayed()
-        for (tab in listOf("tabText", "tabCards")) {
-            compose.onNodeWithTag(tab).assertIsDisplayed().performClick()
-            compose.onNodeWithTag("retryLocalConsolidation").performScrollTo().assertIsDisplayed()
-            compose.onNodeWithTag("resumeConsolidationApi").performScrollTo().assertIsDisplayed()
-            captureDocumentActions(tab)
-            compose.onNodeWithTag("resumeConsolidationApi").performClick()
-            compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.consolidation_api_confirm)).assertIsDisplayed()
-            assertEquals(0, container.fakeLlm.requests.size)
-            compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.consolidation_api_cancel)).assertIsDisplayed().performClick()
-            assertEquals(DocStatus.FAILED, container.documentRepository.get(id)?.status)
-            assertEquals(0, container.fakeLlm.requests.size)
-        }
+        compose.onNodeWithTag("resumeConsolidationApi").performScrollTo().performClick()
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.consolidation_api_confirm)).assertIsDisplayed()
+        assertEquals(0, container.fakeLlm.requests.size)
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.consolidation_api_cancel)).performClick()
+        assertEquals(DocStatus.FAILED, container.documentRepository.get(id)?.status)
         copyStateAndWait()
         compose.runOnIdle {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
@@ -348,13 +352,13 @@ class UiFlowsTest {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithTag("allUnlearned").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("allDeckStudy")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("allDeckStudy").performClick()
+        compose.onNodeWithTag("allDeckStudy").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("flashCard").performTouchInput { swipeRight() }
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("roundSummary")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("roundDone").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("allDeckStudy")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("allDeckStudy").performClick()
+        compose.onNodeWithTag("allDeckStudy").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("resume")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("resume").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("roundUndo")).fetchSemanticsNodes().isNotEmpty() }

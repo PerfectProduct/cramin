@@ -39,6 +39,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -73,6 +77,9 @@ fun FlashCard(
     onStar: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val flipLabel = stringResource(R.string.card_flip)
+    val knownLabel = stringResource(R.string.cards_known)
+    val learningLabel = stringResource(R.string.cards_learning)
     val scope = rememberCoroutineScope()
     val offsetX = remember(card.id) { Animatable(0f) }
     val density = LocalDensity.current
@@ -86,6 +93,13 @@ fun FlashCard(
         modifier = modifier
             .fillMaxWidth()
             .testTag("flashCard")
+            .semantics {
+                onClick(label = flipLabel) { onFlip(); true }
+                customActions = listOf(
+                    CustomAccessibilityAction(learningLabel) { onSwipeLeft(); true },
+                    CustomAccessibilityAction(knownLabel) { onSwipeRight(); true },
+                )
+            }
             .pointerInput(card.id) {
                 detectTapGestures(onTap = { onFlip() })
             }

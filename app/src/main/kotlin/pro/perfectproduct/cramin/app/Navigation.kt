@@ -50,7 +50,7 @@ object Routes {
     const val LICENSES = "settings/licenses"
 
     fun create(shared: SharedInput? = null): String = "create?url=${enc(shared?.url)}&text=${enc(shared?.text)}&pdf=${enc(shared?.pdfUri?.toString())}"
-    fun document(id: Long, tab: String = "text") = "document/$id?tab=$tab"
+    fun document(id: Long, tab: String = "cards") = "document/$id?tab=$tab"
     fun study(deckKey: String, shuffle: Boolean = false) = "study/${Uri.encode(deckKey)}?shuffle=$shuffle"
     fun modelPicker(role: String) = "settings/model/$role"
     private fun enc(s: String?) = if (s.isNullOrEmpty()) "" else Uri.encode(s)
@@ -91,11 +91,11 @@ fun CraminNavHost(startDestination: String, navController: NavHostController = r
         }
         composable(
             Routes.DOCUMENT,
-            arguments = listOf(navArgument("id") { type = NavType.LongType }, navArgument("tab") { type = NavType.StringType; defaultValue = "text" }),
+            arguments = listOf(navArgument("id") { type = NavType.LongType }, navArgument("tab") { type = NavType.StringType; defaultValue = "cards" }),
         ) { entry ->
             DocumentScreen(
                 documentId = entry.arguments?.getLong("id") ?: -1L,
-                initialTab = entry.arguments?.getString("tab") ?: "text",
+                initialTab = entry.arguments?.getString("tab") ?: "cards",
                 onBack = { navController.popBackStack() },
                 onStudy = { deckKey, shuffle -> navController.navigate(Routes.study(deckKey, shuffle)) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },

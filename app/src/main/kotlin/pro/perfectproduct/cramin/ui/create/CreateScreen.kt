@@ -104,7 +104,8 @@ fun CreateScreen(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp).verticalScroll(rememberScrollState())) {
             Text(stringResource(R.string.create_title_1), style = MaterialTheme.typography.headlineMedium)
-            Text(stringResource(R.string.create_title_2), style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.create_result), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.create_api_notice), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
             Spacer(Modifier.height(20.dp))
             if (!state.hasKey) {
                 Card(
@@ -112,8 +113,8 @@ fun CreateScreen(
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth().testTag("noKeyBanner"),
                 ) {
-                    Row(modifier = Modifier.padding(14.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Text(stringResource(R.string.create_no_key), color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.weight(1f))
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text(stringResource(R.string.create_no_key), color = MaterialTheme.colorScheme.onErrorContainer)
                         TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.action_open_settings)) }
                     }
                 }
@@ -144,6 +145,12 @@ fun CreateScreen(
                     Text(stringResource(R.string.create_submit))
                 }
             }
+            var advanced by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+            TextButton(onClick = { advanced = !advanced }) { Text(stringResource(R.string.create_advanced)) }
+            if (advanced) {
+                Text(stringResource(R.string.create_advanced_help), style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.settings_processing)) }
+            }
             state.error?.let { Spacer(Modifier.height(12.dp)); Text(it, color = MaterialTheme.colorScheme.error) }
             Spacer(Modifier.height(32.dp))
         }
@@ -154,7 +161,8 @@ fun CreateScreen(
             onDismissRequest = { mode = null },
             title = { Text(stringResource(R.string.create_url_dialog_title)) },
             text = {
-                Column {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(stringResource(R.string.create_api_notice), style = MaterialTheme.typography.bodySmall)
                     OutlinedTextField(
                         value = urlText, onValueChange = { urlText = it }, singleLine = true,
                         placeholder = { Text(stringResource(R.string.create_url_hint)) },
@@ -201,6 +209,7 @@ private fun TextInputDialog(
         title = { Text(stringResource(R.string.create_text_title)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(stringResource(R.string.create_api_notice), style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(
                     value = title, onValueChange = onTitle, singleLine = true,
                     placeholder = { Text(stringResource(R.string.create_text_name_hint)) }, modifier = Modifier.fillMaxWidth(),

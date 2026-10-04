@@ -75,16 +75,21 @@ fun SettingsScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
-            SectionTitle(stringResource(R.string.settings_openrouter))
-            KeySection(vm)
-            SectionTitle(stringResource(R.string.settings_models))
-            ModelsSection(vm, onPickModel)
-            SectionTitle(stringResource(R.string.settings_study))
-            settings?.let { s -> StudySection(vm, s) }
-            SectionTitle(stringResource(R.string.settings_stats))
-            StatsSection(vm)
-            SectionTitle(stringResource(R.string.settings_about))
-            AboutSection(onLicenses)
+            var section by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("study") }
+            SettingsGroup(stringResource(R.string.settings_study), section == "study", { section = if (section == "study") "" else "study" }) {
+                settings?.let { s -> StudySection(vm, s) }
+            }
+            SettingsGroup(stringResource(R.string.settings_processing), section == "processing", { section = if (section == "processing") "" else "processing" }) {
+                SectionTitle(stringResource(R.string.settings_openrouter))
+                KeySection(vm)
+                SectionTitle(stringResource(R.string.settings_models))
+                ModelsSection(vm, onPickModel)
+                SectionTitle(stringResource(R.string.settings_stats))
+                StatsSection(vm)
+            }
+            SettingsGroup(stringResource(R.string.settings_application), section == "app", { section = if (section == "app") "" else "app" }) {
+                AboutSection(onLicenses)
+            }
         }
     }
 }
@@ -182,6 +187,7 @@ fun sourceLabel(source: ConfigSource): String = stringResource(
     },
 )
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun StudySection(vm: SettingsViewModel, s: pro.perfectproduct.cramin.data.prefs.Settings) {
     val ttsLangs by vm.ttsLangs.collectAsState()
@@ -189,12 +195,12 @@ private fun StudySection(vm: SettingsViewModel, s: pro.perfectproduct.cramin.dat
         Text(stringResource(R.string.settings_default_target), style = MaterialTheme.typography.titleSmall)
         LangSelector(selected = Lang.fromCode(s.defaultTargetLang), onSelect = vm::setDefaultTargetLang)
         Text(stringResource(R.string.settings_default_direction), style = MaterialTheme.typography.titleSmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = s.defaultDirection == Direction.SRC_FRONT, onClick = { vm.setDefaultDirection(Direction.SRC_FRONT) }, label = { Text(stringResource(R.string.settings_direction_src)) })
             FilterChip(selected = s.defaultDirection == Direction.TGT_FRONT, onClick = { vm.setDefaultDirection(Direction.TGT_FRONT) }, label = { Text(stringResource(R.string.settings_direction_tgt)) })
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.settings_autospeak))
+            Text(stringResource(R.string.settings_autospeak), Modifier.weight(1f))
             Switch(checked = s.autoSpeak, onCheckedChange = vm::setAutoSpeak)
         }
         Text(stringResource(R.string.settings_tts_rate) + ": ${"%.1f".format(s.ttsRate)}×", style = MaterialTheme.typography.titleSmall)
@@ -230,3 +236,11 @@ private fun AboutSection(onLicenses: () -> Unit) {
 }
 
 const val REPO_URL = "https://github.com/PerfectProduct/cramin"
+
+@Composable
+private fun SettingsGroup(title: String, expanded: Boolean, onClick: () -> Unit, content: @Composable () -> Unit) {
+    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Text(title + if (expanded) " ▴" else " ▾", style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
+    }
+    if (expanded) content()
+}

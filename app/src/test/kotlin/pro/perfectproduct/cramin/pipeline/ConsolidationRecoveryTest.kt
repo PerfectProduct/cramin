@@ -187,8 +187,9 @@ class ConsolidationRecoveryTest {
             assertTrue(p.processor().process(id) is ProcessOutcome.Failed)
             val d = FailureDiagnostic.forDocument(p.documents.get(id)!!)!!
             assertNull(d.request) // fake success has no HTTP failure event
-            assertEquals(1, d.local!!.clientInvocations)
-            assertEquals(1, d.local!!.clientResponses)
+            // Consolidation and the existing separate topic classification both use the client.
+            assertEquals(2, d.local!!.clientInvocations)
+            assertEquals(2, d.local!!.clientResponses)
             assertTrue(d.copyText("copy", 34).contains("INVOKED (HTTP details only in request event)"))
         }
     }

@@ -1,5 +1,7 @@
 package pro.perfectproduct.cramin.ui.study
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,6 +57,16 @@ fun StudyScreen(
     onClose: () -> Unit,
     vm: StudyViewModel = craminViewModel(key = "study-$deckKey") { StudyViewModel(it, deckKey, shuffle) },
 ) {
+    // The Russian control layout and physical swipe directions stay LTR even for Hebrew content.
+    // FlashCard uses TextDirection.Content for the actual words and examples.
+    androidx.compose.runtime.CompositionLocalProvider(
+        androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr,
+    ) { StudyContent(onClose, vm) }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StudyContent(onClose: () -> Unit, vm: StudyViewModel) {
     val state by vm.state.collectAsState()
     val session = state.session
     var settingsOpen by remember { mutableStateOf(false) }
@@ -168,7 +180,7 @@ fun StudyScreen(
 
     if (settingsOpen) {
         ModalBottomSheet(onDismissRequest = { settingsOpen = false }) {
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 val src = state.srcLang
                 val tgt = state.tgtLang
                 if (src != null && tgt != null) {
@@ -176,7 +188,7 @@ fun StudyScreen(
                 }
                 TextButton(onClick = { vm.reshuffle(); settingsOpen = false }) { Text(stringResource(R.string.cards_shuffle)) }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.study_autospeak))
+                    Text(stringResource(R.string.study_autospeak), Modifier.weight(1f))
                     Switch(checked = state.autoSpeak, onCheckedChange = vm::setAutoSpeak)
                 }
                 Text(stringResource(R.string.study_interval_front) + ": ${state.frontMs / 1000f}", style = MaterialTheme.typography.labelLarge)

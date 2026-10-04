@@ -9,6 +9,7 @@ enum class DeckFilter(val key: String) {
     UNLEARNED("unlearned"),
     ALL("all"),
     STARRED("starred"),
+    UNLEARNED_STARRED("unlearned_starred"),
     ;
 
     companion object {

@@ -49,4 +49,24 @@ class SettingsStoreTest {
         assertEquals(Direction.TGT_FRONT, store.allDeckDirection("en", "ru").first())
         assertNull(store.allDeckDirection("he", "ru").first())
     }
+    @Test fun documentPreparationSurvivesReopeningStoreWithoutChangingGlobalSettings() = runTest {
+        val file = File(tmp.root, "reopen.preferences_pb")
+        val firstScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val first = SettingsStore(PreferenceDataStoreFactory.create(scope = firstScope) { file })
+        first.setAutoSpeak(true)
+        first.setAutoplayIntervals(1500, 4500)
+        first.toggleAllCategory(4)
+        first.setDocumentFilter(12, pro.perfectproduct.cramin.data.repo.DeckFilter.UNLEARNED_STARRED)
+        first.setDocumentShuffle(12, true)
+        firstScope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
+        firstScope.coroutineContext[kotlinx.coroutines.Job]?.join()
+        val reopened = SettingsStore(PreferenceDataStoreFactory.create(scope = scope) { file })
+        assertEquals(pro.perfectproduct.cramin.data.repo.DeckFilter.UNLEARNED_STARRED, reopened.documentFilter(12).first())
+        assertEquals(true, reopened.documentShuffle(12).first())
+        assertEquals(pro.perfectproduct.cramin.data.repo.DeckFilter.UNLEARNED, reopened.documentFilter(99).first())
+        assertEquals(true, reopened.current().autoSpeak)
+        assertEquals(4500, reopened.current().autoplayBackMs)
+        assertEquals(3, reopened.allCategoryMask.first())
+    }
+
 }

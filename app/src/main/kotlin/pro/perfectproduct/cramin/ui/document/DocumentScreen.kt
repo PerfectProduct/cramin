@@ -81,20 +81,24 @@ fun DocumentScreen(
     val counts by vm.counts.collectAsState()
     var tab by rememberSaveable { mutableStateOf(initialTab) }
     var menuOpen by remember { mutableStateOf(false) }
+    var diagnosticsOpen by rememberSaveable { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
     var reprocessing by remember { mutableStateOf(false) }
     var chooseLang by remember { mutableStateOf<ErrorAction?>(null) }
     val doc = row?.document
 
+    androidx.activity.compose.BackHandler(diagnosticsOpen) { diagnosticsOpen = false }
+    val tabState = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(doc?.title.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) } },
+                title = { Text(stringResource(if (diagnosticsOpen) R.string.doc_info_title else R.string.doc_material), style = MaterialTheme.typography.titleMedium) },
+                navigationIcon = { IconButton(onClick = { if (diagnosticsOpen) diagnosticsOpen = false else onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) } },
                 actions = {
                     IconButton(onClick = { menuOpen = true }, modifier = Modifier.testTag("docMenu")) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.action_more)) }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(modifier = Modifier.testTag("diagnosticsMenuItem"), text = { Text(stringResource(R.string.doc_diagnostics)) }, onClick = { menuOpen = false; diagnosticsOpen = true })
                         DropdownMenuItem(text = { Text(stringResource(R.string.action_rename)) }, onClick = { menuOpen = false; renaming = true })
                         DropdownMenuItem(text = { Text(stringResource(R.string.action_reprocess)) }, onClick = { menuOpen = false; reprocessing = true })
                         DropdownMenuItem(text = { Text(stringResource(R.string.action_delete)) }, onClick = { menuOpen = false; deleting = true })
@@ -112,22 +116,30 @@ fun DocumentScreen(
             )
         },
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(selected = tab == "text", onClick = { tab = "text" }, icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_action_document), null) }, label = { Text(stringResource(R.string.doc_tab_text)) }, modifier = Modifier.testTag("tabText"))
+            if (!diagnosticsOpen) NavigationBar {
                 NavigationBarItem(selected = tab == "cards", onClick = { tab = "cards" }, icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_action_cards), null) }, label = { Text(stringResource(R.string.doc_tab_cards)) }, modifier = Modifier.testTag("tabCards"))
+                NavigationBarItem(selected = tab == "text", onClick = { tab = "text" }, icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_action_document), null) }, label = { Text(stringResource(R.string.doc_tab_text)) }, modifier = Modifier.testTag("tabText"))
             }
         },
     ) { padding ->
         if (doc == null) return@Scaffold
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             val header: @Composable () -> Unit = {
-                DocumentHeader(doc, counts.total, counts.known)
-                StatusBanner(doc, onCopy = vm::copyDiagnostics, onResumeApi = vm::resumeConsolidationWithApi, onRetryLocal = vm::retryLocalConsolidation, onRetry = vm::retry, onOpenSettings = onOpenSettings, onChooseLang = { chooseLang = it }, onCheckUpdates = onOpenSettings)
+                DocumentHeader(doc)
+                if (diagnosticsOpen || doc.status != DocStatus.READY) StatusBanner(doc, onCopy = vm::copyDiagnostics, onResumeApi = vm::resumeConsolidationWithApi, onRetryLocal = vm::retryLocalConsolidation, onRetry = vm::retry, onOpenSettings = onOpenSettings, onChooseLang = { chooseLang = it }, onCheckUpdates = onOpenSettings, details = diagnosticsOpen, onDetails = { diagnosticsOpen = true })
             }
-            if (tab == "text") {
-                TextTab(vm, header)
-            } else {
-                CardsTab(vm, counts, onStudy = onStudy, header = header)
+            if (diagnosticsOpen) {
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
+                    header()
+                    Text(statusLabel(doc.status), Modifier.padding(horizontal = 20.dp))
+                    val summary by androidx.compose.runtime.produceState("", doc.id, doc.updatedAt, doc.status) { value = vm.diagnostics() }
+                    androidx.compose.foundation.text.selection.SelectionContainer {
+                        Text(summary, Modifier.padding(20.dp), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            } else tabState.SaveableStateProvider(tab) {
+                if (tab == "text") TextTab(vm, header)
+                else CardsTab(vm, counts, onStudy = onStudy, header = header)
             }
         }
     }
@@ -188,45 +200,46 @@ private fun modelsSummary(doc: DocumentEntity): String = doc.modelsSnapshotJson?
 }?.takeIf { it.isNotEmpty() } ?: "—"
 
 @Composable
-private fun DocumentHeader(doc: DocumentEntity, total: Int, known: Int) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(doc.emoji, style = MaterialTheme.typography.displaySmall)
-        Spacer(Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(doc.title, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            val src = Lang.fromCode(doc.sourceLang)?.label ?: "?"
-            val tgt = Lang.fromCode(doc.targetLang)?.label ?: "?"
-            Text(
-                stringResource(R.string.doc_header_stats, total, known, total, src, tgt),
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+private fun DocumentHeader(doc: DocumentEntity) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+        Text(doc.title, style = MaterialTheme.typography.titleLarge)
+        val src = Lang.fromCode(doc.sourceLang)?.label ?: "?"
+        val tgt = Lang.fromCode(doc.targetLang)?.label ?: "?"
+        Text(
+            doc.emoji + " " + stringResource(R.string.doc_source_languages, sourceTypeLabel(doc.sourceType), src, tgt),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
+        )
     }
 }
 
 /** Обработка и ошибки с действием (SPEC: «Ошибка — повторить», конкретные сообщения по коду). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun StatusBanner(doc: DocumentEntity, onCopy: (android.content.Context) -> Unit, onResumeApi: () -> Unit, onRetryLocal: () -> Unit, onRetry: () -> Unit, onOpenSettings: () -> Unit, onChooseLang: (ErrorAction) -> Unit, onCheckUpdates: () -> Unit) {
+private fun StatusBanner(doc: DocumentEntity, onCopy: (android.content.Context) -> Unit, onResumeApi: () -> Unit, onRetryLocal: () -> Unit, onRetry: () -> Unit, onOpenSettings: () -> Unit, onChooseLang: (ErrorAction) -> Unit, onCheckUpdates: () -> Unit, details: Boolean = false, onDetails: () -> Unit = {}) {
+    val oldParameters = doc.modelsSnapshotJson?.let {
+        runCatching { pro.perfectproduct.cramin.llm.ProcessingSnapshot.decode(it).legacyParametersUnknown }.getOrDefault(false)
+    } == true
     var confirmApi by remember { mutableStateOf(false) }
     if (confirmApi) AlertDialog(
         onDismissRequest = { confirmApi = false },
         title = { Text(stringResource(R.string.consolidation_api_resume)) },
-        text = { Text(stringResource(R.string.consolidation_api_confirm), modifier = Modifier.verticalScroll(rememberScrollState())) },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+            Text(stringResource(R.string.consolidation_api_confirm))
+            if (oldParameters) Text(stringResource(R.string.config_legacy_notice), Modifier.padding(top = 12.dp))
+        } },
         confirmButton = { TextButton(onClick = { confirmApi = false; onResumeApi() }) { Text(stringResource(R.string.consolidation_api_start)) } },
         dismissButton = { TextButton(onClick = { confirmApi = false }) { Text(stringResource(R.string.consolidation_api_cancel)) } },
     )
-    val oldParameters = doc.modelsSnapshotJson?.let {
-        runCatching { pro.perfectproduct.cramin.llm.ProcessingSnapshot.decode(it).legacyParametersUnknown }.getOrDefault(false)
-    } == true
-    if (oldParameters) Text(stringResource(R.string.config_legacy_notice), modifier = Modifier.padding(20.dp), style = MaterialTheme.typography.bodyMedium)
-    if (doc.studyNotice) {
+
+    if (details && oldParameters) Text(stringResource(R.string.config_legacy_notice), modifier = Modifier.padding(20.dp), style = MaterialTheme.typography.bodyMedium)
+    if (details && doc.studyNotice) {
         Text(stringResource(R.string.study_migration_notice), modifier = Modifier.padding(20.dp), style = MaterialTheme.typography.bodyMedium)
     }
     val diagnostic = pro.perfectproduct.cramin.pipeline.FailureDiagnostic.forDocument(doc)
     val context = androidx.compose.ui.platform.LocalContext.current
     var showHistory by remember(doc.id, doc.status) { mutableStateOf(doc.status == DocStatus.FAILED) }
-    if (diagnostic != null) {
+    if (details && diagnostic != null) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)) {
             Text(stringResource(when (doc.status) {
                 DocStatus.READY -> R.string.diagnostic_recovered
@@ -252,7 +265,7 @@ private fun StatusBanner(doc: DocumentEntity, onCopy: (android.content.Context) 
             }
         }
     }
-    TextButton(onClick = { onCopy(context) }, modifier = Modifier.padding(horizontal = 12.dp)) {
+    if (details) TextButton(onClick = { onCopy(context) }, modifier = Modifier.padding(horizontal = 12.dp)) {
         Text(stringResource(R.string.diagnostic_copy))
     }
     when {
@@ -270,20 +283,24 @@ private fun StatusBanner(doc: DocumentEntity, onCopy: (android.content.Context) 
                     else code
                     Text(stringResource(errorMessageRes(effectiveCode)), color = MaterialTheme.colorScheme.onErrorContainer)
                     if (diagnostic?.stage == pro.perfectproduct.cramin.pipeline.FailureStage.CONSOLIDATING) {
-                        Text(stringResource(R.string.consolidation_local_hint), style = MaterialTheme.typography.bodyMedium)
-                        OutlinedButton(onClick = onRetryLocal, modifier = Modifier.testTag("retryLocalConsolidation")) {
+                        if (details) Text(stringResource(R.string.consolidation_local_hint), style = MaterialTheme.typography.bodyMedium)
+                        if (details || effectiveCode != ErrorCode.CONSOLIDATION_CACHE_UNFINISHED) OutlinedButton(onClick = onRetryLocal, modifier = Modifier.testTag("retryLocalConsolidation")) {
                             Text(stringResource(R.string.consolidation_local_retry))
                         }
-                        if (effectiveCode !in listOf(ErrorCode.CONSOLIDATION_CACHE_MISSING, ErrorCode.CONSOLIDATION_CACHE_INVALID, ErrorCode.CONSOLIDATION_LIMIT)) {
+                        if ((details || effectiveCode == ErrorCode.CONSOLIDATION_CACHE_UNFINISHED) && effectiveCode !in listOf(ErrorCode.CONSOLIDATION_CACHE_MISSING, ErrorCode.CONSOLIDATION_CACHE_INVALID, ErrorCode.CONSOLIDATION_LIMIT)) {
                             OutlinedButton(onClick = { confirmApi = true }, modifier = Modifier.testTag("resumeConsolidationApi")) {
                                 Text(stringResource(R.string.consolidation_api_resume))
                             }
                         }
                     }
+                    if (!details) TextButton(onClick = onDetails) { Text(stringResource(R.string.doc_diagnostics)) }
+                    if (diagnostic?.stage != pro.perfectproduct.cramin.pipeline.FailureStage.CONSOLIDATING && errorActions(code).any { it == ErrorAction.RETRY || it == ErrorAction.CHOOSE_SOURCE_LANG || it == ErrorAction.CHOOSE_TARGET_LANG }) {
+                        Text(stringResource(R.string.retry_api_notice), style = MaterialTheme.typography.bodySmall)
+                    }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
                         for (action in errorActions(code).filterNot {
                             it == ErrorAction.RETRY && diagnostic?.stage == pro.perfectproduct.cramin.pipeline.FailureStage.CONSOLIDATING
-                        }) {
+                        }.let { if (details) it else it.take(1) }) {
                             OutlinedButton(
                                 onClick = {
                                     when (action) {
@@ -308,7 +325,7 @@ private fun StatusBanner(doc: DocumentEntity, onCopy: (android.content.Context) 
                 LinearProgressIndicator(progress = { doc.progress }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
             }
         }
-        doc.wordCount > BIG_DOCUMENT_WORDS -> Text(
+        details && doc.wordCount > BIG_DOCUMENT_WORDS -> Text(
             stringResource(R.string.doc_big_warning, doc.wordCount),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
@@ -332,3 +349,11 @@ fun statusLabel(status: DocStatus): String = stringResource(
         DocStatus.FAILED -> R.string.status_failed
     },
 )
+
+@Composable
+fun sourceTypeLabel(type: pro.perfectproduct.cramin.data.db.SourceType): String = stringResource(when (type) {
+    pro.perfectproduct.cramin.data.db.SourceType.TEXT -> R.string.source_text
+    pro.perfectproduct.cramin.data.db.SourceType.URL -> R.string.source_article
+    pro.perfectproduct.cramin.data.db.SourceType.YOUTUBE -> R.string.source_youtube
+    pro.perfectproduct.cramin.data.db.SourceType.PDF -> R.string.source_pdf
+})

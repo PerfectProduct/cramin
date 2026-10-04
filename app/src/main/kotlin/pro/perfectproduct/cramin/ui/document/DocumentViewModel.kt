@@ -54,9 +54,9 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
     val viewMode: StateFlow<TextViewMode> = _viewMode
     fun setViewMode(mode: TextViewMode) { _viewMode.value = mode }
 
-    private val _deckFilter = MutableStateFlow(DeckFilter.UNLEARNED)
-    val deckFilter: StateFlow<DeckFilter> = _deckFilter
-    fun setDeckFilter(f: DeckFilter) { _deckFilter.value = f }
+    val deckFilter = container.settingsStore.documentFilter(documentId)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, DeckFilter.UNLEARNED)
+    fun setDeckFilter(f: DeckFilter) = viewModelScope.launch { container.settingsStore.setDocumentFilter(documentId, f) }
 
     val categoryMask = document.map { it?.document?.categoryMask ?: 7 }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 7)
@@ -77,9 +77,9 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
         container.studyRepository.observeResumable(DeckKey.Document(documentId, filter, mask).key)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    private val _shuffle = MutableStateFlow(false)
-    val shuffle: StateFlow<Boolean> = _shuffle
-    fun setShuffle(v: Boolean) { _shuffle.value = v }
+    val shuffle = container.settingsStore.documentShuffle(documentId)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    fun setShuffle(v: Boolean) = viewModelScope.launch { container.settingsStore.setDocumentShuffle(documentId, v) }
 
     /** Направление: у документа своё, по умолчанию — из настроек (SPEC §9.5). */
     val direction: StateFlow<Direction> = combine(document, container.settingsStore.settings) { d, s -> d?.document?.direction ?: s.defaultDirection }
@@ -90,7 +90,7 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
     val ttsAvailable: StateFlow<Set<Lang>> get() = container.tts.available
     fun speak(text: String, lang: Lang) = viewModelScope.launch { container.tts.speak(text, lang, container.settingsStore.current().ttsRate) }
 
-    fun deckKey(): String = DeckKey.Document(documentId, _deckFilter.value, categoryMask.value).key
+    fun deckKey(): String = DeckKey.Document(documentId, deckFilter.value, categoryMask.value).key
 
     suspend fun card(cardId: Long): StudyCard? = container.cardRepository.card(cardId)
 
@@ -102,6 +102,11 @@ class DocumentViewModel(private val container: AppContainer, val documentId: Lon
         container.processScheduler.cancel(documentId)
         container.documentRepository.delete(documentId)
         onDone()
+    }
+
+    suspend fun diagnostics(): String = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        pro.perfectproduct.cramin.pipeline.DocumentStateSummary.copyText(container.db, documentId, container.stoplists,
+            pro.perfectproduct.cramin.BuildConfig.VERSION_NAME, android.os.Build.VERSION.SDK_INT, container.files)
     }
 
     fun copyDiagnostics(context: android.content.Context) = viewModelScope.launch {

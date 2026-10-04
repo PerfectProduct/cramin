@@ -13,5 +13,6 @@ object CategoryFilter {
         DeckFilter.ALL -> true
         DeckFilter.UNLEARNED -> card.status != CardStatus.KNOWN
         DeckFilter.STARRED -> card.starred
+        DeckFilter.UNLEARNED_STARRED -> card.starred && card.status != CardStatus.KNOWN
     }
 }

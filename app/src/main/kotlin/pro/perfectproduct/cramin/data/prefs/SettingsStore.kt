@@ -56,6 +56,16 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         it[key] = (it[key] ?: 7) xor bit
     }
 
+    fun documentFilter(id: Long) = dataStore.data.map {
+        it[stringPreferencesKey("doc_filter_$id")]?.let(pro.perfectproduct.cramin.data.repo.DeckFilter::fromKey)
+            ?: pro.perfectproduct.cramin.data.repo.DeckFilter.UNLEARNED
+    }
+    suspend fun setDocumentFilter(id: Long, filter: pro.perfectproduct.cramin.data.repo.DeckFilter) = edit {
+        it[stringPreferencesKey("doc_filter_$id")] = filter.key
+    }
+    fun documentShuffle(id: Long) = dataStore.data.map { it[booleanPreferencesKey("doc_shuffle_$id")] ?: false }
+    suspend fun setDocumentShuffle(id: Long, shuffle: Boolean) = edit { it[booleanPreferencesKey("doc_shuffle_$id")] = shuffle }
+
     suspend fun current(): Settings = settings.first()
 
     suspend fun setOnboardingDone(done: Boolean) = edit { it[Keys.ONBOARDING_DONE] = done }

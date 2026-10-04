@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -106,12 +108,15 @@ fun LibraryScreen(
                 },
             )
         },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = onCreate, modifier = Modifier.testTag("libraryCreate")) {
-                Text(stringResource(R.string.library_create), style = MaterialTheme.typography.titleMedium)
+        bottomBar = {
+            androidx.compose.material3.Surface {
+                Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
+                    androidx.compose.material3.Button(onClick = onCreate, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("libraryCreate")) {
+                        Text(stringResource(R.string.library_create), style = MaterialTheme.typography.titleMedium)
+                    }
+                }
             }
         },
-        floatingActionButtonPosition = androidx.compose.material3.FabPosition.Center,
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             FlowRow(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -122,8 +127,8 @@ fun LibraryScreen(
             if (items.isEmpty() && !hasReady) {
                 EmptyState("📚", stringResource(if (filter == LibraryFilter.ALL && query.isEmpty()) R.string.library_empty else R.string.library_empty_filtered), Modifier.padding(top = 48.dp))
             } else {
-                LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (hasReady && filter == LibraryFilter.ALL && query.isEmpty()) {
+                LazyColumn(modifier = Modifier.testTag("libraryList"), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (hasReady) {
                         item(key = "all-unlearned") { AllUnlearnedRow(onClick = onAllDeck) }
                     }
                     if (items.isEmpty()) {
@@ -133,7 +138,7 @@ fun LibraryScreen(
                         DocumentRow(
                             row = row,
                             onClick = {
-                                onOpenDocument(row.document.id, "text")
+                                onOpenDocument(row.document.id, "cards")
                             },
                             onPlay = { onOpenDocument(row.document.id, "cards") },
                             onLongClick = { menuFor = row },
@@ -222,6 +227,7 @@ private fun DocumentRow(
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(doc.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(pro.perfectproduct.cramin.ui.document.sourceTypeLabel(doc.sourceType), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(2.dp))
                 when {
                     doc.status == DocStatus.FAILED -> Text(stringResource(R.string.library_error), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
@@ -241,7 +247,7 @@ private fun DocumentRow(
                 enabled = doc.status == DocStatus.READY,
                 shape = CircleShape,
                 colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.primary),
-                modifier = Modifier.size(44.dp).testTag("play-${doc.id}"),
+                modifier = Modifier.size(48.dp).testTag("play-${doc.id}"),
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.library_play))
             }

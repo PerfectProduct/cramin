@@ -46,7 +46,7 @@
     <string name="library_tab_learned">Выученные</string>
     <string name="library_all_unlearned">Все невыученные</string>
     <string name="library_all_unlearned_subtitle">Карточки всех готовых документов</string>
-    <string name="library_create">+ Создать</string>
+    <string name="library_create">Добавить материал</string>
     <string name="library_empty">Добавьте первый текст — статью, видео или PDF</string>
     <string name="library_empty_filtered">Здесь пока пусто</string>
     <string name="library_subtitle">%1$d карточек · выучено %2$d · %3$s</string>
@@ -61,7 +61,7 @@
     <string name="library_reprocess_confirm_body">Текст будет переведён и разобран заново с реальным ключом (это стоит денег). Статусы карточек сохранятся по леммам.</string>
 
     <!-- Экран загрузки (§9.2) -->
-    <string name="create_title_1">Создать карточки</string>
+    <string name="create_title_1">Добавить материал</string>
     <string name="create_title_2">из ваших текстов</string>
     <string name="create_target">Перевод на:</string>
     <string name="create_source_label">Загрузите источник</string>
@@ -83,8 +83,8 @@
     <string name="create_pdf_large">Большой документ (%1$d слов): обработка займёт время и потратит кредит</string>
 
     <!-- Экран документа (§9.3) -->
-    <string name="doc_tab_text">Текст</string>
-    <string name="doc_tab_cards">Карточки</string>
+    <string name="doc_tab_text">Читать</string>
+    <string name="doc_tab_cards">Учить</string>
     <string name="doc_header_stats">%1$d карточек · выучено %2$d из %3$d · %4$s → %5$s</string>
     <string name="doc_cost">Учтено: $%1$s · модели: %2$s. Это нижняя граница: часть расходов провайдер мог не передать.</string>
     <string name="doc_cost_unknown">Стоимость обработки пока неизвестна</string>
@@ -102,7 +102,7 @@
     <string name="cards_learning">Учу</string>
     <string name="cards_known">Знаю</string>
     <string name="cards_starred">Избранные</string>
-    <string name="cards_filter_unlearned">Все невыученные</string>
+    <string name="cards_filter_unlearned">Невыученные</string>
     <string name="cards_filter_all">Все</string>
     <string name="cards_filter_starred">Только избранные</string>
     <string name="cards_study">Учить</string>
@@ -178,7 +178,7 @@
     <string name="role_extract">Извлечение</string>
     <string name="role_consolidate">Консолидация</string>
     <string name="role_stt">Транскрипция</string>
-    <string name="settings_study">Изучение</string>
+    <string name="settings_study">Обучение</string>
     <string name="settings_default_target">Язык перевода по умолчанию</string>
     <string name="settings_default_direction">Направление по умолчанию</string>
     <string name="settings_direction_src">Лицом слово оригинала</string>
@@ -287,4 +287,37 @@
     <string name="topic_determine">Определить категории</string>
     <string name="topic_continue">Продолжить определение категорий</string>
     <string name="topic_running">Определение категорий…</string>
+    <string name="doc_material">Материал</string>
+    <string name="doc_diagnostics">Сведения и диагностика</string>
+    <string name="doc_source_languages">%1$s · %2$s → %3$s</string>
+    <string name="doc_progress_summary">Прогресс документа: %1$d из %2$d выучено</string>
+    <string name="doc_progress_details">Новые: %1$d · Учу: %2$d · Знаю: %3$d · Избранные: %4$d</string>
+    <string name="topic_question">Какие слова учить</string>
+    <string name="topic_core_help">Ключевые понятия темы</string>
+    <string name="topic_related_help">Помогают обсуждать тему</string>
+    <string name="topic_general_help">Повседневная лексика</string>
+    <string name="topic_start_hint">С чего начать?</string>
+    <string name="topic_start_help">Для знакомства с темой можно выбрать «Основные», а затем расширять набор. Категории можно сочетать как угодно.</string>
+    <string name="cards_selection">Отбор карточек</string>
+    <string name="cards_only_starred">Только избранные</string>
+    <string name="session_options">Параметры занятия</string>
+    <string name="session_first_language">Первым показывать</string>
+    <string name="session_summary">Сначала %1$s · %2$s</string>
+    <string name="session_shuffled">вразброс</string>
+    <string name="session_ordered">по порядку</string>
+    <string name="session_resume_saved">Продолжить сохранённое занятие</string>
+    <string name="topic_enrichment_confirm">Категории помогут выбрать главное в теме. Карточки, переводы и прогресс сохранятся. Определение категорий использует платный API. При частичном выполнении будут обработаны только недостающие части.</string>
+    <string name="settings_processing">Обработка материалов</string>
+    <string name="settings_application">Приложение</string>
+    <string name="source_text">Текст</string>
+    <string name="source_article">Статья</string>
+    <string name="source_youtube">YouTube</string>
+    <string name="source_pdf">PDF</string>
+    <string name="create_result">Карточки с контекстными примерами и категориями из вашего материала.</string>
+    <string name="create_api_notice">Обработка использует ваш API-ключ и может быть платной.</string>
+    <string name="create_advanced">Параметры обработки</string>
+    <string name="create_advanced_help">Язык оригинала определяется автоматически. Модели и API-ключ доступны в настройках обработки. Выбранный язык перевода не меняет язык дорожки YouTube.</string>
+    <string name="card_flip">Перевернуть карточку</string>
+    <string name="retry_api_notice">Продолжение обработки может использовать платный API.</string>
+    <string name="doc_info_title">Сведения</string>
 </resources>
