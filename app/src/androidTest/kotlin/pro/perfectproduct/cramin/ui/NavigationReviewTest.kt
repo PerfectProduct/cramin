@@ -27,6 +27,7 @@ class NavigationReviewTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val container = TestContainer(context)
     @After fun close() { container.db.close() }
+    @Test fun wide100() = review(1f, true, false, 412)
     @Test fun light100() = review(1f, false, false)
     @Test fun dark150() = review(1.5f, true, false)
     @Test fun dark200Rtl() = review(2f, true, true)
@@ -55,7 +56,7 @@ class NavigationReviewTest {
     }
 
 
-    private fun review(scale: Float, dark: Boolean, rtl: Boolean) {
+    private fun review(scale: Float, dark: Boolean, rtl: Boolean, width: Int = 320) {
         val id = runBlocking {
             container.settingsStore.setOnboardingDone(true)
             container.settingsStore.setAutoplayIntervals(10000, 10000)
@@ -65,26 +66,30 @@ class NavigationReviewTest {
                 container.db.documentDao().setFailure(it, """{"source":"TEXT","stage":"CONSOLIDATING","code":"UNKNOWN"}""")
             }
         }
-        val stem = "${(scale*100).toInt()}-${if(dark) "dark" else "light"}-${if(rtl) "rtl" else "ltr"}"
+        val stem = "${width}-${(scale*100).toInt()}-${if(dark) "dark" else "light"}-${if(rtl) "rtl" else "ltr"}"
         compose.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalContainer provides container, LocalDensity provides Density(density.density, scale), LocalLayoutDirection provides if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
                 CraminTheme(darkTheme = dark) {
-                    Surface(Modifier.width(320.dp).fillMaxHeight()) { CraminNavHost(Routes.LIBRARY) }
+                    Surface(Modifier.width(width.dp).fillMaxHeight()) { CraminNavHost(Routes.LIBRARY) }
                 }
             }
         }
         awaitTag("libraryList")
-        compose.onNodeWithTag("libraryList").performScrollToNode(hasTestTag("play-$id"))
+        compose.onNodeWithTag("libraryList").performScrollToNode(hasTestTag("doc-$id"))
         shot("$stem-library")
-        compose.onNodeWithTag("play-$id").performScrollTo().performClick()
+        compose.onNodeWithTag("doc-$id").performScrollTo().performClick()
         awaitTag("category_CORE")
         compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.diagnostic_recovered)).assertDoesNotExist()
         compose.onNodeWithText("Скопировать диагностику").assertDoesNotExist()
-        compose.onNodeWithTag("category_CORE").performScrollTo().assertIsOn()
+        compose.onNodeWithTag("studyButton").assertIsDisplayed()
         shot("$stem-ready")
-        compose.onNodeWithTag("onlyStarred").performScrollTo().performClick().assertIsOn()
-        compose.onNodeWithTag("studyButton").performScrollTo().assertTextContains("1", substring = true)
+        compose.onNodeWithTag("category_CORE").performScrollTo().assertIsOn()
+        compose.onNodeWithTag("onlyStarred").performScrollTo().performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("onlyStarred") and isOn()).fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag("onlyStarred").assertIsOn()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton") and hasText("1", substring = true)).fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag("studyButton").assertTextContains("1", substring = true)
         compose.onNodeWithTag("onlyStarred").performScrollTo().performClick()
         compose.onNodeWithTag("sessionOptions").performScrollTo().performClick()
         compose.onNodeWithText("Первым показывать").assertIsDisplayed()
@@ -99,8 +104,21 @@ class NavigationReviewTest {
         compose.onNodeWithTag("textList").performScrollToNode(hasText("The bank was closed."))
         compose.onNodeWithText("The bank was closed.").assertIsDisplayed()
         shot("$stem-reader")
+        val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        compose.onNodeWithText("The bank was closed.").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        val bankBounds = layouts.single().getBoundingBox(5)
+        compose.onNodeWithText("The bank was closed.").performTouchInput { click(bankBounds.center) }
+        compose.waitUntil(5000) { compose.onAllNodesWithText(context.getString(pro.perfectproduct.cramin.R.string.word_status_new)).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.word_status_new)).performScrollTo().assertIsSelected()
+        shot("$stem-word-sheet")
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.word_status_known)).performScrollTo().performClick()
+        val bankId = runBlocking { container.db.cardDao().getByDocument(id).first { it.lemma == "bank" }.id }
+        compose.waitUntil(5000) { runBlocking { container.cardRepository.getStatus(bankId) } == CardStatus.KNOWN }
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.word_status_new)).performScrollTo().performClick()
+        compose.waitUntil(5000) { runBlocking { container.cardRepository.getStatus(bankId) } == CardStatus.NEW }
+        androidx.test.espresso.Espresso.pressBack()
         compose.onNodeWithTag("tabCards").performClick()
-        compose.onNodeWithTag("studyButton").performScrollTo().performClick()
+        compose.onNodeWithTag("studyButton").performClick()
         compose.waitUntil(5000) { compose.onAllNodesWithTag("autoplay").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("autoplay").assertIsDisplayed()
         compose.onNodeWithTag("undo").assertIsDisplayed()
@@ -112,6 +130,9 @@ class NavigationReviewTest {
         compose.waitUntil(5000) { compose.onAllNodesWithContentDescription(context.getString(pro.perfectproduct.cramin.R.string.study_pause)).fetchSemanticsNodes().isNotEmpty() }
         shot("$stem-study-pause")
         compose.onNodeWithTag("autoplay").performClick()
+        compose.onNodeWithContentDescription(context.getString(pro.perfectproduct.cramin.R.string.study_settings)).performClick()
+        shot("$stem-study-options")
+        androidx.test.espresso.Espresso.pressBack()
         compose.onNodeWithTag("studyClose").performClick()
         compose.onNodeWithContentDescription(context.getString(pro.perfectproduct.cramin.R.string.action_back)).performClick()
         compose.onNodeWithTag("libraryList").performScrollToNode(hasText("Материал без категорий"))
@@ -133,19 +154,76 @@ class NavigationReviewTest {
         awaitTag("sourceText")
         compose.onNodeWithTag("sourceText").performScrollTo().assertIsDisplayed()
         shot("$stem-create")
+        compose.onNodeWithTag("sourceUrl").performClick()
+        compose.onNodeWithTag("urlField").performScrollTo().assertIsDisplayed()
+        shot("$stem-create-link")
+        compose.onNodeWithTag("sourcePdf").performScrollTo().performClick()
+        compose.onNodeWithTag("pickPdf").assertIsDisplayed()
+        compose.onNodeWithTag("submitPdf").assertIsNotEnabled()
+        shot("$stem-create-pdf")
+        assertTrue(container.fakeLlm.requests.isEmpty())
         compose.onNodeWithTag("createClose").performClick()
         compose.onNodeWithTag("librarySettings").performClick()
-        shot("$stem-settings-learning")
-        compose.onNodeWithText("Обработка материалов ▾").performScrollTo().performClick()
+        shot("$stem-settings-home")
+        compose.onNodeWithTag("settingsAudio").performScrollTo().performClick()
+        shot("$stem-settings-audio")
+        compose.onNodeWithContentDescription(context.getString(pro.perfectproduct.cramin.R.string.action_back)).performClick()
+        compose.onNodeWithTag("settingsProcessing").performScrollTo().performClick()
         compose.onNodeWithTag("keyField").performScrollTo().assertIsDisplayed()
         shot("$stem-settings-processing")
-        compose.onNodeWithText("Приложение ▾").performScrollTo().performClick()
-        compose.onNodeWithTag("version").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription(context.getString(pro.perfectproduct.cramin.R.string.action_back)).performClick()
+        compose.onNodeWithTag("settingsApp").performScrollTo().performClick()
+        compose.onNodeWithTag("version").assertIsDisplayed()
         shot("$stem-settings-app")
+        assertTrue(container.fakeLlm.requests.isEmpty())
+    }
+    @Test fun secondaryRoutesAndLargeCounts() {
+        val id = runBlocking {
+            container.settingsStore.setOnboardingDone(true)
+            seedDocument().also { id ->
+                val doc = container.db.documentDao().getById(id) ?: error("missing synthetic document")
+                container.db.documentDao().update(doc.copy(title = "Линейные модели в машинном обучении", sourceType = SourceType.URL))
+                repeat(1547) { i -> container.db.cardDao().insertCard(CardEntity(documentId = id, lemmaKey = "word$i|NOUN", meaningKey = "meaning$i", lemma = "word$i", lemmaVocalized = null, pos = Pos.NOUN, lang = "en", targetLang = "ru", status = if (i < 213) CardStatus.KNOWN else CardStatus.NEW, starred = i < 12, category = TopicCategory.entries[i % 3], firstSentenceIdx = i + 2, updatedAt = 0L)) }
+            }
+        }
+        lateinit var nav: androidx.navigation.NavHostController
+        compose.setContent { CompositionLocalProvider(LocalContainer provides container) { CraminTheme(darkTheme = true) {
+            nav = androidx.navigation.compose.rememberNavController()
+            Surface(Modifier.fillMaxSize()) { CraminNavHost(Routes.LIBRARY, nav) }
+        } } }
+        awaitTag("libraryList"); shot("extra-library-large-counts")
+        compose.onNodeWithContentDescription(context.getString(pro.perfectproduct.cramin.R.string.library_search)).performClick()
+        compose.onNodeWithTag("librarySearch").performTextInput("не найдено")
+        shot("extra-search-empty")
+        compose.onNodeWithContentDescription(context.getString(pro.perfectproduct.cramin.R.string.library_search)).performClick()
+        compose.onNodeWithTag("doc-$id").performTouchInput { longClick() }; shot("extra-library-menu")
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.action_rename)).performClick(); shot("extra-rename")
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.action_cancel)).performClick()
+        compose.onNodeWithTag("doc-$id").performClick(); awaitTag("studyButton"); shot("extra-ready-large-counts")
+        compose.onNodeWithTag("docMenu").performClick(); shot("extra-document-menu")
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.action_reprocess)).performClick(); shot("extra-reprocess-confirm")
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.action_cancel)).performClick()
+        compose.onNodeWithTag("docMenu").performClick()
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.action_delete)).performClick(); shot("extra-delete-confirm")
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.action_cancel)).performClick()
+        fun go(route: String) { compose.runOnUiThread { nav.navigate(route) }; compose.waitForIdle() }
+        go(Routes.ALL_DECK); awaitTag("allDeckStudy"); shot("extra-all-deck")
+        compose.onNodeWithTag("allDeckOptions").performScrollTo().performClick(); compose.onNodeWithTag("directionToggle").assertIsDisplayed(); shot("extra-all-deck-options")
+        compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.action_ok)).performScrollTo().performClick()
+        go(Routes.SETTINGS); compose.onNodeWithTag("settingsAppearance").performClick(); shot("extra-appearance")
+        compose.onNodeWithContentDescription(context.getString(pro.perfectproduct.cramin.R.string.action_back)).performClick()
+        compose.onNodeWithTag("settingsDefaults").performClick(); shot("extra-defaults")
+        go(Routes.LICENSES); shot("extra-licenses")
+        go(Routes.modelPicker("stt")); shot("extra-model-picker")
+        go(Routes.ONBOARDING); shot("extra-onboarding")
+        compose.onNodeWithTag("onboardingStart").performScrollTo().assertIsDisplayed(); shot("extra-onboarding-bottom")
         assertTrue(container.fakeLlm.requests.isEmpty())
     }
     private fun awaitTag(tag: String) { compose.waitUntil(5000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1 } }
     private fun shot(name: String) {
+        compose.waitForIdle()
+        // UiAutomation captures the compositor, which can lag Compose semantics by a frame.
+        Thread.sleep(250)
         compose.waitForIdle()
         val dir = File(context.getExternalFilesDir(null), "navigation-review").apply { mkdirs() }
         val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()

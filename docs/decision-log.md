@@ -456,3 +456,13 @@ An empty fresh selection never starts study; a separate saved-session action ret
 whose cards have all become known. No automatic enrichment. Autoplay timers, TTS sequence, interaction
 cancellation and ViewModel lifecycle remain unchanged. Accessibility card actions expose existing flip/swipes.
 See [UI report](ui-reorganization/report.md) for the function map and verification evidence.
+
+## CRM-DL-054 — Визуальная переработка после отклонения 0.1.34 (2026-10-04)
+
+Переименования и аккордеоны не решили перегрузку. Введены общие компоненты строк,
+выбора и основного действия; библиотека стала списком без дублирующих play,
+создание — формой с явным запуском, настройки — оглавлением с подстраницами,
+запуск занятия закреплён над текстовой навигацией. Учебная карточка и механика
+автопоказа/Undo/resume сохранены. Десять добавленных в 0.1.34 lint warning были
+UnusedResources; удалены без suppression. Сравнение со снимками телефона и
+локально отрендеренным HTML, карта экранов и ограничения — docs/ui-redesign/report.md.

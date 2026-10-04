@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -118,7 +119,9 @@ class UiFlowsTest {
         val raw = """{"source":"TEXT","stage":"CONSOLIDATING","code":"UNKNOWN","observedAtEpochMs":1791059173074}"""
         container.db.documentDao().setFailure(id, raw)
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithText("Riverside Library").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag("doc-$id").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("docMenu")).fetchSemanticsNodes().size == 1 }
         compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.diagnostic_recovered)).assertDoesNotExist()
         openDiagnostics()
         compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.diagnostic_recovered)).assertIsDisplayed()
@@ -138,7 +141,9 @@ class UiFlowsTest {
         container.db.documentDao().setFailure(id, """{"source":"TEXT","stage":"CONSOLIDATING","code":"UNKNOWN"}""")
         container.db.documentDao().setStatus(id, DocStatus.CONSOLIDATING, .9f, null, null, 3)
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithText("Riverside Library").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag("doc-$id").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("docMenu")).fetchSemanticsNodes().size == 1 }
         openDiagnostics()
         compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.diagnostic_processing_state)).assertIsDisplayed()
         compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.diagnostic_recovered)).assertDoesNotExist()
@@ -149,12 +154,14 @@ class UiFlowsTest {
         val id = seedDocument()
         container.db.documentDao().setStatus(id, DocStatus.FAILED, .1f, "SAME_LANGUAGE", "PRIVATE", 2)
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithText("Riverside Library").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag("doc-$id").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("docMenu")).fetchSemanticsNodes().size == 1 }
         compose.onNodeWithTag("errorBanner").assertIsDisplayed()
         compose.onNodeWithText("Сведения и диагностика").assertIsDisplayed()
         assertEquals(DocStatus.FAILED, container.documentRepository.get(id)?.status)
         compose.onNodeWithText(context.getString(pro.perfectproduct.cramin.R.string.action_choose_target_lang)).performClick()
-        compose.onNodeWithText("EN").assertIsDisplayed()
+        compose.onNodeWithText("Английский").assertIsDisplayed()
     }
 
     @Test
@@ -164,7 +171,9 @@ class UiFlowsTest {
         container.db.documentDao().setFailure(id,
             """{"source":"TEXT","stage":"BRIEFING","code":"BAD_REQUEST"}""")
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithText("Riverside Library").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag("doc-$id").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("docMenu")).fetchSemanticsNodes().size == 1 }
         copyStateAndWait()
         compose.runOnIdle {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
@@ -186,7 +195,9 @@ class UiFlowsTest {
         container.db.documentDao().setFailure(id,
             """{"source":"URL","stage":"CONSOLIDATING","code":"UNKNOWN","observedAtEpochMs":1791027829315,"local":{"build":"0.1.26-debug","buildCode":26,"attemptId":"synthetic","cacheOnly":true,"step":"REQUEST","exceptionTypes":["pro.perfectproduct.cramin.pipeline.ConsolidationCacheMissing"],"appFrames":[],"counts":{},"clientInvocations":0,"clientResponses":0}}""")
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithText("Riverside Library").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag("doc-$id").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("docMenu")).fetchSemanticsNodes().size == 1 }
         compose.onNodeWithTag("resumeConsolidationApi").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("retryLocalConsolidation").assertDoesNotExist()
         openDiagnostics()
@@ -218,14 +229,15 @@ class UiFlowsTest {
     }
 
     @Test
-    fun libraryShowsDocumentAndPlayOpensCardsTab() = runBlocking<Unit> {
+    fun libraryRowOpensStudyPreparation() = runBlocking<Unit> {
         val id = seedDocument()
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithText("Riverside Library").assertIsDisplayed()
         compose.onNodeWithTag("allUnlearned").assertIsDisplayed()
-        compose.onNodeWithTag("play-$id").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag("doc-$id").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("studyButton").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("studyButton").assertIsDisplayed()
     }
 
     @Test
@@ -253,9 +265,10 @@ class UiFlowsTest {
     fun autoplayPausesOnCancelledPointerAndPauseButtonDoesNotRestart() = runBlocking<Unit> {
         val id = seedDocument()
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithTag("play-$id").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag("doc-$id").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("studyButton").performScrollTo().performClick()
+        compose.onNodeWithTag("studyButton").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
         // Accessibility action has no preceding pointer-down.
         compose.onNodeWithTag("autoplay").performClick()
@@ -276,9 +289,10 @@ class UiFlowsTest {
     fun studySessionFlipSwipeUndoAndRoundEnd() = runBlocking<Unit> {
         val id = seedDocument()
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithTag("play-$id").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag("doc-$id").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("studyButton").performScrollTo().performClick()
+        compose.onNodeWithTag("studyButton").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
 
         // Тап переворачивает.
@@ -290,6 +304,8 @@ class UiFlowsTest {
         // Свайп вправо → «знаю» и KNOWN в БД.
         compose.onNodeWithTag("flashCard").performTouchInput { swipeRight() }
         compose.waitUntil(5_000) { runBlocking { container.cardRepository.getStatus(cardId(id, "bank")) } == CardStatus.KNOWN }
+        // Room commits before the ViewModel publishes the new session counters.
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("knownCount") and hasText("1")).fetchSemanticsNodes().size == 1 }
         compose.onNodeWithTag("knownCount").assertTextContains("1")
         compose.onNodeWithTag("counter").assertTextContains("2 / 2")
 
@@ -299,6 +315,7 @@ class UiFlowsTest {
         assertEquals(CardStatus.LEARNING, runBlocking { container.cardRepository.getStatus(cardId(id, "closed")) })
         compose.onNodeWithTag("roundSummary").assertTextContains("Вы знаете 1 из 2")
         compose.onNodeWithTag("repeatLearning").assertIsDisplayed()
+        reviewShot("round-complete")
 
         // Повтор невыученных: новый раунд из одной карточки; ↶ возвращает после свайпа.
         compose.onNodeWithTag("repeatLearning").performClick()
@@ -314,6 +331,8 @@ class UiFlowsTest {
         compose.onNodeWithTag("undo").performClick()
         compose.waitUntil(5_000) { runBlocking { container.cardRepository.getStatus(cardId(id, "closed")) } == CardStatus.NEW }
         compose.onNodeWithTag("counter").assertTextContains("2 / 2")
+        // Room commits before the ViewModel publishes the new session counters.
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("knownCount") and hasText("1")).fetchSemanticsNodes().size == 1 }
         compose.onNodeWithTag("knownCount").assertTextContains("1")
         compose.onNodeWithTag("learningCount").assertTextContains("0")
     }
@@ -322,16 +341,17 @@ class UiFlowsTest {
     fun leavingSessionMidwayOffersResumeEvenAfterCardsBecameKnown() = runBlocking<Unit> {
         val id = seedDocument()
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithTag("play-$id").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag("doc-$id").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("studyButton").performScrollTo().performClick()
+        compose.onNodeWithTag("studyButton").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("flashCard").performTouchInput { swipeRight() }
         compose.waitUntil(5_000) { runBlocking { container.cardRepository.getStatus(cardId(id, "bank")) } == CardStatus.KNOWN }
         compose.onNodeWithTag("studyClose").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
         // Колода «невыученные» теперь из одной карточки, но сессия продолжается со своих 2 (SPEC §9.6).
-        compose.onNodeWithTag("studyButton").performScrollTo().performClick()
+        compose.onNodeWithTag("studyButton").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("resume")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("resume").assertTextContains("2/2", substring = true).performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("counter")).fetchSemanticsNodes().isNotEmpty() }
@@ -352,14 +372,15 @@ class UiFlowsTest {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithTag("allUnlearned").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("allDeckStudy")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("allDeckStudy").performScrollTo().performClick()
+        compose.onNodeWithTag("allDeckStudy").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("flashCard").performTouchInput { swipeRight() }
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("roundSummary")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("roundDone").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("allDeckStudy")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("allDeckStudy").performScrollTo().performClick()
+        compose.onNodeWithTag("allDeckStudy").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("resume")).fetchSemanticsNodes().isNotEmpty() }
+        reviewShot("resume")
         compose.onNodeWithTag("resume").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("roundUndo")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("roundUndo").performClick()
@@ -374,4 +395,11 @@ class UiFlowsTest {
     }
 
     private suspend fun cardId(docId: Long, lemma: String): Long = container.db.cardDao().getByDocument(docId).first { it.lemma == lemma }.id
+    private fun reviewShot(name: String) {
+        compose.waitForIdle()
+        val dir = java.io.File(context.getExternalFilesDir(null), "navigation-review").apply { mkdirs() }
+        val bitmap = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        try { java.io.File(dir, "extra-$name.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) } } finally { bitmap.recycle() }
+    }
+
 }

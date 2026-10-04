@@ -62,11 +62,7 @@ fun TextTab(vm: DocumentViewModel, header: @Composable () -> Unit = {}) {
         item(key = "documentHeader") {
             Column {
                 header()
-                FlowRow(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = mode == TextViewMode.PAIRS, onClick = { vm.setViewMode(TextViewMode.PAIRS) }, label = { Text(stringResource(R.string.doc_view_pairs)) })
-                    FilterChip(selected = mode == TextViewMode.SOURCE_ONLY, onClick = { vm.setViewMode(TextViewMode.SOURCE_ONLY) }, label = { Text(stringResource(R.string.doc_view_source)) })
-                    FilterChip(selected = mode == TextViewMode.TARGET_ONLY, onClick = { vm.setViewMode(TextViewMode.TARGET_ONLY) }, label = { Text(stringResource(R.string.doc_view_target)) })
-                }
+                pro.perfectproduct.cramin.ui.components.SingleChoice(TextViewMode.entries, mode, { stringResource(when(it) { TextViewMode.PAIRS -> R.string.doc_view_pairs; TextViewMode.SOURCE_ONLY -> R.string.doc_view_source; TextViewMode.TARGET_ONLY -> R.string.doc_view_target }) }, vm::setViewMode, Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
             }
         }
         if (paragraphs.isEmpty()) {

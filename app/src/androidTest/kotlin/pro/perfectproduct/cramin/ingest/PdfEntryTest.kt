@@ -69,21 +69,22 @@ class PdfEntryTest {
             scenario = ActivityScenario.launch(MainActivity::class.java)
             compose.onNodeWithTag("libraryCreate").performClick()
             compose.onNodeWithTag("sourcePdf").performClick()
+            compose.onNodeWithTag("pickPdf").performScrollTo().performClick()
             assertTrue("Android picker did not show synthetic PDF", device.wait(Until.hasObject(By.text(name)), 10_000))
             device.findObject(By.text(name)).click()
-            compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("submitPdf")).fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("submitPdf") and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
             context.contentResolver.delete(picked, null, null)
             scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
             scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
-            compose.onNodeWithTag("submitPdf").performScrollTo().performClick()
+            compose.onNodeWithTag("submitPdf").performClick()
             awaitReady(container, 1)
             shared = pdf("cramin-share-synthetic.pdf")
             scenario.close()
             scenario = ActivityScenario.launch(Intent(context, MainActivity::class.java).setAction(Intent.ACTION_SEND)
                 .setType("application/pdf").putExtra(Intent.EXTRA_STREAM, shared).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
-            compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("submitPdf")).fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("submitPdf") and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
             context.contentResolver.delete(shared, null, null)
-            compose.onNodeWithTag("submitPdf").performScrollTo().performClick()
+            compose.onNodeWithTag("submitPdf").performClick()
             awaitReady(container, 2)
             assertTrue(container.fakeLlm.requests.isNotEmpty())
             assertEquals(2, container.db.documentDao().getAll().count { it.status == DocStatus.READY })

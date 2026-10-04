@@ -102,15 +102,11 @@ fun errorActionLabel(action: ErrorAction): String = stringResource(
 /** Сегментированный выбор языка «[RU] [EN] [HE]» (SPEC §9.2). */
 @Composable
 fun LangSelector(selected: Lang?, onSelect: (Lang) -> Unit, modifier: Modifier = Modifier, order: List<Lang> = listOf(Lang.RU, Lang.EN, Lang.HE), enabled: (Lang) -> Boolean = { true }) {
-    Row(modifier = modifier, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-        for (lang in order) {
-            FilterChip(selected = lang == selected, onClick = { onSelect(lang) }, enabled = enabled(lang), label = { Text(lang.label) })
-        }
-    }
+    SingleChoice(order, selected, { langLabel(it) }, onSelect, modifier, enabled = enabled)
 }
 
 @Composable
-fun EmojiBadge(emoji: String, size: Int = 28, modifier: Modifier = Modifier) {
+fun EmojiBadge(emoji: String, modifier: Modifier = Modifier, size: Int = 28) {
     Box(
         modifier = modifier.size((size + 16).dp).background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(14.dp)),
         contentAlignment = Alignment.Center,

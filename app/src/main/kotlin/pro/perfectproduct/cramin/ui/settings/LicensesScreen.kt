@@ -70,9 +70,8 @@ fun LicensesScreen(onBack: () -> Unit) {
 @Composable
 private fun NoticeSection(title: String, body: String) {
     var expanded by remember { mutableStateOf(false) }
-    Column(Modifier.padding(vertical = 12.dp)) {
-        Text(title, style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.clickable { expanded = !expanded }.padding(vertical = 8.dp))
-        if (expanded) Text(body, style = MaterialTheme.typography.bodyMedium)
+    Column {
+        pro.perfectproduct.cramin.ui.components.NavigationRow(title, null, onClick = { expanded = !expanded })
+        if (expanded) Text(body, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 12.dp))
     }
 }

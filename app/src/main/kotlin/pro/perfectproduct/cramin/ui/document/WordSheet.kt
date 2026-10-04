@@ -1,5 +1,7 @@
 package pro.perfectproduct.cramin.ui.document
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -37,7 +39,7 @@ import pro.perfectproduct.cramin.ui.components.posLabel
 @Composable
 fun WordSheet(card: StudyCard, vm: DocumentViewModel, onChanged: (StudyCard) -> Unit) {
     val tts by vm.ttsAvailable.collectAsState()
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 if (card.lemmaVocalized != null) {
@@ -62,15 +64,8 @@ fun WordSheet(card: StudyCard, vm: DocumentViewModel, onChanged: (StudyCard) -> 
             Text("• " + sense.translation, style = contentTextStyle(MaterialTheme.typography.bodyLarge))
         }
         Spacer(Modifier.height(16.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatusChip(stringResource(R.string.word_status_new), card.status == CardStatus.NEW) { vm.setStatus(card.id, CardStatus.NEW); onChanged(card.copy(status = CardStatus.NEW)) }
-            StatusChip(stringResource(R.string.word_status_learning), card.status == CardStatus.LEARNING) { vm.setStatus(card.id, CardStatus.LEARNING); onChanged(card.copy(status = CardStatus.LEARNING)) }
-            StatusChip(stringResource(R.string.word_status_known), card.status == CardStatus.KNOWN) { vm.setStatus(card.id, CardStatus.KNOWN); onChanged(card.copy(status = CardStatus.KNOWN)) }
-        }
+        pro.perfectproduct.cramin.ui.components.SingleChoice(CardStatus.entries, card.status,
+            { stringResource(when (it) { CardStatus.NEW -> R.string.word_status_new; CardStatus.LEARNING -> R.string.word_status_learning; CardStatus.KNOWN -> R.string.word_status_known }) },
+            { status -> vm.setStatus(card.id, status); onChanged(card.copy(status = status)) })
     }
-}
-
-@Composable
-private fun StatusChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
 }

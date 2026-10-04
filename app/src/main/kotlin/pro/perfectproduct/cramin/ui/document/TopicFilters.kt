@@ -1,6 +1,8 @@
 package pro.perfectproduct.cramin.ui.document
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,11 +18,15 @@ import pro.perfectproduct.cramin.data.db.TopicCategory
 
 @Composable
 fun ChoiceRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier, explanation: String? = null) {
-    Row(modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(checked, role = Role.Checkbox, onValueChange = onChange).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked, onCheckedChange = null)
-        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(label, style = MaterialTheme.typography.bodyLarge)
-            explanation?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    Surface(shape = RoundedCornerShape(10.dp), color = if (checked && explanation != null) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surface,
+        border = if (explanation != null) BorderStroke(1.dp, if (checked) MaterialTheme.colorScheme.primary.copy(alpha = 0.65f) else MaterialTheme.colorScheme.outlineVariant) else null,
+        modifier = Modifier.fillMaxWidth().padding(bottom = if (explanation != null) 8.dp else 0.dp)) {
+        Row(modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(checked, role = Role.Checkbox, onValueChange = onChange).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked, onCheckedChange = null, modifier = Modifier.size(24.dp))
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text(label, style = MaterialTheme.typography.titleMedium)
+                explanation?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
         }
     }
 }

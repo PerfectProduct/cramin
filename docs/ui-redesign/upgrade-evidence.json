@@ -1,0 +1,56 @@
+{
+  "before": "0.1.34-debug",
+  "after": "0.1.35-debug",
+  "apkSha256": "3e508d1cbef871b66938fbd68acf205d5c27dee85bea369efbfb09f767240c61",
+  "tables": {
+    "Card": {
+      "rows": 6,
+      "unchanged": true
+    },
+    "Document": {
+      "rows": 7,
+      "unchanged": true
+    },
+    "Job": {
+      "rows": 0,
+      "unchanged": true
+    },
+    "Occurrence": {
+      "rows": 6,
+      "unchanged": true
+    },
+    "ReprocessState": {
+      "rows": 0,
+      "unchanged": true
+    },
+    "Segment": {
+      "rows": 8,
+      "unchanged": true
+    },
+    "Sense": {
+      "rows": 6,
+      "unchanged": true
+    },
+    "Sentence": {
+      "rows": 8,
+      "unchanged": true
+    },
+    "StudySession": {
+      "rows": 1,
+      "unchanged": true
+    },
+    "android_metadata": {
+      "rows": 1,
+      "unchanged": true
+    },
+    "room_master_table": {
+      "rows": 1,
+      "unchanged": true
+    }
+  },
+  "settingsUnchanged": true,
+  "settingsSha256": "8e19eedc7bdf68b005e11d6695ba3152bcbb3b72007bcb7776abf5d9ee3f4766",
+  "emulator": "emulator-5580",
+  "synthetic": true,
+  "package": "pro.perfectproduct.cramin.debug"
+}

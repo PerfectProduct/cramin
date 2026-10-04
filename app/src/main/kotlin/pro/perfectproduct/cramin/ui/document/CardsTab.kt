@@ -15,7 +15,7 @@ import pro.perfectproduct.cramin.data.db.CardCounts
 import pro.perfectproduct.cramin.data.db.DocStatus
 import pro.perfectproduct.cramin.data.db.Direction
 import pro.perfectproduct.cramin.data.repo.DeckFilter
-import pro.perfectproduct.cramin.ui.components.DirectionToggle
+import pro.perfectproduct.cramin.ui.components.*
 import pro.perfectproduct.cramin.ui.components.langLabel
 import pro.perfectproduct.cramin.util.Lang
 
@@ -45,7 +45,8 @@ fun CardsTab(vm: DocumentViewModel, counts: CardCounts, onStudy: (String, Boolea
         onlyStarred -> DeckFilter.STARRED
         else -> DeckFilter.ALL
     })
-    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize()) {
+      Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
         header()
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
             TextButton(onClick = { totals = !totals }, modifier = Modifier.testTag("documentProgress")) {
@@ -62,30 +63,24 @@ fun CardsTab(vm: DocumentViewModel, counts: CardCounts, onStudy: (String, Boolea
                 }
             }
             Text(stringResource(R.string.cards_selection), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 20.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = unlearned, onClick = { setFilter(true, starred) }, label = { Text(stringResource(R.string.cards_filter_unlearned)) })
-                FilterChip(selected = !unlearned, onClick = { setFilter(false, starred) }, label = { Text(stringResource(R.string.cards_filter_all)) })
-            }
+            SingleChoice(listOf(true, false), unlearned, { stringResource(if (it) R.string.cards_filter_unlearned else R.string.cards_filter_all) }, { setFilter(it, starred) }, Modifier.padding(top = 8.dp))
             ChoiceRow(stringResource(R.string.cards_only_starred), starred, { setFilter(unlearned, it) }, Modifier.testTag("onlyStarred"))
             if (src != null && tgt != null) {
-                TextButton(onClick = { options = true }, modifier = Modifier.fillMaxWidth().testTag("sessionOptions")) {
-                    Column(Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.session_options), style = MaterialTheme.typography.titleMedium)
-                        Text(stringResource(R.string.session_summary, langLabel(if (direction == Direction.SRC_FRONT) src else tgt), stringResource(if (shuffle) R.string.session_shuffled else R.string.session_ordered)), style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+                NavigationRow(stringResource(R.string.session_options),
+                    stringResource(R.string.session_summary, langLabel(if (direction == Direction.SRC_FRONT) src else tgt), stringResource(if (shuffle) R.string.session_shuffled else R.string.session_ordered)),
+                    Modifier.testTag("sessionOptions"), onClick = { options = true })
             }
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = { onStudy(vm.deckKey(), shuffle) }, enabled = doc.status == DocStatus.READY && mask != 0 && deckSize > 0,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("studyButton")) {
-                Text(stringResource(R.string.cards_study) + " · $deckSize", style = MaterialTheme.typography.titleMedium)
-            }
+            if (doc.studyNotice) StatusText(stringResource(R.string.study_migration_notice))
+        }
+      }
+      ActionDock {
+
+            PrimaryAction(stringResource(R.string.cards_study) + " · $deckSize", { onStudy(vm.deckKey(), shuffle) }, Modifier.testTag("studyButton"), enabled = doc.status == DocStatus.READY && mask != 0 && deckSize > 0)
             // A saved round can contain known cards even when today's selection is empty.
             if (doc.status == DocStatus.READY && mask != 0 && deckSize == 0 && canResume) {
                 TextButton(onClick = { onStudy(vm.deckKey(), shuffle) }, modifier = Modifier.testTag("resumeSaved")) { Text(stringResource(R.string.session_resume_saved)) }
             }
             if (doc.status == DocStatus.READY && deckSize == 0 && mask != 0) Text(stringResource(R.string.cards_empty_deck), style = MaterialTheme.typography.bodySmall)
-            if (doc.studyNotice) Text(stringResource(R.string.study_migration_notice), style = MaterialTheme.typography.bodySmall)
         }
     }
     if (options && src != null && tgt != null) ModalBottomSheet(onDismissRequest = { options = false }) {

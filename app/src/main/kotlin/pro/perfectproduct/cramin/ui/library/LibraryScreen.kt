@@ -61,7 +61,7 @@ import pro.perfectproduct.cramin.R
 import pro.perfectproduct.cramin.app.craminViewModel
 import pro.perfectproduct.cramin.data.db.DocStatus
 import pro.perfectproduct.cramin.data.db.DocumentWithCounts
-import pro.perfectproduct.cramin.ui.components.EmojiBadge
+import pro.perfectproduct.cramin.ui.components.*
 import pro.perfectproduct.cramin.ui.components.EmptyState
 import pro.perfectproduct.cramin.ui.components.formatDate
 
@@ -78,6 +78,9 @@ fun LibraryScreen(
     val filter by vm.filter.collectAsState()
     val query by vm.query.collectAsState()
     val hasReady by vm.hasReady.collectAsState()
+    // A ready row can arrive before the independent ready-count flow.
+    // Include it immediately so inserting the deck entry cannot shift the first visible item.
+    val showAllDeck = hasReady || items.any { it.document.status == DocStatus.READY }
     var searchOpen by remember { mutableStateOf(false) }
     var menuFor by remember { mutableStateOf<DocumentWithCounts?>(null) }
     var renameFor by remember { mutableStateOf<DocumentWithCounts?>(null) }
@@ -109,26 +112,18 @@ fun LibraryScreen(
             )
         },
         bottomBar = {
-            androidx.compose.material3.Surface {
-                Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
-                    androidx.compose.material3.Button(onClick = onCreate, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("libraryCreate")) {
-                        Text(stringResource(R.string.library_create), style = MaterialTheme.typography.titleMedium)
-                    }
-                }
+            ActionDock(Modifier.navigationBarsPadding()) {
+                PrimaryAction(stringResource(R.string.library_create), onCreate, Modifier.testTag("libraryCreate"))
             }
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            FlowRow(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (f in LibraryFilter.entries) {
-                    FilterChip(selected = filter == f, onClick = { vm.setFilter(f) }, label = { Text(stringResource(f.labelRes)) })
-                }
-            }
-            if (items.isEmpty() && !hasReady) {
+            SingleChoice(LibraryFilter.entries, filter, { stringResource(it.labelRes) }, vm::setFilter, Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+            if (items.isEmpty() && !showAllDeck) {
                 EmptyState("📚", stringResource(if (filter == LibraryFilter.ALL && query.isEmpty()) R.string.library_empty else R.string.library_empty_filtered), Modifier.padding(top = 48.dp))
             } else {
-                LazyColumn(modifier = Modifier.testTag("libraryList"), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (hasReady) {
+                LazyColumn(modifier = Modifier.testTag("libraryList"), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                    if (showAllDeck) {
                         item(key = "all-unlearned") { AllUnlearnedRow(onClick = onAllDeck) }
                     }
                     if (items.isEmpty()) {
@@ -140,7 +135,6 @@ fun LibraryScreen(
                             onClick = {
                                 onOpenDocument(row.document.id, "cards")
                             },
-                            onPlay = { onOpenDocument(row.document.id, "cards") },
                             onLongClick = { menuFor = row },
                             menuOpen = menuFor?.document?.id == row.document.id,
                             onDismissMenu = { menuFor = null },
@@ -186,28 +180,14 @@ fun LibraryScreen(
 
 @Composable
 private fun AllUnlearnedRow(onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        modifier = Modifier.fillMaxWidth().testTag("allUnlearned"),
-    ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.library_all_unlearned), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Text(stringResource(R.string.library_all_unlearned_subtitle), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
-            }
-            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-        }
-    }
+    NavigationRow(stringResource(R.string.library_all_unlearned), null, modifier = Modifier.testTag("allUnlearned"), onClick = onClick)
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun DocumentRow(
     row: DocumentWithCounts,
     onClick: () -> Unit,
-    onPlay: () -> Unit,
     onLongClick: () -> Unit,
     menuOpen: Boolean,
     onDismissMenu: () -> Unit,
@@ -217,39 +197,22 @@ private fun DocumentRow(
 ) {
     val doc = row.document
     val processing = !doc.status.isTerminal
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        modifier = Modifier.fillMaxWidth().testTag("doc-${doc.id}").combinedClickable(onClick = onClick, onLongClick = onLongClick),
-    ) {
-        Row(modifier = Modifier.padding(start = 14.dp, top = 12.dp, bottom = 12.dp, end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            EmojiBadge(doc.emoji)
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(doc.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(pro.perfectproduct.cramin.ui.document.sourceTypeLabel(doc.sourceType), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(2.dp))
-                when {
-                    doc.status == DocStatus.FAILED -> Text(stringResource(R.string.library_error), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                    processing -> {
-                        val percent = (doc.progress * 100).toInt()
-                        Text(if (doc.status == DocStatus.QUEUED) stringResource(R.string.library_queued) else stringResource(R.string.library_processing, percent), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        LinearProgressIndicator(progress = { doc.progress }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp, end = 8.dp).height(3.dp))
-                    }
-                    else -> Text(
-                        stringResource(R.string.library_subtitle, row.cardCount, row.knownCount, formatDate(doc.createdAt)),
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+    Column(Modifier.fillMaxWidth().testTag("doc-${doc.id}").combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
+        Row(Modifier.padding(vertical = 16.dp), verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                Text(doc.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 6.dp)) {
+                    StatusText("${doc.emoji} ${pro.perfectproduct.cramin.ui.document.sourceTypeLabel(doc.sourceType)}")
+                    StatusText(formatDate(doc.createdAt).replace(' ', '\u00a0'))
                 }
-            }
-            FilledIconButton(
-                onClick = onPlay,
-                enabled = doc.status == DocStatus.READY,
-                shape = CircleShape,
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.primary),
-                modifier = Modifier.size(48.dp).testTag("play-${doc.id}"),
-            ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.library_play))
+                when {
+                    doc.status == DocStatus.FAILED -> StatusText(stringResource(R.string.library_error), error = true)
+                    processing -> {
+                        StatusText(if (doc.status == DocStatus.QUEUED) stringResource(R.string.library_queued) else stringResource(R.string.library_processing, (doc.progress * 100).toInt()))
+                        LinearProgressIndicator(progress = { doc.progress }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp).height(3.dp))
+                    }
+                    else -> StatusText(stringResource(R.string.library_progress_short, row.cardCount, row.knownCount))
+                }
             }
             Box {
                 DropdownMenu(expanded = menuOpen, onDismissRequest = onDismissMenu) {
@@ -259,5 +222,6 @@ private fun DocumentRow(
                 }
             }
         }
+        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }

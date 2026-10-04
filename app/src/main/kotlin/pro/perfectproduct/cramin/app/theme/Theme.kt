@@ -1,5 +1,6 @@
 package pro.perfectproduct.cramin.app.theme
 
+import androidx.compose.ui.unit.dp
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
@@ -95,6 +96,12 @@ fun CraminTheme(
     MaterialTheme(
         colorScheme = if (darkTheme) DarkScheme else LightScheme,
         typography = CraminTypography,
+        shapes = androidx.compose.material3.Shapes(
+            small = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+            medium = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+            large = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+        ),
         content = content,
     )
 }

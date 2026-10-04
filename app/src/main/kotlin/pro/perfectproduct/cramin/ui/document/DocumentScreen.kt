@@ -1,5 +1,9 @@
 package pro.perfectproduct.cramin.ui.document
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -116,9 +120,22 @@ fun DocumentScreen(
             )
         },
         bottomBar = {
-            if (!diagnosticsOpen) NavigationBar {
-                NavigationBarItem(selected = tab == "cards", onClick = { tab = "cards" }, icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_action_cards), null) }, label = { Text(stringResource(R.string.doc_tab_cards)) }, modifier = Modifier.testTag("tabCards"))
-                NavigationBarItem(selected = tab == "text", onClick = { tab = "text" }, icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_action_document), null) }, label = { Text(stringResource(R.string.doc_tab_text)) }, modifier = Modifier.testTag("tabText"))
+            if (!diagnosticsOpen) androidx.compose.material3.Surface {
+                Column(Modifier.navigationBarsPadding()) {
+                    androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Row(Modifier.fillMaxWidth().selectableGroup()) {
+                        listOf("cards" to R.string.doc_tab_cards, "text" to R.string.doc_tab_text).forEach { (key, label) ->
+                            androidx.compose.foundation.layout.Box(Modifier.weight(1f).heightIn(min = 48.dp)
+                                .testTag(if (key == "cards") "tabCards" else "tabText")
+                                .selectable(tab == key, role = androidx.compose.ui.semantics.Role.Tab, onClick = { tab = key })
+                                .padding(horizontal = 12.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
+                                Text(stringResource(label), style = MaterialTheme.typography.titleMedium,
+                                    color = if (tab == key) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textDecoration = if (tab == key) androidx.compose.ui.text.style.TextDecoration.Underline else null)
+                            }
+                        }
+                    }
+                }
             }
         },
     ) { padding ->
@@ -139,6 +156,7 @@ fun DocumentScreen(
                 }
             } else tabState.SaveableStateProvider(tab) {
                 if (tab == "text") TextTab(vm, header)
+                else if (doc.status != DocStatus.READY) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) { header() }
                 else CardsTab(vm, counts, onStudy = onStudy, header = header)
             }
         }
@@ -271,9 +289,10 @@ private fun StatusBanner(doc: DocumentEntity, onCopy: (android.content.Context) 
     when {
         doc.status == DocStatus.FAILED -> {
             val code = ErrorCode.fromName(doc.errorCode)
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                shape = RoundedCornerShape(16.dp),
+            androidx.compose.material3.Surface(
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).testTag("errorBanner"),
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {

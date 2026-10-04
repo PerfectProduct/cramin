@@ -66,14 +66,14 @@ class TopicFiltersUiTest {
             compose.onNodeWithTag("category_${category.name}").performScrollTo().assertIsDisplayed().performClick()
             compose.waitUntil(5000) { vm.categoryMask.value and category.bit == 0 }
         }
-        compose.onNodeWithTag("studyButton").performScrollTo().assertIsDisplayed().assertIsNotEnabled()
+        compose.onNodeWithTag("studyButton").assertIsDisplayed().assertIsNotEnabled()
         assertEquals(0, vm.selection.value.first)
         screenshot("$stem-empty")
         for (category in TopicCategory.entries) compose.onNodeWithTag("category_${category.name}").performScrollTo().performClick()
         compose.waitUntil(5000) { vm.selection.value.first == 4 }
         compose.onNodeWithText("Продолжить определение категорий").performScrollTo().assertIsDisplayed()
         screenshot("$stem-enrichment")
-        compose.onNodeWithTag("studyButton").performScrollTo().assertIsDisplayed().assertIsEnabled().assertTextContains("4", substring = true)
+        compose.onNodeWithTag("studyButton").assertIsDisplayed().assertIsEnabled().assertTextContains("4", substring = true)
         screenshot("$stem-study")
         assertTrue(container.fakeLlm.requests.isEmpty())
         runBlocking { assertEquals(7, container.db.documentDao().getById(doc)?.categoryMask) }

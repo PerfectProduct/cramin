@@ -1,5 +1,7 @@
 package pro.perfectproduct.cramin.ui.settings
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -66,13 +68,14 @@ fun ModelPickerScreen(roleKey: String, onBack: () -> Unit, vm: SettingsViewModel
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 12.dp)) {
+          item {
             Text(current?.model ?: "—", style = MaterialTheme.typography.titleMedium)
             Text(current?.let { sourceLabel(it.source) } ?: "", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = { vm.setOverride(role, null) }) { Text(stringResource(R.string.settings_models_reset)) }
-            Row(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(value = manual, onValueChange = { manual = it }, singleLine = true, label = { Text(stringResource(R.string.settings_model_manual)) }, modifier = Modifier.weight(1f))
+            Column(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(value = manual, onValueChange = { manual = it }, singleLine = true, label = { Text(stringResource(R.string.settings_model_manual)) }, modifier = Modifier.fillMaxWidth())
                 Button(onClick = { if (manual.isNotBlank()) { vm.setOverride(role, RoleOverride(model = manual.trim())); manual = "" } }, modifier = Modifier.padding(start = 8.dp, top = 8.dp)) { Text(stringResource(R.string.action_save)) }
             }
             if (role.isText) {
@@ -80,9 +83,11 @@ fun ModelPickerScreen(roleKey: String, onBack: () -> Unit, vm: SettingsViewModel
                 OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true, label = { Text(stringResource(R.string.settings_model_search)) }, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
                 if (loaded && models.isEmpty()) Text(stringResource(R.string.err_network), color = MaterialTheme.colorScheme.error)
-                LazyColumn {
+            }
+          }
+          if (role.isText) {
                     items(filtered, key = { it.id }) { m ->
-                        Column(modifier = Modifier.fillMaxWidth().clickable { vm.setOverride(role, RoleOverride(model = m.id)); onBack() }.padding(vertical = 8.dp)) {
+                        Column(modifier = Modifier.fillMaxWidth().clickable { vm.setOverride(role, RoleOverride(model = m.id)); onBack() }.padding(vertical = 12.dp)) {
                             Text(m.id, style = MaterialTheme.typography.bodyMedium, color = if (m.id == current?.model) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
                             Text(
                                 stringResource(R.string.settings_model_price, "%.2f".format(m.promptPricePerMillion ?: 0.0), "%.2f".format(m.completionPricePerMillion ?: 0.0)) + "  · ctx ${m.contextLength ?: "?"}",
@@ -90,7 +95,6 @@ fun ModelPickerScreen(roleKey: String, onBack: () -> Unit, vm: SettingsViewModel
                             )
                         }
                     }
-                }
             }
         }
     }

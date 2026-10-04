@@ -1,5 +1,6 @@
 package pro.perfectproduct.cramin.ui.settings
 
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,12 +31,12 @@ import pro.perfectproduct.cramin.ui.components.SectionTitle
 fun OnboardingScreen(onDone: () -> Unit, vm: SettingsViewModel = craminViewModel { SettingsViewModel(it) }) {
     val effective by vm.effective.collectAsState()
     val hasKey by vm.hasKey.collectAsState()
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
+    Column(modifier = Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(24.dp)) {
         Spacer(Modifier.height(32.dp))
-        Text(stringResource(R.string.brand), style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
+        Text(stringResource(R.string.brand), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
         Text(stringResource(R.string.onboarding_title), style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(12.dp))
-        Text(stringResource(R.string.onboarding_body), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.onboarding_body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         SectionTitle(stringResource(R.string.settings_openrouter))
         KeySection(vm, showRestoreNote = false)
         SectionTitle(stringResource(R.string.onboarding_models_title))
@@ -44,8 +45,7 @@ fun OnboardingScreen(onDone: () -> Unit, vm: SettingsViewModel = craminViewModel
             Text("${roleLabel(role)}: ${effective?.roles?.get(role)?.model ?: "—"}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
         }
         Spacer(Modifier.height(28.dp))
-        Button(onClick = { vm.finishOnboarding(); onDone() }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("onboardingStart")) {
-            Text(stringResource(if (hasKey) R.string.onboarding_start else R.string.onboarding_skip))
-        }
+        pro.perfectproduct.cramin.ui.components.PrimaryAction(stringResource(if (hasKey) R.string.onboarding_start else R.string.onboarding_skip), { vm.finishOnboarding(); onDone() }, Modifier.testTag("onboardingStart"))
+        Spacer(Modifier.height(24.dp))
     }
 }

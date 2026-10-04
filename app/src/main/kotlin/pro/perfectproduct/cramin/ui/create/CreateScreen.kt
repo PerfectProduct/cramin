@@ -1,5 +1,7 @@
 package pro.perfectproduct.cramin.ui.create
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.imePadding
 import android.Manifest
 import android.content.ClipboardManager
 import android.content.Context
@@ -55,184 +57,76 @@ import pro.perfectproduct.cramin.ui.components.LangSelector
 import pro.perfectproduct.cramin.ui.components.contentTextStyle
 import pro.perfectproduct.cramin.util.Lang
 
-/** Экран загрузки (SPEC §9.2): полноэкранный диалог с выбором языка перевода и источника. */
+/** Import is staged locally; only the primary action schedules processing. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateScreen(
-    shared: SharedInput?,
-    onClose: () -> Unit,
-    onOpenSettings: () -> Unit,
-    vm: CreateViewModel = craminViewModel { CreateViewModel(it) },
-) {
+fun CreateScreen(shared: SharedInput?, onClose: () -> Unit, onOpenSettings: () -> Unit,
+    vm: CreateViewModel = craminViewModel { CreateViewModel(it) }) {
     val context = LocalContext.current
     val state by vm.state.collectAsState()
-    var mode by remember { mutableStateOf<CreateMode?>(null) }
-    var urlText by remember { mutableStateOf("") }
-    var pastedText by remember { mutableStateOf("") }
-    var pastedTitle by remember { mutableStateOf("") }
-
+    var mode by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(CreateMode.TEXT) }
+    var urlText by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var pastedText by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var pastedTitle by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var advanced by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(shared) {
         when {
             shared?.url != null -> { urlText = shared.url; mode = CreateMode.URL }
             shared?.text != null -> { pastedText = shared.text; mode = CreateMode.TEXT }
-            shared?.pdfUri != null -> vm.pickPdf(context, shared.pdfUri)
+            shared?.pdfUri != null -> { mode = CreateMode.PDF; vm.pickPdf(context, shared.pdfUri) }
         }
     }
     LaunchedEffect(state.done) { if (state.done) onClose() }
-
-    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-    val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { vm.pickPdf(context, it) } }
-
-    fun submit(block: () -> Unit) {
-        // POST_NOTIFICATIONS запрашивается при первом импорте (SPEC §6.11).
-        if (Build.VERSION.SDK_INT >= 33 && !state.notificationsAsked) {
-            vm.markNotificationsAsked()
-            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { vm.pickPdf(context, it) } }
+    val submitTag = when(mode) { CreateMode.TEXT -> "submitText"; CreateMode.URL -> "submitUrl"; CreateMode.PDF -> "submitPdf" }
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.create_title_1), style = MaterialTheme.typography.titleLarge) }, navigationIcon = {
+        IconButton(onClick = onClose, modifier = Modifier.testTag("createClose")) { Icon(Icons.Default.Close, stringResource(R.string.action_close)) }
+    }) }, bottomBar = {
+        pro.perfectproduct.cramin.ui.components.ActionDock(Modifier.navigationBarsPadding().imePadding()) {
+            pro.perfectproduct.cramin.ui.components.PrimaryAction(stringResource(R.string.create_submit), {
+                if (Build.VERSION.SDK_INT >= 33 && !state.notificationsAsked) { vm.markNotificationsAsked(); permission.launch(Manifest.permission.POST_NOTIFICATIONS) }
+                when(mode) { CreateMode.TEXT -> vm.submitText(pastedText, pastedTitle); CreateMode.URL -> vm.submitUrl(urlText); CreateMode.PDF -> vm.submitPdf() }
+            }, Modifier.testTag(submitTag), state.hasKey && !state.busy && (mode != CreateMode.PDF || state.pdfName != null))
+            pro.perfectproduct.cramin.ui.components.StatusText(stringResource(R.string.create_cost_short))
         }
-        block()
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
-                    IconButton(onClick = onClose, modifier = Modifier.testTag("createClose")) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close)) }
-                },
-            )
-        },
-    ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp).verticalScroll(rememberScrollState())) {
-            Text(stringResource(R.string.create_title_1), style = MaterialTheme.typography.headlineMedium)
-            Text(stringResource(R.string.create_result), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(stringResource(R.string.create_api_notice), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
-            Spacer(Modifier.height(20.dp))
-            if (!state.hasKey) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().testTag("noKeyBanner"),
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text(stringResource(R.string.create_no_key), color = MaterialTheme.colorScheme.onErrorContainer)
-                        TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.action_open_settings)) }
+    }) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            pro.perfectproduct.cramin.ui.components.SingleChoice(CreateMode.entries, mode, { stringResource(when(it) { CreateMode.TEXT -> R.string.source_text_short; CreateMode.URL -> R.string.source_link_short; CreateMode.PDF -> R.string.source_pdf_short }) }, { mode = it }, tag = { Modifier.testTag(when(it) { CreateMode.TEXT -> "sourceText"; CreateMode.URL -> "sourceUrl"; CreateMode.PDF -> "sourcePdf" }) })
+            when(mode) {
+                CreateMode.TEXT -> {
+                    OutlinedTextField(pastedText, { pastedText = it }, label = { Text(stringResource(R.string.source_text_short)) }, placeholder = { Text(stringResource(R.string.create_text_hint)) }, minLines = 4, maxLines = 8, textStyle = contentTextStyle(MaterialTheme.typography.bodyMedium), modifier = Modifier.fillMaxWidth().testTag("pasteField"))
+                    TextButton(onClick = { clipboardText(context)?.let { pastedText = it } }) { Text(stringResource(R.string.create_paste)) }
+                    if (state.sourceLangNeeded) {
+                        Text(stringResource(R.string.create_lang_unknown))
+                        LangSelector(state.sourceLang, vm::setSourceLang)
                     }
                 }
-                Spacer(Modifier.height(16.dp))
-            }
-            Text(stringResource(R.string.create_target), style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(6.dp))
-            LangSelector(selected = state.targetLang, onSelect = vm::setTargetLang, modifier = Modifier.testTag("targetLang"))
-            Spacer(Modifier.height(24.dp))
-            Text(stringResource(R.string.create_source_label), style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(10.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SourcePill(stringResource(R.string.create_pdf), R.drawable.ic_action_document, enabled = state.hasKey, tag = "sourcePdf") { pdfPicker.launch(arrayOf("application/pdf")) }
-                SourcePill(stringResource(R.string.create_url), R.drawable.ic_action_link, enabled = state.hasKey, tag = "sourceUrl") {
-                    if (urlText.isEmpty()) clipboardText(context)?.let { if (UrlClassifier.isUrl(it)) urlText = it }
-                    mode = CreateMode.URL
-                }
-                SourcePill(stringResource(R.string.create_text), R.drawable.ic_action_clipboard, enabled = state.hasKey, tag = "sourceText") {
-                    if (pastedText.isEmpty()) clipboardText(context)?.let { if (!UrlClassifier.isUrl(it)) pastedText = it }
-                    mode = CreateMode.TEXT
+                CreateMode.URL -> OutlinedTextField(urlText, { urlText = it }, label = { Text(stringResource(R.string.create_url_dialog_title)) }, placeholder = { Text(stringResource(R.string.create_url_hint)) }, modifier = Modifier.fillMaxWidth().testTag("urlField"))
+                CreateMode.PDF -> {
+                    state.pdfName?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                    androidx.compose.material3.OutlinedButton(onClick = { picker.launch(arrayOf("application/pdf")) }, enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("pickPdf")) { Text(stringResource(R.string.create_pdf)) }
                 }
             }
-            state.pdfName?.let { name ->
-                Spacer(Modifier.height(20.dp))
-                Text("📁 $name", style = MaterialTheme.typography.bodyLarge)
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = { submit { vm.submitPdf() } }, enabled = state.hasKey && !state.busy, modifier = Modifier.fillMaxWidth().testTag("submitPdf")) {
-                    Text(stringResource(R.string.create_submit))
+            Text(stringResource(R.string.create_target), style = MaterialTheme.typography.titleMedium)
+            LangSelector(state.targetLang, vm::setTargetLang, Modifier.testTag("targetLang"))
+            if (!state.hasKey) {
+                Column(Modifier.testTag("noKeyBanner")) {
+                    pro.perfectproduct.cramin.ui.components.StatusText(stringResource(R.string.create_no_key), error = true)
+                    TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.action_open_settings)) }
                 }
             }
-            var advanced by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+            state.error?.let { pro.perfectproduct.cramin.ui.components.StatusText(it, error = true) }
+            pro.perfectproduct.cramin.ui.components.StatusText(stringResource(R.string.create_result))
             TextButton(onClick = { advanced = !advanced }) { Text(stringResource(R.string.create_advanced)) }
             if (advanced) {
-                Text(stringResource(R.string.create_advanced_help), style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.settings_processing)) }
+                if (mode == CreateMode.TEXT) OutlinedTextField(pastedTitle, { pastedTitle = it }, label = { Text(stringResource(R.string.create_text_name_hint)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                pro.perfectproduct.cramin.ui.components.NavigationRow(stringResource(R.string.settings_processing), stringResource(R.string.create_advanced_help), onClick = onOpenSettings)
             }
-            state.error?.let { Spacer(Modifier.height(12.dp)); Text(it, color = MaterialTheme.colorScheme.error) }
-            Spacer(Modifier.height(32.dp))
         }
     }
-
-    when (mode) {
-        CreateMode.URL -> AlertDialog(
-            onDismissRequest = { mode = null },
-            title = { Text(stringResource(R.string.create_url_dialog_title)) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text(stringResource(R.string.create_api_notice), style = MaterialTheme.typography.bodySmall)
-                    OutlinedTextField(
-                        value = urlText, onValueChange = { urlText = it }, singleLine = true,
-                        placeholder = { Text(stringResource(R.string.create_url_hint)) },
-                        modifier = Modifier.fillMaxWidth().testTag("urlField"),
-                    )
-                    if (state.error != null) Text(state.error!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { submit { vm.submitUrl(urlText) } }, enabled = state.hasKey && !state.busy, modifier = Modifier.testTag("submitUrl")) {
-                    Text(stringResource(R.string.create_submit))
-                }
-            },
-            dismissButton = { TextButton(onClick = { mode = null }) { Text(stringResource(R.string.action_cancel)) } },
-        )
-        CreateMode.TEXT -> TextInputDialog(
-            text = pastedText, onText = { pastedText = it }, title = pastedTitle, onTitle = { pastedTitle = it },
-            enabled = state.hasKey && !state.busy, error = state.error,
-            sourceLangNeeded = state.sourceLangNeeded, sourceLang = state.sourceLang, onSourceLang = vm::setSourceLang,
-            onSubmit = { submit { vm.submitText(pastedText, pastedTitle) } }, onDismiss = { mode = null },
-        )
-        null -> Unit
-    }
 }
-
-private enum class CreateMode { URL, TEXT }
-
-@Composable
-private fun SourcePill(label: String, icon: Int, enabled: Boolean, tag: String, onClick: () -> Unit) {
-    FilledTonalButton(onClick = onClick, enabled = enabled, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag(tag)) {
-        Icon(androidx.compose.ui.res.painterResource(icon), null, modifier = Modifier.padding(end = 12.dp))
-        Text(label, style = MaterialTheme.typography.titleMedium)
-    }
-}
-
-@Composable
-private fun TextInputDialog(
-    text: String, onText: (String) -> Unit, title: String, onTitle: (String) -> Unit,
-    enabled: Boolean, error: String?, sourceLangNeeded: Boolean, sourceLang: Lang?, onSourceLang: (Lang) -> Unit,
-    onSubmit: () -> Unit, onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.create_text_title)) },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Text(stringResource(R.string.create_api_notice), style = MaterialTheme.typography.bodySmall)
-                OutlinedTextField(
-                    value = title, onValueChange = onTitle, singleLine = true,
-                    placeholder = { Text(stringResource(R.string.create_text_name_hint)) }, modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = text, onValueChange = onText, minLines = 6,
-                    placeholder = { Text(stringResource(R.string.create_text_hint)) },
-                    textStyle = contentTextStyle(MaterialTheme.typography.bodyMedium),
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp).testTag("pasteField"),
-                )
-                if (sourceLangNeeded) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(stringResource(R.string.create_lang_unknown), style = MaterialTheme.typography.bodySmall)
-                    LangSelector(selected = sourceLang, onSelect = onSourceLang, order = listOf(Lang.EN, Lang.RU, Lang.HE))
-                }
-                if (error != null) Text(error, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
-            }
-        },
-        confirmButton = { TextButton(onClick = onSubmit, enabled = enabled, modifier = Modifier.testTag("submitText")) { Text(stringResource(R.string.create_submit)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
-    )
-}
+private enum class CreateMode { TEXT, URL, PDF }
 
 private fun clipboardText(context: Context): String? {
     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return null

@@ -1,5 +1,6 @@
 package pro.perfectproduct.cramin.ui.study
 
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,7 +53,7 @@ import pro.perfectproduct.cramin.app.craminViewModel
 import pro.perfectproduct.cramin.data.db.Direction
 import pro.perfectproduct.cramin.data.db.LangPair
 import pro.perfectproduct.cramin.data.repo.DeckKey
-import pro.perfectproduct.cramin.ui.components.DirectionToggle
+import pro.perfectproduct.cramin.ui.components.*
 import pro.perfectproduct.cramin.ui.components.EmptyState
 import pro.perfectproduct.cramin.util.Lang
 
@@ -107,6 +108,7 @@ fun AllDeckScreen(onBack: () -> Unit, onStudy: (String, Boolean) -> Unit, vm: Al
     val mask by vm.categoryMask.collectAsState()
     val unknown by vm.unknown.collectAsState()
     var shuffle by remember { mutableStateOf(false) }
+    var options by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -114,36 +116,32 @@ fun AllDeckScreen(onBack: () -> Unit, onStudy: (String, Boolean) -> Unit, vm: Al
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) } },
             )
         },
+        bottomBar = { current?.let { cur ->
+            ActionDock(Modifier.navigationBarsPadding()) {
+                PrimaryAction(stringResource(R.string.cards_study) + " · ${cur.second}", { onStudy(DeckKey.All(Lang.requireCode(cur.first.lang), Lang.requireCode(cur.first.targetLang), mask).key, shuffle) }, Modifier.testTag("allDeckStudy"), mask != 0 && (cur.second > 0 || canResume))
+            }
+        } },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
             if (pairs.isEmpty()) {
                 EmptyState("🗂", stringResource(R.string.alldeck_empty))
                 return@Column
             }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (p in pairs) {
-                    FilterChip(selected = current?.first == p, onClick = { vm.select(p) }, label = { Text("${p.lang.uppercase()} → ${p.targetLang.uppercase()}") })
-                }
-            }
+            SingleChoice(pairs, current?.first, { "${langLabel(Lang.requireCode(it.lang))} → ${langLabel(Lang.requireCode(it.targetLang))}" }, vm::select)
             Spacer(Modifier.height(20.dp))
             val cur = current
             if (cur != null) {
                 pro.perfectproduct.cramin.ui.document.TopicFilters(mask, vm::toggleCategory)
                 if (unknown > 0) Text(stringResource(R.string.topic_incomplete, unknown))
-                Text(stringResource(R.string.alldeck_count, cur.second), style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(16.dp))
-                DirectionToggle(Lang.requireCode(cur.first.lang), Lang.requireCode(cur.first.targetLang), direction, vm::setDirection, Modifier.align(Alignment.CenterHorizontally))
-                Spacer(Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = shuffle, onCheckedChange = { shuffle = it })
-                    Text(stringResource(R.string.cards_shuffle))
+                NavigationRow(stringResource(R.string.session_options), stringResource(R.string.session_summary, langLabel(Lang.requireCode(if (direction == Direction.SRC_FRONT) cur.first.lang else cur.first.targetLang)), stringResource(if (shuffle) R.string.session_shuffled else R.string.session_ordered)), Modifier.testTag("allDeckOptions")) { options = true }
+                if (options) androidx.compose.material3.ModalBottomSheet(onDismissRequest = { options = false }) {
+                    Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp)) {
+                        DirectionToggle(Lang.requireCode(cur.first.lang), Lang.requireCode(cur.first.targetLang), direction, vm::setDirection)
+                        pro.perfectproduct.cramin.ui.document.ChoiceRow(stringResource(R.string.cards_shuffle), shuffle, { shuffle = it })
+                        PrimaryAction(stringResource(R.string.action_ok), { options = false })
+                    }
                 }
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = { onStudy(DeckKey.All(Lang.requireCode(cur.first.lang), Lang.requireCode(cur.first.targetLang), mask).key, shuffle) },
-                    enabled = mask != 0 && (cur.second > 0 || canResume),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("allDeckStudy"),
-                ) { Text(stringResource(R.string.cards_study) + " · ${cur.second}", style = MaterialTheme.typography.titleMedium) }
                 if (cur.second == 0) {
                     Spacer(Modifier.height(12.dp))
                     Text(stringResource(R.string.alldeck_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -2,7 +2,6 @@
 <resources>
     <!-- app_name задаётся типом сборки: «Cramin» / «Cramin (debug)» (SPEC §12.1). -->
     <string name="brand">Cramin</string>
-    <string name="tagline">Зубрёжка слов из ваших текстов</string>
 
     <!-- Общее -->
     <string name="action_ok">ОК</string>
@@ -16,22 +15,16 @@
     <string name="action_back">Назад</string>
     <string name="action_close">Закрыть</string>
     <string name="action_more">Ещё</string>
-    <string name="action_continue">Продолжить</string>
     <string name="action_choose_source_lang">Выбрать язык текста</string>
     <string name="action_choose_target_lang">Выбрать другой язык перевода</string>
     <string name="action_check_updates">Проверить обновления</string>
     <string name="lang_en">Английский</string>
     <string name="lang_ru">Русский</string>
     <string name="lang_he">Иврит</string>
-    <string name="lang_short_en">EN</string>
-    <string name="lang_short_ru">RU</string>
-    <string name="lang_short_he">HE</string>
 
     <!-- Онбординг (U1) -->
     <string name="onboarding_title">Учите слова из своих текстов</string>
     <string name="onboarding_body">Дайте ссылку на статью, видео YouTube, PDF или вставьте текст. Cramin переведёт его и соберёт двусторонние карточки: слово в контексте — перевод. Изучение работает офлайн; для подготовки карточек нужен ключ OpenRouter.</string>
-    <string name="onboarding_key_hint">Ключ OpenRouter (sk-or-…)</string>
-    <string name="onboarding_check_key">Проверить ключ</string>
     <string name="onboarding_models_title">Модели</string>
     <string name="onboarding_models_hint">Модели по ролям заданы конфигом репозитория; поменять их можно в настройках.</string>
     <string name="onboarding_skip">Позже, без ключа</string>
@@ -45,15 +38,12 @@
     <string name="library_tab_in_progress">В процессе</string>
     <string name="library_tab_learned">Выученные</string>
     <string name="library_all_unlearned">Все невыученные</string>
-    <string name="library_all_unlearned_subtitle">Карточки всех готовых документов</string>
     <string name="library_create">Добавить материал</string>
     <string name="library_empty">Добавьте первый текст — статью, видео или PDF</string>
     <string name="library_empty_filtered">Здесь пока пусто</string>
-    <string name="library_subtitle">%1$d карточек · выучено %2$d · %3$s</string>
     <string name="library_processing">Обработка… %1$d %%</string>
     <string name="library_queued">В очереди</string>
     <string name="library_error">Ошибка — открыть подробности</string>
-    <string name="library_play">Учить</string>
     <string name="library_delete_confirm_title">Удалить документ?</string>
     <string name="library_delete_confirm_body">«%1$s» вместе с карточками и прогрессом будет удалён. Это нельзя отменить.</string>
     <string name="library_rename_title">Переименовать</string>
@@ -62,17 +52,12 @@
 
     <!-- Экран загрузки (§9.2) -->
     <string name="create_title_1">Добавить материал</string>
-    <string name="create_title_2">из ваших текстов</string>
-    <string name="create_target">Перевод на:</string>
-    <string name="create_source_label">Загрузите источник</string>
+    <string name="create_target">Какой язык изучаете</string>
     <string name="create_pdf">Файл PDF</string>
-    <string name="create_url">Сайт или YouTube</string>
-    <string name="create_text">Скопированный текст</string>
     <string name="create_no_key">Добавьте ключ OpenRouter в настройках</string>
     <string name="create_url_dialog_title">Ссылка на статью или видео</string>
     <string name="create_url_hint">https://…</string>
     <string name="create_url_invalid">Это не похоже на ссылку</string>
-    <string name="create_text_title">Скопированный текст</string>
     <string name="create_text_hint">Вставьте текст</string>
     <string name="create_text_name_hint">Заголовок (необязательно)</string>
     <string name="create_text_empty">Текст пустой</string>
@@ -80,15 +65,12 @@
     <string name="create_lang_unknown">Не удалось определить язык текста. Выберите его:</string>
     <string name="create_submit">Создать карточки</string>
     <string name="create_pdf_failed">Не удалось открыть файл</string>
-    <string name="create_pdf_large">Большой документ (%1$d слов): обработка займёт время и потратит кредит</string>
 
     <!-- Экран документа (§9.3) -->
     <string name="doc_tab_text">Читать</string>
     <string name="doc_tab_cards">Учить</string>
-    <string name="doc_header_stats">%1$d карточек · выучено %2$d из %3$d · %4$s → %5$s</string>
     <string name="doc_cost">Учтено: $%1$s · модели: %2$s. Это нижняя граница: часть расходов провайдер мог не передать.</string>
     <string name="doc_cost_unknown">Стоимость обработки пока неизвестна</string>
-    <string name="doc_processing_title">Документ обрабатывается</string>
     <string name="doc_processing_body">%1$s — %2$d %%</string>
     <string name="doc_big_warning">Большой документ: %1$d слов. Обработка может быть долгой и дорогой.</string>
     <string name="doc_view_pairs">Пары</string>
@@ -97,26 +79,19 @@
     <string name="doc_text_empty">Текст появится после обработки</string>
 
     <!-- Вкладка «Карточки» (§9.5) -->
-    <string name="cards_total">Всего</string>
-    <string name="cards_new">Новые</string>
     <string name="cards_learning">Учу</string>
     <string name="cards_known">Знаю</string>
-    <string name="cards_starred">Избранные</string>
     <string name="cards_filter_unlearned">Невыученные</string>
     <string name="cards_filter_all">Все</string>
-    <string name="cards_filter_starred">Только избранные</string>
     <string name="cards_study">Учить</string>
     <string name="cards_shuffle">Перемешать</string>
-    <string name="cards_direction">Направление</string>
     <string name="cards_empty_deck">В этой колоде нет карточек</string>
-    <string name="cards_all_learned">Все карточки выучены 🎉</string>
 
     <!-- Мини-карточка слова -->
     <string name="word_status_new">Новое</string>
     <string name="word_status_learning">Учу</string>
     <string name="word_status_known">Знаю</string>
     <string name="word_star">Избранное</string>
-    <string name="word_speak">Озвучить</string>
     <string name="pos_noun">существительное</string>
     <string name="pos_verb">глагол</string>
     <string name="pos_adj">прилагательное</string>
@@ -139,13 +114,12 @@
     <string name="study_resume_continue">Продолжить с %1$d/%2$d</string>
     <string name="study_swipe_hint">← ещё учу · знаю →</string>
     <string name="study_autospeak">Автоозвучка</string>
-    <string name="study_interval_front">Лицо, с</string>
-    <string name="study_interval_back">Оборот, с</string>
+    <string name="study_interval_front">Первая сторона, секунд</string>
+    <string name="study_interval_back">Обратная сторона, секунд</string>
     <string name="study_empty">Нет карточек для изучения</string>
 
     <!-- Общая колода (§10.6) -->
     <string name="alldeck_title">Все невыученные</string>
-    <string name="alldeck_count">%1$d карточек</string>
     <string name="alldeck_empty">Нет невыученных карточек — добавьте документ или начните заново</string>
 
     <!-- Настройки (§9.7) -->
@@ -189,11 +163,9 @@
     <string name="settings_autoplay">Интервалы автопроигрывания</string>
     <string name="settings_stats">Статистика</string>
     <string name="settings_stats_body">Документов: %1$d · токены: %2$s / %3$s · учтено: $%4$s (нижняя граница расходов)</string>
-    <string name="settings_about">О приложении</string>
     <string name="settings_version">Версия %1$s (%2$d)</string>
     <string name="settings_repo">Репозиторий на GitHub</string>
     <string name="settings_licenses">Лицензии открытых библиотек</string>
-    <string name="settings_notifications">Уведомления о готовых карточках</string>
 
     <!-- Обновления (§12.4) -->
     <string name="update_checking">Проверяю…</string>
@@ -279,8 +251,6 @@
     <string name="topic_related">Связанные</string>
     <string name="topic_general">Общие</string>
     <string name="topic_choose">Выберите хотя бы одну категорию</string>
-    <string name="topic_selected">В выбранном наборе: %1$d</string>
-    <string name="topic_document_totals">Весь документ</string>
     <string name="topic_incomplete">Без категории: %1$d. Тематическая подборка пока неполная. Полный набор доступен при включении всех трёх категорий.</string>
     <string name="topic_error">Не удалось завершить классификацию. Сохранённые части доступны; можно продолжить.</string>
     <string name="topic_api_notice">Определение категорий обращается к платному API OpenRouter. Фильтры и обучение работают офлайн.</string>
@@ -314,10 +284,25 @@
     <string name="source_youtube">YouTube</string>
     <string name="source_pdf">PDF</string>
     <string name="create_result">Карточки с контекстными примерами и категориями из вашего материала.</string>
-    <string name="create_api_notice">Обработка использует ваш API-ключ и может быть платной.</string>
     <string name="create_advanced">Параметры обработки</string>
     <string name="create_advanced_help">Язык оригинала определяется автоматически. Модели и API-ключ доступны в настройках обработки. Выбранный язык перевода не меняет язык дорожки YouTube.</string>
     <string name="card_flip">Перевернуть карточку</string>
     <string name="retry_api_notice">Продолжение обработки может использовать платный API.</string>
     <string name="doc_info_title">Сведения</string>
+    <string name="library_progress_short">%1$d карточек · выучено %2$d</string>
+    <string name="source_text_short">Текст</string>
+    <string name="source_link_short">Ссылка</string>
+    <string name="source_pdf_short">PDF</string>
+    <string name="create_paste">Вставить из буфера</string>
+    <string name="create_cost_short">Обработка через ваш API · может быть платной</string>
+    <string name="settings_appearance">Внешний вид</string>
+    <string name="settings_appearance_summary">Тема и размер текста Android</string>
+    <string name="settings_appearance_body">Cramin использует тему и размер текста устройства. Изменить их можно в настройках экрана Android.</string>
+    <string name="settings_system_display">Настройки экрана Android</string>
+    <string name="settings_audio">Озвучивание и автопоказ</string>
+    <string name="settings_audio_summary">Автоозвучка, скорость и время показа</string>
+    <string name="settings_defaults">Язык и направление</string>
+    <string name="settings_defaults_summary">Для новых материалов и занятий</string>
+    <string name="settings_processing_summary">API-ключ, модели и расходы</string>
+    <string name="settings_app_summary">Обновления, версия и лицензии</string>
 </resources>

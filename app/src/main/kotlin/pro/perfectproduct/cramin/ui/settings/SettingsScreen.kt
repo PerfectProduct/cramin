@@ -48,7 +48,7 @@ import pro.perfectproduct.cramin.app.craminViewModel
 import pro.perfectproduct.cramin.data.db.Direction
 import pro.perfectproduct.cramin.llm.ConfigSource
 import pro.perfectproduct.cramin.llm.ModelRole
-import pro.perfectproduct.cramin.ui.components.LangSelector
+import pro.perfectproduct.cramin.ui.components.*
 import pro.perfectproduct.cramin.ui.components.SectionTitle
 import pro.perfectproduct.cramin.ui.components.formatDate
 import pro.perfectproduct.cramin.ui.components.formatUsd
@@ -66,29 +66,50 @@ fun SettingsScreen(
     vm: SettingsViewModel = craminViewModel { SettingsViewModel(it) },
 ) {
     val settings by vm.settings.collectAsState()
+    var page by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("home") }
+    val context = LocalContext.current
+    val back = { if (page == "home") onBack() else page = "home" }
+    androidx.activity.compose.BackHandler(page != "home") { page = "home" }
+    val title = when(page) {
+        "appearance" -> R.string.settings_appearance
+        "audio" -> R.string.settings_audio
+        "defaults" -> R.string.settings_defaults
+        "processing" -> R.string.settings_processing
+        "app" -> R.string.settings_application
+        else -> R.string.settings_title
+    }
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) } },
+                title = { Text(stringResource(title)) },
+                navigationIcon = { IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) } },
             )
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
-            var section by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("study") }
-            SettingsGroup(stringResource(R.string.settings_study), section == "study", { section = if (section == "study") "" else "study" }) {
-                settings?.let { s -> StudySection(vm, s) }
-            }
-            SettingsGroup(stringResource(R.string.settings_processing), section == "processing", { section = if (section == "processing") "" else "processing" }) {
-                SectionTitle(stringResource(R.string.settings_openrouter))
-                KeySection(vm)
-                SectionTitle(stringResource(R.string.settings_models))
-                ModelsSection(vm, onPickModel)
-                SectionTitle(stringResource(R.string.settings_stats))
-                StatsSection(vm)
-            }
-            SettingsGroup(stringResource(R.string.settings_application), section == "app", { section = if (section == "app") "" else "app" }) {
-                AboutSection(onLicenses)
+            when(page) {
+                "home" -> {
+                    SectionTitle(stringResource(R.string.settings_study))
+                    NavigationRow(stringResource(R.string.settings_appearance), stringResource(R.string.settings_appearance_summary), Modifier.testTag("settingsAppearance")) { page = "appearance" }
+                    NavigationRow(stringResource(R.string.settings_audio), stringResource(R.string.settings_audio_summary), Modifier.testTag("settingsAudio")) { page = "audio" }
+                    NavigationRow(stringResource(R.string.settings_defaults), stringResource(R.string.settings_defaults_summary), Modifier.testTag("settingsDefaults")) { page = "defaults" }
+                    SectionTitle(stringResource(R.string.settings_processing))
+                    NavigationRow(stringResource(R.string.settings_openrouter), stringResource(R.string.settings_processing_summary), Modifier.testTag("settingsProcessing")) { page = "processing" }
+                    SectionTitle(stringResource(R.string.settings_application))
+                    NavigationRow(stringResource(R.string.settings_app_summary), BuildConfig.VERSION_NAME, Modifier.testTag("settingsApp")) { page = "app" }
+                }
+                "appearance" -> {
+                    Text(stringResource(R.string.settings_appearance_body), Modifier.padding(vertical = 20.dp))
+                    OutlinedButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_DISPLAY_SETTINGS)) }) { Text(stringResource(R.string.settings_system_display)) }
+                }
+                "audio" -> settings?.let { StudySection(vm, it, false) }
+                "defaults" -> settings?.let { StudySection(vm, it, true) }
+                "processing" -> {
+                    SectionTitle(stringResource(R.string.settings_openrouter)); KeySection(vm)
+                    SectionTitle(stringResource(R.string.settings_models)); ModelsSection(vm, onPickModel)
+                    SectionTitle(stringResource(R.string.settings_stats)); StatsSection(vm)
+                }
+                "app" -> AboutSection(onLicenses)
             }
         }
     }
@@ -189,16 +210,15 @@ fun sourceLabel(source: ConfigSource): String = stringResource(
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun StudySection(vm: SettingsViewModel, s: pro.perfectproduct.cramin.data.prefs.Settings) {
+private fun StudySection(vm: SettingsViewModel, s: pro.perfectproduct.cramin.data.prefs.Settings, defaults: Boolean) {
     val ttsLangs by vm.ttsLangs.collectAsState()
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (defaults) {
         Text(stringResource(R.string.settings_default_target), style = MaterialTheme.typography.titleSmall)
         LangSelector(selected = Lang.fromCode(s.defaultTargetLang), onSelect = vm::setDefaultTargetLang)
         Text(stringResource(R.string.settings_default_direction), style = MaterialTheme.typography.titleSmall)
-        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = s.defaultDirection == Direction.SRC_FRONT, onClick = { vm.setDefaultDirection(Direction.SRC_FRONT) }, label = { Text(stringResource(R.string.settings_direction_src)) })
-            FilterChip(selected = s.defaultDirection == Direction.TGT_FRONT, onClick = { vm.setDefaultDirection(Direction.TGT_FRONT) }, label = { Text(stringResource(R.string.settings_direction_tgt)) })
-        }
+        SingleChoice(Direction.entries, s.defaultDirection, { stringResource(if (it == Direction.SRC_FRONT) R.string.settings_direction_src else R.string.settings_direction_tgt) }, vm::setDefaultDirection)
+        } else {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.settings_autospeak), Modifier.weight(1f))
             Switch(checked = s.autoSpeak, onCheckedChange = vm::setAutoSpeak)
@@ -213,6 +233,7 @@ private fun StudySection(vm: SettingsViewModel, s: pro.perfectproduct.cramin.dat
         Slider(value = s.autoplayFrontMs / 1000f, onValueChange = { vm.setIntervals((it * 1000).toInt(), s.autoplayBackMs) }, valueRange = 1f..10f, steps = 17)
         Text(stringResource(R.string.study_interval_back) + ": ${s.autoplayBackMs / 1000f}", style = MaterialTheme.typography.labelLarge)
         Slider(value = s.autoplayBackMs / 1000f, onValueChange = { vm.setIntervals(s.autoplayFrontMs, (it * 1000).toInt()) }, valueRange = 1f..10f, steps = 17)
+        }
     }
 }
 
@@ -236,11 +257,3 @@ private fun AboutSection(onLicenses: () -> Unit) {
 }
 
 const val REPO_URL = "https://github.com/PerfectProduct/cramin"
-
-@Composable
-private fun SettingsGroup(title: String, expanded: Boolean, onClick: () -> Unit, content: @Composable () -> Unit) {
-    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Text(title + if (expanded) " ▴" else " ▾", style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
-    }
-    if (expanded) content()
-}
