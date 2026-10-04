@@ -82,7 +82,7 @@ class YoutubeExtractor(private val http: OkHttpClient) : SourceExtractor {
             if (text.isBlank()) throw PipelineException(ErrorCode.EMPTY_TEXT, "subtitles empty")
             Log.i(TAG, "doc=${document.id} subtitles ${chosen.languageTag} ${format}: ${text.length} chars")
             return@withContext Extracted.Text(text = text, title = title, langHint = videoLang ?: subLang,
-                provenance = TextProvenance("YOUTUBE_CAPTIONS", chosen.languageTag, "NON_AUTO_REPORTED"))
+                provenance = TextProvenance("YOUTUBE_CAPTIONS", chosen.languageTag, "NON_AUTO_REPORTED", trackId = chosen.id))
         }
 
         // Авторских субтитров нет — своя транскрипция (решение владельца, SPEC §15 п. 4).
@@ -93,7 +93,7 @@ class YoutubeExtractor(private val http: OkHttpClient) : SourceExtractor {
         val duration = runCatching { extractor.length.toInt() }.getOrDefault(0)
         Log.i(TAG, "doc=${document.id} audio itag=${audio.itag} bytes=${target.length()} duration=${duration}s")
         Extracted.Audio(file = target, title = title, langHint = audio.audioLocale?.language?.let { Lang.fromCode(it) } ?: videoLang, durationSeconds = duration,
-            provenance = TextProvenance("YOUTUBE_AUDIO_STT", audio.audioLocale?.toLanguageTag(), audio.audioTrackType?.name))
+            provenance = TextProvenance("YOUTUBE_AUDIO_STT", audio.audioLocale?.toLanguageTag(), audio.audioTrackType?.name, trackId = audio.audioTrackId))
     }
 
     private suspend fun download(url: String): String = try {

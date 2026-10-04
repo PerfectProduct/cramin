@@ -218,7 +218,9 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         }
         setStatus(id, DocStatus.FETCHING, progress.start(DocStatus.FETCHING), onProgress)
         val sourceFile = deps.files.sourceText(id)
-        var langHint: Lang? = storedLang
+        val storedOrigin = deps.files.textProvenance(id)
+        var langHint: Lang? = Lang.fromCode(storedOrigin.sttLanguage)
+            ?: Lang.fromCode(storedOrigin.trackLanguage?.substringBefore('-')) ?: storedLang
         var title: String? = null
         if (!sourceFile.isFile) {
             val extractor = deps.extractors[doc.sourceType] ?: throw PipelineException(ErrorCode.UNKNOWN, "no extractor for ${doc.sourceType}")
@@ -226,11 +228,13 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                 is Extracted.Text -> {
                     deps.files.writeSourceText(id, extracted.text, extracted.provenance)
                     title = extracted.title
-                    langHint = langHint ?: extracted.langHint
+                    langHint = extracted.langHint ?: langHint
                 }
                 is Extracted.Audio -> {
                     title = extracted.title
-                    langHint = langHint ?: extracted.langHint
+                    langHint = extracted.langHint ?: langHint
+                    if (langHint == targetLang) throw PipelineException(ErrorCode.SAME_LANGUAGE,
+                        "source == target (${targetLang.code})", stage = FailureStage.LANGUAGE)
                     val text = transcribeStage(doc, extracted, langHint, config, progress, onProgress)
                     deps.files.writeSourceText(id, text, extracted.provenance.copy(
                         sttLanguage = langHint?.code, sttModel = config.role(ModelRole.STT).model))
@@ -239,7 +243,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             onProgress(DocStatus.FETCHING, progress.within(DocStatus.FETCHING, 1f))
         }
         val text = sourceFile.readText()
-        val lang = storedLang ?: langHint ?: LangDetector.detect(text)
+        val lang = langHint ?: LangDetector.detect(text)
             ?: throw PipelineException(ErrorCode.LANG_UNDETECTED, "script share below threshold", stage = FailureStage.LANGUAGE)
         if (lang == targetLang) throw PipelineException(ErrorCode.SAME_LANGUAGE, "source == target (${lang.code})", stage = FailureStage.LANGUAGE)
         val sentences = deps.segmenter.segment(text, lang, pdfMode = doc.sourceType == SourceType.PDF)
@@ -267,14 +271,19 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         // A retry downloads audio again. Bind cached parts to bytes, language and model,
         // before making any new request; index alone is not an identity.
         val audioHash = pro.perfectproduct.cramin.util.Hashing.sha256Hex(audio.file)
-        val binding = "stt-v1:$audioHash:${lang.code}:$model:${parts.size}"
-        val previous = db.jobDao().getByKind(id, JobKind.STT).filter { it.status == JobStatus.DONE }
+        val originHash = pro.perfectproduct.cramin.util.Hashing.sha256Hex(
+            LlmJson.strict.encodeToString(pro.perfectproduct.cramin.ingest.TextProvenance.serializer(), audio.provenance).toByteArray(Charsets.UTF_8))
+        val binding = "stt-v2:$audioHash:$originHash:${lang.code}:$model:${parts.size}"
+        val previous = db.jobDao().getByKind(id, JobKind.STT).filter { it.status == JobStatus.DONE || it.finishReason != null }
         if (previous.any { it.finishReason != binding || it.idx !in parts.indices }) {
             throw PipelineException(ErrorCode.TRANSCRIPTION, "cached audio identity unavailable or changed")
         }
         val texts = ArrayList<String>()
         for ((i, part) in parts.withIndex()) {
-            val job = ensureJob(id, JobKind.STT, i, part.durationSeconds, null, model)
+            val job = ensureJob(id, JobKind.STT, i, part.durationSeconds, null, model).let { saved ->
+                // Persist identity before the first request, including a failed/interrupted attempt.
+                if (saved.status == JobStatus.DONE) saved else saved.copy(finishReason = binding).also { db.jobDao().update(it) }
+            }
             val text = if (job.status == JobStatus.DONE && job.responseJson != null) {
                 job.responseJson
             } else {

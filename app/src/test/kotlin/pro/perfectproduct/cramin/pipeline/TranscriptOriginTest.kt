@@ -19,15 +19,16 @@ import java.io.File
 class TranscriptOriginTest {
     @get:Rule val tmp = TemporaryFolder()
 
-    private suspend fun checkRetry(changed: Boolean, legacy: Boolean = false) {
+    private suspend fun checkRetry(changed: Boolean, legacy: Boolean = false, changedTrack: Boolean = false, failBeforeFirst: Boolean = false) {
         val raw = "В simple terms Cancer RAG. Это problem в ней в ней в ней."
         var calls = 0
         var fail = true
         var bytes = "original audio"
+        var trackId = "ru-original"
         val extractor = object : SourceExtractor {
             override suspend fun extract(document: DocumentEntity, files: DocumentFiles): Extracted {
                 val file = File(files.audioDir(document.id), "full.m4a").apply { writeText(bytes) }
-                return Extracted.Audio(file, null, Lang.RU, 2, TextProvenance("YOUTUBE_AUDIO_STT", "ru", "ORIGINAL"))
+                return Extracted.Audio(file, null, Lang.RU, 2, TextProvenance("YOUTUBE_AUDIO_STT", "ru", "ORIGINAL", trackId = trackId))
             }
         }
         val segmenter = object : AudioSegmenter {
@@ -39,7 +40,7 @@ class TranscriptOriginTest {
             override suspend fun transcribe(part: AudioPart, lang: Lang?, model: String): Transcript {
                 calls++
                 assertEquals(Lang.RU, lang)
-                if (part.file.name == "part-1.m4a" && fail) throw PipelineException(ErrorCode.NETWORK, "synthetic")
+                if (fail && (failBeforeFirst || part.file.name == "part-1.m4a")) throw PipelineException(ErrorCode.NETWORK, "synthetic")
                 return Transcript(if (part.file.name == "part-0.m4a") raw else "Последняя техника.", null)
             }
         }
@@ -47,18 +48,19 @@ class TranscriptOriginTest {
             transcriber = transcriber, audioSegmenter = segmenter).use { p ->
             val id = p.documents.create(NewDocument.Youtube("https://example.invalid/private", Lang.EN))
             assertTrue(p.processor().process(id) is ProcessOutcome.Failed)
-            assertEquals(2, calls)
+            assertEquals(if (failBeforeFirst) 1 else 2, calls)
             if (legacy) {
                 val done = p.db.jobDao().getByKind(id, JobKind.STT).first { it.status == JobStatus.DONE }
                 p.db.jobDao().update(done.copy(finishReason = null))
             }
             if (changed) bytes = "different dub"
+            if (changedTrack) trackId = "another-track"
             fail = false
             p.documents.requeue(id)
             val outcome = p.processor().process(id)
-            if (changed || legacy) {
+            if (changed || legacy || changedTrack) {
                 assertTrue(outcome is ProcessOutcome.Failed)
-                assertEquals(2, calls) // No paid work or mixing when identity is unverified.
+                assertEquals(if (failBeforeFirst) 1 else 2, calls) // No paid work or mixing when identity is unverified.
                 assertFalse(p.files.sourceText(id).exists())
             } else {
                 assertTrue("$outcome", outcome is ProcessOutcome.Ready)
@@ -73,6 +75,7 @@ class TranscriptOriginTest {
                 val summary = DocumentStateSummary.copyText(p.db, id, p.deps.stoplists, "test", 34, p.files)
                 assertTrue(summary.contains("Text provenance: YOUTUBE_AUDIO_STT"))
                 assertTrue(summary.contains("STT request language: ru"))
+                assertTrue(summary.contains("Track ID: ru-original"))
                 assertFalse(summary.contains("Cancer"))
                 assertFalse(summary.contains("example.invalid"))
                 // Legacy/missing metadata never borrows today's config or guesses a track.
@@ -83,6 +86,8 @@ class TranscriptOriginTest {
             }
         }
     }
+    @Test fun changedTrackAfterFailedFirstRequestIsRejected() = runTest { checkRetry(false, changedTrack = true, failBeforeFirst = true) }
+    @Test fun changedTrackCannotRelabelCachedParts() = runTest { checkRetry(false, changedTrack = true) }
     @Test fun matchingRetryPreservesOriginalAndSeparateTranslation() = runTest { checkRetry(false) }
     @Test fun differentAudioCannotMixWithCachedParts() = runTest { checkRetry(true) }
     @Test fun legacyPartsWithoutIdentityCannotMixWithNewAudio() = runTest { checkRetry(false, legacy = true) }

@@ -11,9 +11,10 @@ data class TextProvenance(
     val sttLanguage: String? = null,
     val sttModel: String? = null,
     val sourceHash: String? = null,
+    val trackId: String? = null,
 ) {
     fun safeSummary(): String = "Text provenance: ${safe(source)}\n" +
-        "Track language: ${safe(trackLanguage)}\nTrack type: ${safe(trackType)}\n" +
+        "Track ID: ${safe(trackId)}\nTrack language: ${safe(trackLanguage)}\nTrack type: ${safe(trackType)}\n" +
         "STT request language: ${safe(sttLanguage)}\nSTT model: ${safe(sttModel)}"
 
     companion object {
