@@ -79,5 +79,8 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     fun setAutoSpeak(v: Boolean) = viewModelScope.launch { container.settingsStore.setAutoSpeak(v) }
     fun setTtsRate(v: Float) = viewModelScope.launch { container.settingsStore.setTtsRate(v) }
     fun setIntervals(front: Int, back: Int) = viewModelScope.launch { container.settingsStore.setAutoplayIntervals(front, back) }
-    fun finishOnboarding() = viewModelScope.launch { container.settingsStore.setOnboardingDone(true) }
+    fun finishOnboarding(onDone: () -> Unit) = viewModelScope.launch {
+        container.settingsStore.setOnboardingDone(true)
+        onDone()
+    }
 }

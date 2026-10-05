@@ -58,7 +58,7 @@ fun OnboardingScreen(onDone: () -> Unit, vm: SettingsViewModel = craminViewModel
             }
         }
         ActionDock {
-            pro.perfectproduct.cramin.ui.components.PrimaryAction(stringResource(if (hasKey) R.string.onboarding_start else R.string.onboarding_skip), { focus.clearFocus(); keyboard?.hide(); vm.finishOnboarding(); onDone() }, Modifier.testTag("onboardingStart"))
+            pro.perfectproduct.cramin.ui.components.PrimaryAction(stringResource(if (hasKey) R.string.onboarding_start else R.string.onboarding_skip), { focus.clearFocus(); keyboard?.hide(); vm.finishOnboarding(onDone) }, Modifier.testTag("onboardingStart"))
         }
     }
 }

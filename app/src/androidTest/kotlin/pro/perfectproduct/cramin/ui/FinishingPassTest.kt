@@ -15,6 +15,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -33,6 +34,7 @@ import pro.perfectproduct.cramin.util.Lang
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 /** Only the four revised areas. System font/width are supplied by the emulator, including dialog windows. */
 class FinishingPassTest {
@@ -40,10 +42,29 @@ class FinishingPassTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val dir = File(context.cacheDir, "finish-${System.nanoTime()}").apply { mkdirs() }
     private val keyChecks = AtomicInteger()
+    private val onboardingWriteGate = AtomicReference<CompletableDeferred<Unit>?>()
+    private val onboardingWriteStarted = CompletableDeferred<Unit>()
     private val fake = FakeLlmClient()
     private val container = object : AppContainer(context,
         databaseProvider = { CraminDatabase.inMemory(context) },
-        settingsDataStoreProvider = { scope -> PreferenceDataStoreFactory.create(scope = scope) { File(dir, "settings.preferences_pb") } },
+        settingsDataStoreProvider = { scope ->
+            val store = PreferenceDataStoreFactory.create(scope = scope) { File(dir, "settings.preferences_pb") }
+            object : androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> {
+                override val data = store.data
+                override suspend fun updateData(transform: suspend (androidx.datastore.preferences.core.Preferences) -> androidx.datastore.preferences.core.Preferences) =
+                    store.updateData { current ->
+                        val updated = transform(current)
+                        val done = androidx.datastore.preferences.core.booleanPreferencesKey("onboarding_done")
+                        if (current[done] != true && updated[done] == true) {
+                            onboardingWriteGate.get()?.let { gate ->
+                                onboardingWriteStarted.complete(Unit)
+                                gate.await()
+                            }
+                        }
+                        updated
+                    }
+            }
+        },
         secretsDataStoreProvider = { scope -> PreferenceDataStoreFactory.create(scope = scope) { File(dir, "secrets.preferences_pb") } },
         secretCipher = PlainCipher()) {
         override val llmClient get() = fake
@@ -70,6 +91,36 @@ class FinishingPassTest {
         repeat(2) { i -> container.db.cardDao().insertCard(CardEntity(documentId=id,lemmaKey="word$i",meaningKey="meaning$i",lemma="word$i",lemmaVocalized=null,pos=Pos.NOUN,lang="en",targetLang="ru",status=CardStatus.NEW,starred=i==0,firstSentenceIdx=i,updatedAt=1,category=if(partial && i==0) TopicCategory.CORE else null)) }
         container.db.documentDao().setCategoryMask(id, if(partial) 1 else 3)
         return id
+    }
+
+    @Test fun onboardingWaitsForDurableSettingsBeforeLeaving() {
+        val release = CompletableDeferred<Unit>()
+        onboardingWriteGate.set(release)
+        try {
+            compose.setContent {
+                CompositionLocalProvider(LocalContainer provides container) {
+                    CraminTheme { Surface(Modifier.fillMaxSize()) { CraminNavHost(Routes.ONBOARDING) } }
+                }
+            }
+            awaitTag("onboardingStart")
+            compose.onNodeWithTag("onboardingStart").performClick()
+            compose.waitUntil(5000) {
+                onboardingWriteStarted.isCompleted || compose.onAllNodesWithTag("libraryCreate").fetchSemanticsNodes().isNotEmpty()
+            }
+            // Removing the onboarding entry must not cancel its still-pending settings write.
+            compose.onNodeWithTag("libraryCreate").assertDoesNotExist()
+            compose.onNodeWithTag("onboardingStart").assertIsDisplayed()
+            assertTrue("The real DataStore update must be pending", onboardingWriteStarted.isCompleted)
+            assertFalse(runBlocking { container.settingsStore.current().onboardingDone })
+            release.complete(Unit)
+            awaitTag("libraryCreate")
+            assertTrue(runBlocking { container.settingsStore.current().onboardingDone })
+            assertTrue(fake.requests.isEmpty())
+            assertEquals(0, keyChecks.get())
+        } finally {
+            release.complete(Unit)
+            onboardingWriteGate.set(null)
+        }
     }
 
     @Test fun affectedNavigationAndSelectionStayOffline() {
