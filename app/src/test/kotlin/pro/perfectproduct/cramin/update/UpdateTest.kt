@@ -59,8 +59,8 @@ class UpdateTest {
 
     @Test
     fun compareWithCurrentVersion() = runTest {
-        server.enqueue(MockResponse(body = releaseJson("v0.1.10", "https://x/apk", null)))
-        server.enqueue(MockResponse(body = releaseJson("v0.1.11", "https://x/apk", null)))
+        server.enqueue(MockResponse(body = releaseJson("v0.1.10", "https://x/apk", "https://x/sha")))
+        server.enqueue(MockResponse(body = releaseJson("v0.1.11", "https://x/apk", "https://x/sha")))
         server.enqueue(MockResponse(code = 404))
         server.enqueue(MockResponse(code = 500))
         val checker = UpdateChecker(OkHttpClient(), currentVersionCode = 10, url = server.url("/latest").toString())
@@ -69,6 +69,24 @@ class UpdateTest {
         assertTrue(available is UpdateCheck.Available && available.release.versionCode == 11)
         assertTrue(checker.check() is UpdateCheck.UpToDate) // релизов ещё нет
         assertTrue(checker.check() is UpdateCheck.Error)
+    }
+
+    @Test
+    fun rejectsWrongChannelAndIncompleteRelease() {
+        val valid = releaseJson("v0.1.42", "https://x/apk", "https://x/sha")
+        assertNull(UpdateChecker.parse(valid.replace("\"prerelease\":false", "\"prerelease\":true")))
+        assertNull(UpdateChecker.parse(valid.replace("cramin-v0.1.42.apk\"", "cramin-v0.1.42-debug.apk\"")))
+        assertNull(UpdateChecker.parse(releaseJson("v0.1.42", "https://x/apk", null)))
+        assertNull(UpdateChecker.versionCodeFromTag("v1.0.42"))
+        assertNull(UpdateChecker.versionCodeFromTag("v0.2.42"))
+        assertNull(UpdateChecker.versionCodeFromTag("v0.1.42-debug"))
+    }
+
+    @Test
+    fun debugDoesNotDiscoverPublicRelease() = runTest {
+        val checker = UpdateChecker(OkHttpClient(), 37, server.url("/latest").toString(), enabled = false)
+        assertEquals(UpdateCheck.UpToDate(37), checker.check())
+        assertEquals(0, server.requestCount)
     }
 
     @Test

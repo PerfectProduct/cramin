@@ -42,8 +42,11 @@ class UpdateChecker(
     private val http: OkHttpClient,
     private val currentVersionCode: Int,
     private val url: String = LATEST_URL,
+    private val enabled: Boolean = true,
 ) {
     suspend fun check(): UpdateCheck = withContext(Dispatchers.IO) {
+        // Public releases belong to the release package; there is no public debug channel.
+        if (!enabled) return@withContext UpdateCheck.UpToDate(currentVersionCode)
         try {
             val request = Request.Builder().url(url).header("Accept", "application/vnd.github+json").header("User-Agent", "Cramin").build()
             http.newCall(request).useCancellable { resp ->
@@ -62,17 +65,17 @@ class UpdateChecker(
         private const val TAG = "Update"
         const val LATEST_URL = "https://api.github.com/repos/PerfectProduct/cramin/releases/latest"
         private val json = Json { ignoreUnknownKeys = true }
-        private val TAG_REGEX = Regex("^v(\\d+)\\.(\\d+)\\.(\\d+)$")
+        private val TAG_REGEX = Regex("^v0\\.1\\.([1-9]\\d*)$")
 
         /** `v0.1.42` → 42; null для чужого формата. */
-        fun versionCodeFromTag(tag: String): Int? = TAG_REGEX.matchEntire(tag.trim())?.groupValues?.get(3)?.toIntOrNull()
+        fun versionCodeFromTag(tag: String): Int? = TAG_REGEX.matchEntire(tag.trim())?.groupValues?.get(1)?.toIntOrNull()
 
         fun parse(text: String): ReleaseInfo? {
             val r = runCatching { json.decodeFromString<GhRelease>(text) }.getOrNull() ?: return null
-            if (r.draft) return null
+            if (r.draft || r.prerelease) return null
             val code = versionCodeFromTag(r.tag_name) ?: return null
-            val apk = r.assets.firstOrNull { it.name.endsWith(".apk") } ?: return null
-            val sha = r.assets.firstOrNull { it.name == apk.name + ".sha256" }
+            val apk = r.assets.singleOrNull { it.name == "cramin-${r.tag_name.trim()}.apk" } ?: return null
+            val sha = r.assets.singleOrNull { it.name == apk.name + ".sha256" } ?: return null
             return ReleaseInfo(
                 tagName = r.tag_name.trim(),
                 versionCode = code,
@@ -81,7 +84,7 @@ class UpdateChecker(
                 apkUrl = apk.browser_download_url,
                 apkName = apk.name,
                 apkSize = apk.size,
-                sha256Url = sha?.browser_download_url,
+                sha256Url = sha.browser_download_url,
             )
         }
 

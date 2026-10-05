@@ -1,4 +1,4 @@
-# Инструментированные тесты на эмуляторе API 34 x86_64 (SPEC §12.3). Тесты @LiveApi исключены.
+# Инструментированные fake-API тесты: API 26 и 36 x86_64. Live/external sources исключены.
 name: instrumented
 
 on:
@@ -16,6 +16,10 @@ jobs:
   emulator:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [26, 36]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -37,7 +41,7 @@ jobs:
       - name: Connected tests (without @LiveApi)
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: ${{ matrix.api }}
           arch: x86_64
           target: google_apis
           profile: pixel_6
@@ -45,13 +49,13 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             adb start-server
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.notAnnotation=pro.perfectproduct.cramin.LiveApi --no-daemon
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.notAnnotation=pro.perfectproduct.cramin.LiveApi,pro.perfectproduct.cramin.ExternalSource --no-daemon
 
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: instrumented-reports
+          name: instrumented-reports-api${{ matrix.api }}
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/

@@ -221,7 +221,8 @@ class UiFlowsTest {
         val args = androidx.test.platform.app.InstrumentationRegistry.getArguments()
         if (args.getString("captureDocumentActions") != "true") return
         val dir = args.getString("additionalTestOutputDir") ?: return
-        val bitmap = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        // Some headless API26 images cannot capture a frame; UI assertions still run.
+        val bitmap = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot() ?: return
         java.io.File(dir, "document-actions-$tab.png").outputStream().use {
             bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
         }
@@ -398,7 +399,8 @@ class UiFlowsTest {
     private fun reviewShot(name: String) {
         compose.waitForIdle()
         val dir = java.io.File(context.getExternalFilesDir(null), "navigation-review").apply { mkdirs() }
-        val bitmap = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        // Some headless API26 images cannot capture a frame; UI assertions still run.
+        val bitmap = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot() ?: return
         try { java.io.File(dir, "extra-$name.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) } } finally { bitmap.recycle() }
     }
 

@@ -152,7 +152,7 @@ open class AppContainer(
     val apkInstaller: pro.perfectproduct.cramin.update.ApkInstaller by lazy { pro.perfectproduct.cramin.update.ApkInstaller(appContext) }
     open val updateManager: pro.perfectproduct.cramin.update.UpdateManager by lazy {
         pro.perfectproduct.cramin.update.UpdateManager(
-            checker = pro.perfectproduct.cramin.update.UpdateChecker(httpClient, BuildConfig.VERSION_CODE),
+            checker = pro.perfectproduct.cramin.update.UpdateChecker(httpClient, BuildConfig.VERSION_CODE, enabled = !BuildConfig.DEBUG),
             downloader = pro.perfectproduct.cramin.update.ApkDownloader(httpClient, appContext.cacheDir),
             installer = apkInstaller,
             scope = appScope,

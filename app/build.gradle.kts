@@ -141,6 +141,11 @@ android {
         animationsDisabled = true
     }
 
+    // Instrument an unchanged signed release APK; fixtures stay in the test APK.
+    testBuildType = providers.gradleProperty("androidTestBuildType").getOrElse("debug").also {
+        require(it in setOf("debug", "release")) { "androidTestBuildType must be debug or release" }
+    }
+
     packaging {
         resources.excludes += setOf(
             "META-INF/LICENSE*",

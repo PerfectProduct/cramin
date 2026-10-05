@@ -1,5 +1,5 @@
 # Релиз (SPEC §12.2–§12.3): workflow_dispatch на main. Версия из git rev-list --count HEAD,
-# подпись из секретов, сверка отпечатка, SHA-256, GitHub Release v0.1.<N> с двумя ассетами.
+# подпись из секретов, SHA-256, exact source kit и draft Release v0.1.<N>.
 # Права contents: write выданы только джобе release.
 name: release
 
@@ -42,7 +42,7 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          ./gradlew assembleDebug testDebugUnitTest lintDebug -Plive=false --no-daemon > "$RUNNER_TEMP/release-gates.log" 2>&1
+          ./gradlew assembleDebug testDebugUnitTest lintDebug lintRelease -Plive=false --no-daemon > "$RUNNER_TEMP/release-gates.log" 2>&1
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test -z "$(git status --porcelain)"
 
@@ -85,17 +85,20 @@ jobs:
           echo "apk=dist/cramin-$TAG.apk" >> "$GITHUB_OUTPUT"
           echo "sha=dist/cramin-$TAG.apk.sha256" >> "$GITHUB_OUTPUT"
 
-      - name: Release notes from git log
+      - name: Package matching sources and notices
         run: |
-          PREV=$(git describe --tags --abbrev=0 --match 'v0.1.*' 2>/dev/null || true)
-          {
-            echo "Cramin ${{ steps.version.outputs.tag }}"
-            echo
-            if [ -n "$PREV" ]; then git log --pretty='- %s' "$PREV..HEAD"; else git log --pretty='- %s' -n 50; fi
-          } > notes.md
-          cat notes.md
+          python3 scripts/package-source-kit.py --output dist
+          cp docs/RELEASE-NOTES.md dist/release-notes.md
+          cp docs/DISTRIBUTION.md dist/DISTRIBUTION.md
+          cp docs/THIRD_PARTY_NOTICES.md dist/THIRD_PARTY_NOTICES.md
+          (cd dist && zip -qr cramin-${{ steps.version.outputs.tag }}-notices.zip source-kit/legal DISTRIBUTION.md THIRD_PARTY_NOTICES.md source-kit/LICENSE)
+          (cd dist && sha256sum *.apk *.zip > SHA256SUMS)
 
-      - name: Create GitHub Release
+      - name: Release notes from reviewed document
+        run: |
+          sed "s/0.1.N/0.1.${{ steps.version.outputs.code }}/g" docs/RELEASE-NOTES.md > notes.md
+
+      - name: Create draft GitHub Release (publication requires review)
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ github.sha }}
@@ -103,10 +106,13 @@ jobs:
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test -z "$(git ls-remote --tags origin refs/tags/${{ steps.version.outputs.tag }})"
           gh release create "${{ steps.version.outputs.tag }}" \
+            --draft \
             --target "$RELEASE_SHA" \
             --title "Cramin ${{ steps.version.outputs.tag }}" \
             --notes-file notes.md \
-            "${{ steps.assets.outputs.apk }}" "${{ steps.assets.outputs.sha }}"
+            "${{ steps.assets.outputs.apk }}" "${{ steps.assets.outputs.sha }}" \
+            "dist/cramin-${{ steps.version.outputs.tag }}-source-kit.zip" \
+            "dist/cramin-${{ steps.version.outputs.tag }}-notices.zip" "dist/SHA256SUMS"
 
       - name: Preserve gate reports
         if: always()

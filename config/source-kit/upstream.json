@@ -1,0 +1,50 @@
+[
+  {
+    "repository": "TeamNewPipe/NewPipeExtractor",
+    "ref": "v0.26.5",
+    "commit": "f9e6bb808f82bf3e4dc1f2a29a16fd376931c8ef",
+    "url": "https://codeload.github.com/TeamNewPipe/NewPipeExtractor/tar.gz/f9e6bb808f82bf3e4dc1f2a29a16fd376931c8ef",
+    "file": "TeamNewPipe-NewPipeExtractor-f9e6bb808f82bf3e4dc1f2a29a16fd376931c8ef.tar.gz",
+    "sha256": "648d2717a2f967c2e4f7303436404ff08a9b455a4bf7bc5923bdbba4a49b180c"
+  },
+  {
+    "repository": "TeamNewPipe/nanojson",
+    "ref": "e9d656ddb49a412a5a0a5d5ef20ca7ef09549996",
+    "commit": "e9d656ddb49a412a5a0a5d5ef20ca7ef09549996",
+    "url": "https://codeload.github.com/TeamNewPipe/nanojson/tar.gz/e9d656ddb49a412a5a0a5d5ef20ca7ef09549996",
+    "file": "TeamNewPipe-nanojson-e9d656ddb49a412a5a0a5d5ef20ca7ef09549996.tar.gz",
+    "sha256": "20a700fb8bbab554577b2fbe3868b9eb82ac46ec9c8396d743d47fb3f9170ef6"
+  },
+  {
+    "repository": "mozilla/rhino",
+    "ref": "Rhino1_8_1_Release",
+    "commit": "f2d1ffef9dafbd625ca1ea79b8893ecbaee07e61",
+    "url": "https://codeload.github.com/mozilla/rhino/tar.gz/f2d1ffef9dafbd625ca1ea79b8893ecbaee07e61",
+    "file": "mozilla-rhino-f2d1ffef9dafbd625ca1ea79b8893ecbaee07e61.tar.gz",
+    "sha256": "a41771dad7f746ec23d775e0bc5634b14810d67306aae160c696d0cbce92badb"
+  },
+  {
+    "repository": "TomRoush/PdfBox-Android",
+    "ref": "v2.0.27.0",
+    "commit": "45da92629dad5b3c9887eceefecc89a1423f5457",
+    "url": "https://codeload.github.com/TomRoush/PdfBox-Android/tar.gz/45da92629dad5b3c9887eceefecc89a1423f5457",
+    "file": "TomRoush-PdfBox-Android-45da92629dad5b3c9887eceefecc89a1423f5457.tar.gz",
+    "sha256": "95ab8ae7e195b63581a96c41e73b2b46d914648df622db92305998f97ff4eb7c"
+  },
+  {
+    "repository": "google/desugar_jdk_libs",
+    "ref": "73170c3",
+    "commit": "73170c345e6a762fc6a1f0301bb15218850023ef",
+    "url": "https://codeload.github.com/google/desugar_jdk_libs/tar.gz/73170c345e6a762fc6a1f0301bb15218850023ef",
+    "file": "google-desugar_jdk_libs-73170c345e6a762fc6a1f0301bb15218850023ef.tar.gz",
+    "sha256": "4cd2faa88ecb2450522fd4f0dcd11d6df878d7197b2276fb35532c50267f7a64"
+  },
+  {
+    "repository": "liberationfonts/liberation-fonts",
+    "ref": "2.1.5",
+    "commit": "4b0192046158094654e865245832c66d2104219e",
+    "url": "https://codeload.github.com/liberationfonts/liberation-fonts/tar.gz/4b0192046158094654e865245832c66d2104219e",
+    "file": "liberationfonts-liberation-fonts-4b0192046158094654e865245832c66d2104219e.tar.gz",
+    "sha256": "fa7bdde21ad476b24786f5563b468fd0dd4c5dd4b9ecf48a20f17b13d84f26a8"
+  }
+]

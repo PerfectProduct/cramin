@@ -1,0 +1,13 @@
+Cramin source code: Copyright (c) 2026 PerfectProduct, MIT (LICENSE).
+This notice does not authorize public distribution of the combined APK.
+NewPipeExtractor v0.26.5: GPL-3.0-or-later, original copyright/licence retained.
+Rhino 1.8.1: MPL-2.0, original NOTICE retained.
+PdfBox-Android 2.0.27.0: Apache-2.0, original NOTICE retained.
+Desugar JDK libraries 2.1.5: GPL-2.0 with Classpath Exception; configuration BSD-3-Clause.
+Liberation Sans PDF resource: SIL Open Font License 1.1, copyright retained.
+All exact resolved components, versions, source references and original notices:
+  docs/COMPONENT-LICENSES.md
+  docs/THIRD_PARTY_NOTICES.md
+  app/src/main/assets/legal/inventory.json, index.json and numbered licence texts.
+Original licence texts are shipped offline in Settings > Licences and in source/notices kits.
+Combined-distribution proposal and pending owner decision: docs/DISTRIBUTION.md.

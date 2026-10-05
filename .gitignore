@@ -25,3 +25,7 @@ build/
 
 # --- Локальные настройки агента ---
 .claude/settings.local.json
+
+# Python validation caches
+__pycache__/
+/release-candidate/
