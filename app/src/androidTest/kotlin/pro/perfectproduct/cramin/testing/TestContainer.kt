@@ -29,9 +29,10 @@ class TestContainer(
     val fakeLlm: FakeLlmClient = FakeLlmClient(),
     val config: ModelsConfigFile = FAKE_CONFIG,
     private val dir: File = File(context.cacheDir, "test-${System.nanoTime()}").apply { mkdirs() },
+    databaseProvider: () -> CraminDatabase = { CraminDatabase.inMemory(context) },
 ) : AppContainer(
     appContext = context,
-    databaseProvider = { CraminDatabase.inMemory(context) },
+    databaseProvider = databaseProvider,
     settingsDataStoreProvider = { scope -> PreferenceDataStoreFactory.create(scope = scope) { File(dir, "settings.preferences_pb") } },
     secretsDataStoreProvider = { scope -> PreferenceDataStoreFactory.create(scope = scope) { File(dir, "secrets.preferences_pb") } },
     secretCipher = PlainCipher(),

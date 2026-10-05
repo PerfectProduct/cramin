@@ -27,10 +27,16 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import pro.perfectproduct.cramin.app.CraminApp
 import pro.perfectproduct.cramin.app.MainActivity
 import pro.perfectproduct.cramin.data.db.CardEntity
 import pro.perfectproduct.cramin.data.db.CardStatus
+import pro.perfectproduct.cramin.data.db.CraminDatabase
 import pro.perfectproduct.cramin.data.db.DocStatus
 import pro.perfectproduct.cramin.data.db.DocumentEntity
 import pro.perfectproduct.cramin.data.db.OccurrenceEntity
@@ -233,9 +239,59 @@ class UiFlowsTest {
     fun libraryRowOpensStudyPreparation() = runBlocking<Unit> {
         val id = seedDocument()
         scenario = ActivityScenario.launch(MainActivity::class.java)
+        assertLibraryRowOpensStudyPreparation(id)
+    }
+
+    @Test
+    fun libraryRowOpensStudyPreparationAfterDelayedRoomQuery() = runBlocking<Unit> {
+        // Hold real Room queries after seeding: Compose can be idle while the library is empty.
+        val queryGate = AtomicReference<CountDownLatch?>()
+        val queryStarted = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val executor = Executors.newSingleThreadExecutor()
+        val timer = Executors.newSingleThreadScheduledExecutor()
+        val gatedExecutor = Executor { task ->
+            executor.execute {
+                queryGate.get()?.let { gate ->
+                    queryStarted.countDown()
+                    check(gate.await(10, TimeUnit.SECONDS)) { "Room query gate timed out" }
+                }
+                task.run()
+            }
+        }
+        try {
+            container.db.close()
+            container = TestContainer(context, databaseProvider = {
+                androidx.room.Room.inMemoryDatabaseBuilder(context, CraminDatabase::class.java)
+                    .allowMainThreadQueries()
+                    .setQueryExecutor(gatedExecutor)
+                    .build()
+            })
+            container.settingsStore.setOnboardingDone(true)
+            app.container = container
+            val id = seedDocument()
+            queryGate.set(release)
+            scenario = ActivityScenario.launch(MainActivity::class.java)
+            compose.waitForIdle()
+            org.junit.Assert.assertTrue("Room query must be held", queryStarted.await(5, TimeUnit.SECONDS))
+            compose.onNodeWithText("Riverside Library").assertDoesNotExist()
+            // Controlled external-work latency, not a sleep/retry of the UI assertion.
+            timer.schedule({ release.countDown() }, 1, TimeUnit.SECONDS)
+            assertLibraryRowOpensStudyPreparation(id)
+        } finally {
+            release.countDown()
+            scenario?.close()
+            scenario = null
+            timer.shutdownNow()
+            executor.shutdown()
+        }
+    }
+
+    private fun assertLibraryRowOpensStudyPreparation(id: Long) {
+        // Room's first emission is external work; Compose idle alone does not await it.
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
         compose.onNodeWithText("Riverside Library").assertIsDisplayed()
         compose.onNodeWithTag("allUnlearned").assertIsDisplayed()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
         compose.onNodeWithTag("doc-$id").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("studyButton").assertIsDisplayed()
@@ -371,7 +427,8 @@ class UiFlowsTest {
         val original = banks.associateWith { container.cardRepository.getStatus(it) }
         val before = container.cardRepository.sharedDeckCards(pro.perfectproduct.cramin.util.Lang.EN, pro.perfectproduct.cramin.util.Lang.RU).single()
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithTag("allUnlearned").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("allUnlearned")).fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag("allUnlearned").assertIsDisplayed().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("allDeckStudy")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("allDeckStudy").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
