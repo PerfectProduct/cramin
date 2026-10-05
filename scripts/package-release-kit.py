@@ -42,6 +42,9 @@ def main():
     subprocess.run(['python3', str(ROOT/'scripts/audit-release-inputs.py'), '--apk', str(a.apk)], check=True)
     # These tests exercise the actual packaged offline licence files.
     with zipfile.ZipFile(a.apk) as z:
+        provenance = z.read('META-INF/version-control-info.textproto').decode()
+        if re.findall(r'revision:\s*"([a-f0-9]{40})"', provenance) != [head]:
+            raise SystemExit('APK embedded git revision differs from committed source')
         for f in (ROOT/'app/src/main/assets/legal').iterdir():
             if f.is_file() and z.read('assets/legal/'+f.name) != f.read_bytes():
                 raise SystemExit('APK legal asset differs from source: '+f.name)
@@ -76,6 +79,7 @@ def main():
         z.writestr('CRAMIN-NOTICES.json',json.dumps(dict(commit=head,versionCode=code,versionName=version,distribution=metadata['distribution']),indent=2)+'\n')
     assets=[apk,target/(apk.name+'.sha256'),target/f'cramin-{tag}-source-kit.zip',notices,target/'RELEASE-NOTES.md']
     artifact_data=dict(commit=head,branch=git('branch','--show-current'),versionCode=code,versionName=version,tag=tag,
+        apkGitRevision=head,
         applicationId='pro.perfectproduct.cramin',distribution=metadata['distribution'],
         certificateSha256=(ROOT/'release-signing/cert-sha256.txt').read_text().strip(),
         signatureSchemes=['v2','v3'],published=False,

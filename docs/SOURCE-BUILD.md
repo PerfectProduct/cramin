@@ -62,5 +62,5 @@ python3 build-support/scripts/rebuild-desugar.py \
 Без кэша скрипт скачивает только публичные исходники с проверкой закреплённых SHA-256.
 
 Единый release kit из чистого HEAD: `python3 scripts/package-release-kit.py --apk /absolute/signed.apk --output /absolute/dist`.
-Упаковщик проверяет пакет/версию/сертификат и legal assets APK, включает DISTRIBUTION-LICENSE,
+Упаковщик проверяет пакет/версию/сертификат, встроенный git revision и legal assets APK, включает DISTRIBUTION-LICENSE,
 source kit, notices, release notes, ARTIFACTS.json и SHA256SUMS. `/dist/` исключён из git.
