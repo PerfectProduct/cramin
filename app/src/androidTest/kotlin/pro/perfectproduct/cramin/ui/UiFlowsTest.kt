@@ -5,10 +5,13 @@ import android.content.Intent
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -318,15 +321,69 @@ class UiFlowsTest {
         compose.onNodeWithTag("autoplay").assertContentDescriptionEquals(description)
     }
 
+    private fun startDocumentStudy() {
+        // The button exists disabled until Room publishes the selected deck size.
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasTestTag("studyButton") and isEnabled()).fetchSemanticsNodes().size == 1
+        }
+        compose.onNodeWithTag("studyButton").assertIsDisplayed().assertIsEnabled().performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    @Test
+    fun studyStartsAfterDelayedDeckSelection() = runBlocking<Unit> {
+        val holdSelection = java.util.concurrent.atomic.AtomicBoolean(false)
+        val queryStarted = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(4)
+        val timer = Executors.newSingleThreadScheduledExecutor()
+        try {
+            container.db.close()
+            container = TestContainer(context, databaseProvider = {
+                androidx.room.Room.inMemoryDatabaseBuilder(context, CraminDatabase::class.java)
+                    .allowMainThreadQueries()
+                    .setQueryExecutor(executor)
+                    .setQueryCallback({ sql, _ ->
+                        // Hold only the real selection query; the document and counts can load.
+                        if (holdSelection.get() && sql == "SELECT * FROM Card WHERE documentId = ? ORDER BY firstSentenceIdx, id") {
+                            queryStarted.countDown()
+                            check(release.await(10, TimeUnit.SECONDS)) { "Deck selection query gate timed out" }
+                        }
+                    }, Executor { it.run() })
+                    .build()
+            })
+            container.settingsStore.setOnboardingDone(true)
+            app.container = container
+            val id = seedDocument()
+            holdSelection.set(true)
+            scenario = ActivityScenario.launch(MainActivity::class.java)
+            compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
+            compose.onNodeWithTag("doc-$id").performClick()
+            compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().size == 1 }
+            org.junit.Assert.assertTrue("Deck selection query must be held", queryStarted.await(5, TimeUnit.SECONDS))
+            compose.onNodeWithTag("studyButton").assertIsDisplayed().assertIsNotEnabled()
+            // A single controlled release, without retrying clicks or changing Compose time.
+            timer.schedule({ release.countDown() }, 1, TimeUnit.SECONDS)
+            startDocumentStudy()
+            compose.onNodeWithTag("counter").assertTextContains("1 / 2")
+            compose.onNodeWithTag("cardFront").assertIsDisplayed()
+            assertEquals(0, container.fakeLlm.requests.size)
+        } finally {
+            release.countDown()
+            scenario?.close()
+            scenario = null
+            timer.shutdownNow()
+            executor.shutdown()
+        }
+    }
+
     @Test
     fun autoplayPausesOnCancelledPointerAndPauseButtonDoesNotRestart() = runBlocking<Unit> {
         val id = seedDocument()
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
         compose.onNodeWithTag("doc-$id").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("studyButton").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
+        startDocumentStudy()
         // Accessibility action has no preceding pointer-down.
         compose.onNodeWithTag("autoplay").performClick()
         awaitAutoplayDescription(pro.perfectproduct.cramin.R.string.study_pause)
@@ -348,9 +405,7 @@ class UiFlowsTest {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
         compose.onNodeWithTag("doc-$id").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("studyButton").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
+        startDocumentStudy()
 
         // Тап переворачивает.
         compose.onNodeWithTag("cardFront").assertIsDisplayed()
@@ -400,9 +455,7 @@ class UiFlowsTest {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("doc-$id")).fetchSemanticsNodes().size == 1 }
         compose.onNodeWithTag("doc-$id").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("studyButton")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("studyButton").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("flashCard")).fetchSemanticsNodes().isNotEmpty() }
+        startDocumentStudy()
         compose.onNodeWithTag("flashCard").performTouchInput { swipeRight() }
         compose.waitUntil(5_000) { runBlocking { container.cardRepository.getStatus(cardId(id, "bank")) } == CardStatus.KNOWN }
         compose.onNodeWithTag("studyClose").performClick()
