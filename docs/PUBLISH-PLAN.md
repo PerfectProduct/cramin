@@ -1,92 +1,114 @@
-# План публикации (команды подготовлены, не выполнены)
+# Внешние действия: этапы разрешаются отдельно
 
-Remote: `origin = git@github.com:PerfectProduct/cramin.git`; кандидат на `feat/v1`.
-Точный исходный SHA/версия записаны в ARTIFACTS.json рядом с APK. Локальные теги отсутствовали.
-На GitHub при подготовке были только main (8d5e5291…), 0 workflows и 0 releases;
-анонимные latest release и main/config/models.json возвращали 404. Отсутствие модели
-не блокирует локальную встроенную конфигурацию. Эти ответы не проверяют будущую публикацию.
-Публичный релиз требует решения о GPL условиях APK и согласованного финального APK/source kit.
-Техническая проверка desugar закрыта в DESUGAR-REVIEW.md. APK 0.1.38 остаётся предыдущим
-кандидатом; коммит этой проверки увеличивает git-count версию. Новый подписанный кандидат
-собирается после лицензионного решения и получает комплект из того же нового HEAD.
-Если эти решения приводят к коммитам, старый APK перестаёт быть финальным: соберите новый комплект.
+Локальный комплект готовится из `feat/v1`, origin `git@github.com:PerfectProduct/cramin.git`.
+Точный кандидат: **{{RELEASE_HEAD}}**, версия **{{RELEASE_VERSION}}**. Эти placeholders в
+репозиторном шаблоне заменяются упаковщиком в выдаваемом плане. ARTIFACTS.json — источник
+точного SHA/версии; числа коммитов и теги нельзя угадывать или сохранять после новых коммитов.
+GPL-3.0-or-later путь утверждён; desugar подтверждён; debug migration отложена владельцем.
+Исторические отчёты 0.1.38/0.1.39 сохраняются; актуальные результаты — REPORT.md этого комплекта.
+GitHub CI/discovery ещё не считаются пройденными. Ниже только подготовленные команды.
 
-Предлагаемый способ сохранить SHA и версию кандидата — fast-forward `main` к `feat/v1`.
-Сначала сверить remote; если main не предок feat/v1, остановиться и выбрать merge с новым
-кандидатом либо согласованный иной способ. Не применять force-push, reset удалённой ветки или squash:
-versionCode зависит от достижимой истории, squash может уменьшить его.
+## Этап 1 — требуется разрешение только push feat/v1 и draft PR
 
-После явного разрешения push/создания draft PR и решения о лицензиях:
+PR title: **Prepare Cramin first public release under GPL-3.0-or-later**.
+Точный body — PR-FIRST-RELEASE.md рядом с этим планом; SHA/версия в нём уже подставлены.
+Выполнять из checkout /home/dev/cramin, а путь CRAMIN_FINAL_KIT задавать на final-local.
+
 ```bash
-git fetch origin --tags
+CRAMIN_FINAL_KIT=/home/dev/cramin/release-candidate/final-local/dist
+CRAMIN_EXPECTED_SHA=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["commit"])' "$CRAMIN_FINAL_KIT/ARTIFACTS.json")
 git switch feat/v1
-git status --short
+test -z "$(git status --porcelain)"
+test "$(git rev-parse HEAD)" = "$CRAMIN_EXPECTED_SHA"
+git fetch origin --tags
 git log --oneline origin/main..feat/v1
-git merge-base --is-ancestor origin/main feat/v1
+# Если origin/main уже изменился, оценить PR diff; не merge/rebase без нового кандидата.
 git push origin feat/v1
-# Дождаться успешного ci для точного SHA; не принимать зелёный статус чужого коммита.
-gh run list --repo PerfectProduct/cramin --branch feat/v1 --workflow ci.yml
-# На default branch пока нет workflow: workflow_dispatch до появления YAML в main не работает.
-# Отдельно разрешённый draft PR запустит pull_request Android matrix:
 gh pr create --repo PerfectProduct/cramin --head feat/v1 --base main --draft \
-  --title "Prepare Cramin first public release" --body-file docs/PR-FIRST-RELEASE.md
+  --title "Prepare Cramin first public release under GPL-3.0-or-later" \
+  --body-file "$CRAMIN_FINAL_KIT/PR-FIRST-RELEASE.md"
 gh run list --repo PerfectProduct/cramin --branch feat/v1
-# gh run watch <RUN_ID> --repo PerfectProduct/cramin --exit-status для обоих workflow.
+gh pr view --repo PerfectProduct/cramin --json headRefOid,baseRefName,isDraft,statusCheckRollup
+# gh run watch <RUN_ID> --repo PerfectProduct/cramin --exit-status
 ```
 
-Обязательные secrets (без значений): ANDROID_KEYSTORE_BASE64 (существующий постоянный PKCS12),
-ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS. Текущий CI предполагает равные store/key passwords.
-Если они разные — нужен отдельный ANDROID_KEY_PASSWORD и изменение loadReleaseSigning/workflow.
-`GH_TOKEN` release берёт из встроенного github.token; отдельный персональный токен не нужен.
-OPENROUTER_API_KEY в CI не нужен, живые тесты не запускать. Безопасно проверить имена:
-`gh secret list --repo PerfectProduct/cramin`. Не запускать setup-secrets.sh для создания нового ключа.
-Сделать две защищённые копии постоянного ключа; наличие этих копий проверяет владелец.
+Ожидаются `ci.yml` (push и pull_request: assembleDebug, JVM, lintDebug) и
+`instrumented.yml` (pull_request: fake API, API26/36). Проверить push run на точном head SHA;
+PR run может собирать синтетический merge commit GitHub — зафиксировать его SHA и PR headRefOid.
+Не выдавать PR merge SHA за подписанный локальный APK. Live/external API tests исключены.
+Если workflow не запускается (например, политика fork/Actions permissions), это реальный
+внешний блокер; разобраться до следующего этапа. Workflow_dispatch доступен после YAML
+на default branch; существование локального YAML не доказывает CI.
+Первый этап не включает main, tags, release.yml или публикацию.
 
-Только после отдельного разрешения обновления main:
+## Этап 2 — отдельное разрешение обновить main
+
+Предлагается fast-forward, сохраняющий SHA/версию. Не применять squash/force-push.
+Если main не предок feat/v1, согласовать способ интеграции и собрать новый локальный комплект.
+
 ```bash
-# Создавать локальную main нужно лишь если её ещё нет; не перезаписывать существующую ветку.
-git switch main
+git fetch origin --tags
+git merge-base --is-ancestor origin/main feat/v1
+git switch main # если локальной main нет: git switch -c main origin/main
 git merge --ff-only origin/main
 git merge --ff-only feat/v1
 git push origin main
 gh workflow run instrumented.yml --repo PerfectProduct/cramin --ref main
-# дождаться ci + instrumented на точном main SHA, затем:
+# Дождаться ci и instrumented на точном SHA main; проверить набор секретов/SDK.
+```
+
+## Этап 3 — отдельное разрешение tag + draft release + upload
+
+[gh release create](https://cli.github.com/manual/gh_release_create) автоматически создаёт
+отсутствующий тег; `--target` выбирает commit. **`--draft` не делает создание git tag приватным**:
+команда может создать публичный тег. Разрешение на push/draft PR или только main не даёт
+разрешения на запуск release.yml. Нужно явно разрешить тег `v0.1.<code>`, создание draft и
+загрузку ассетов. Workflow сам вычислит versionCode из сохранённой полной истории.
+
+```bash
 gh workflow run release.yml --repo PerfectProduct/cramin --ref main
 gh run list --repo PerfectProduct/cramin --workflow release.yml --branch main
 # gh run watch <RELEASE_RUN_ID> --repo PerfectProduct/cramin --exit-status
 ```
 
-Workflow собирает **новый CI APK** из main. Не утверждать, что его hash равен локальному:
-скачать draft-ассеты, проверить sha256, подпись, package/versionCode, source metadata и точный commit.
-Если получился другой бинарник — провести smoke именно этого бинарника до публикации.
-Draft не обнаруживается `/releases/latest` и не является опубликованным релизом.
-Ассеты: cramin-v0.1.N.apk, .apk.sha256, cramin-v0.1.N-source-kit.zip,
-cramin-v0.1.N-notices.zip, SHA256SUMS. Размеры и checksum должны совпасть после скачивания.
+Signing secrets: `ANDROID_KEYSTORE_BASE64` (существующий постоянный PKCS12),
+`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`. PKCS12 store/key passwords равны по
+правилу проекта. Не создавать новый ключ; не выводить значения. Проверить два защищённых
+бэкапа существующего ключа вне git. Встроенный github.token даёт GH_TOKEN в release job;
+OpenRouter API key не нужен ни сборке, ни fake tests. CI/instrumented не требуют signing secrets.
 
-Перед публикацией: подтвердить GPL scope/уведомления, corresponding source, JVM/lint/Android CI,
-smoke final CI APK и правильный target SHA. Проверить анонимный доступ к repo/config/models.json;
-приватный repo не обеспечивает обычному пользователю discovery без авторизации.
-После отдельного разрешения публичного тега/релиза:
+Технические зависимости отдельно: JDK21, Android SDK platform36/build-tools36.0.0, Gradle wrapper
+9.8.0, Linux x86_64 API26/36 images, доступ к Maven/JitPack/GitHub и source archive downloads.
+Для package-release-kit.py SDK должен быть доступен через ANDROID_HOME/ANDROID_SDK_ROOT.
+Python3.11+ нужен hashlib.file_digest; десугар-рецепт отдельно требует Python3.12/zip/unzip и
+pinned tools, но release workflow не пересобирает его повторно. Source kit включает рецепт и доказательства.
+
+Workflow собирает новый CI APK и единый kit из github.sha: APK/.sha256, source-kit.zip,
+notices.zip, ARTIFACTS.json, RELEASE-NOTES.md и SHA256SUMS. Он не обязан совпасть побайтово с
+локальным APK. Скачать draft assets, проверить все SHA/подпись/package/version/commit/source
+manifest/notices. При другом CI бинарнике провести smoke именно его на API26/36.
+Draft отсутствует в `/releases/latest`; это ещё не проверка discovery.
+
+## Этап 4 — отдельное разрешение публикации
+
+После успешного CI и проверки CI APK/kit, когда точный тег/target SHA/ассеты подтверждены:
+
 ```bash
 gh release edit v0.1.N --repo PerfectProduct/cramin --draft=false
-# N заменить точным code из проверенного draft; не угадывать номер.
+# N взять из проверенного ARTIFACTS.json, не угадывать.
 gh release view v0.1.N --repo PerfectProduct/cramin --json tagName,isDraft,isPrerelease,assets
 curl --fail https://api.github.com/repos/PerfectProduct/cramin/releases/latest
 curl --fail https://raw.githubusercontent.com/PerfectProduct/cramin/main/config/models.json
 ```
 
-Проверка discovery требует реально опубликованного стабильного релиза и установленного release
-с меньшим code: «Проверить обновления» показывает тот же tag, заметки и APK, SHA-256 совпадает,
-Android подтверждает установку; документы/карточки/занятие сохраняются. Debug публичный канал
-не проверяет. При 404 отображается последняя версия, при HTTP/network ошибке — ошибка;
-недостающий checksum/неправильное имя/другой tag format отклоняются. При неудачной установке
-показывается ошибка; неправильный пакет/подпись/небольший code отвергаются до установки.
-Отмена пользователем и отсутствие install permission проверить на эмуляторе с опубликованными
-ассетами. GitHub discovery/CI до push не считаются пройденными.
+Проверить анонимную доступность repo, source kit, notices и model config. На совместимом
+release с меньшим code нажать «Проверить обновления»: тот же tag/notes/APK/checksum; Android
+подтверждает установку; документы/карточки/прогресс/настройки сохраняются. Проверить отказ
+install permission, отмену, сетевую ошибку; debug публичный release не ищет. 404/latest означает
+отсутствие более новой версии; ошибочные имена/tag/checksum/package/cert/code отклоняются.
+Контракт обновления в этой подготовке не меняется; реально опубликованный discovery
+остаётся обязательной внешней проверкой.
 
-Переход владельца: release ставится рядом с debug, оба приложения остаются. Новые документы —
-в release, старые занятия — в debug; не удалять debug и не чистить его данные. Автоматического
-переноса нет. Если все старые документы и прогресс должны оказаться в release, отдельно согласовать
-узкую миграцию/export-import и её тесты. Для первого публичного релиза новым пользователям она
-не нужна; для замены debug у владельца с сохранением истории — нужна. Ручное повторное создание
-материалов в release может стоить денег и не переносит статусы/сессии.
+Release владельца устанавливается рядом с debug. Старые документы/занятия остаются в debug;
+его нельзя удалять или очищать ради перехода. Автоматического переноса нет и он не проверен.
+Решение о переносе уже принято: отложено до после первого релиза, не является блокером выпуска.

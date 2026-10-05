@@ -1,5 +1,13 @@
 [
   {
+    "title": "Cramin APK — GPL-3.0-or-later",
+    "file": "DISTRIBUTION-LICENSE.txt"
+  },
+  {
+    "title": "Исходники Cramin — MIT",
+    "file": "CRAMIN-MIT.txt"
+  },
+  {
     "title": "TeamNewPipe/LICENSE",
     "file": "001.txt"
   },

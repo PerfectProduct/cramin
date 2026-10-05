@@ -62,7 +62,7 @@ def main():
     shutil.copyfile(ROOT / 'scripts/rebuild-desugar.py', support / 'rebuild-desugar.py')
     shutil.copytree(ROOT / 'scripts/desugar', support / 'desugar')
     shutil.copytree(ROOT / 'docs/release/desugar-evidence', stage / 'desugar-evidence')
-    for f in ['LICENSE', 'docs/SOURCE-BUILD.md', 'docs/DESUGAR-REVIEW.md', 'docs/DISTRIBUTION.md', 'docs/THIRD_PARTY_NOTICES.md', 'docs/COMPONENT-LICENSES.md', 'NOTICE']:
+    for f in ['LICENSE', 'DISTRIBUTION-LICENSE', 'docs/SOURCE-BUILD.md', 'docs/DESUGAR-REVIEW.md', 'docs/DISTRIBUTION.md', 'docs/THIRD_PARTY_NOTICES.md', 'docs/COMPONENT-LICENSES.md', 'NOTICE']:
         shutil.copyfile(ROOT / f, stage / pathlib.Path(f).name)
     # Only HEAD's reachable history; no remotes, reflog, local settings or private working files.
     bundle = stage / f'cramin-{head}.bundle'
@@ -70,7 +70,7 @@ def main():
     subprocess.run(['git', '-C', str(ROOT), 'bundle', 'verify', str(bundle)], check=True)
     subprocess.run(['git', '-C', str(ROOT), 'archive', '--format=tar.gz', '-o', str(stage / f'cramin-{head}.tar.gz'), 'HEAD'], check=True)
     metadata = dict(commit=head, versionCode=code, versionName=f'0.1.{code}',
-                    distribution='PENDING OWNER APPROVAL: see DISTRIBUTION.md',
+                    distribution='GPL-3.0-or-later combined APK; Cramin own sources retain MIT; dependency terms retained',
                     sourceLimitations='See SOURCE-BUILD.md: entire dependency graph and signed APK byte reproducibility are not claimed',
                     desugarReview=dict(reportSha256=sha(ROOT / 'docs/DESUGAR-REVIEW.md'),
                                        buildManifestSha256=sha(ROOT / 'config/source-kit/desugar-build.json')))

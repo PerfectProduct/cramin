@@ -1,5 +1,9 @@
 # Сборка соответствующих исходников
 
+Комбинированный APK распространяется по GPL-3.0-or-later (DISTRIBUTION-LICENSE);
+собственные исходники Cramin сохраняют MIT. Исторический DESUGAR-REVIEW фиксирует
+проверку до принятия решения; действующие условия находятся в DISTRIBUTION.md.
+
 Для каждого APK комплект фиксирует commit, versionCode/versionName, контрольные суммы
 зависимостей и исходников. `cramin-<commit>.bundle` содержит только достижимую историю HEAD;
 `cramin-<commit>.tar.gz` — снимок того же коммита. Не копируйте локальное рабочее дерево.
@@ -56,3 +60,7 @@ python3 build-support/scripts/rebuild-desugar.py \
 `python3 scripts/package-source-kit.py --output /absolute/new/dist`.
 Существующий проверяемый кэш можно передать через `--cache /path/source-kit`.
 Без кэша скрипт скачивает только публичные исходники с проверкой закреплённых SHA-256.
+
+Единый release kit из чистого HEAD: `python3 scripts/package-release-kit.py --apk /absolute/signed.apk --output /absolute/dist`.
+Упаковщик проверяет пакет/версию/сертификат и legal assets APK, включает DISTRIBUTION-LICENSE,
+source kit, notices, release notes, ARTIFACTS.json и SHA256SUMS. `/dist/` исключён из git.

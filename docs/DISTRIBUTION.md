@@ -1,40 +1,32 @@
-# Условия распространения: решение ещё не принято
+# Принятые условия распространения Cramin
 
-Корневая лицензия исходников Cramin — MIT, copyright 2026 PerfectProduct. Она сохранена.
-Текущий APK статически включает NewPipeExtractor v0.26.5 (GPL-3.0-or-later), nanojson
-fork e9d656d (Apache-2.0) и Rhino 1.8.1 (MPL-2.0). APK нельзя описывать как исключительно MIT.
+Владелец утвердил сохранение NewPipe и распространение комбинированного APK по
+**GPL-3.0-or-later**, сохраняя MIT grant собственных исходников. Это принятое решение,
+а не ожидаемое разрешение. Корневой MIT LICENSE и исходные лицензии/уведомления
+зависимостей сохранены. APK нельзя описывать как исключительно MIT.
 
-Первичные источники:
-- [NewPipe v0.26.5 LICENSE](https://github.com/TeamNewPipe/NewPipeExtractor/blob/v0.26.5/LICENSE),
-  [исходник с выбором GPL v3 или более поздней](https://github.com/TeamNewPipe/NewPipeExtractor/blob/v0.26.5/extractor/src/main/java/org/schabi/newpipe/extractor/NewPipe.java).
-- GPL §5(c): условия GPL для комбинированного произведения; §6(d): corresponding source
-  доступен тем же способом рядом с скачиваемым object code без дополнительной платы.
-  Corresponding source (§1) включает необходимый код и управляющие сборкой/установкой скрипты.
-- [MPL 2.0 §3.2](https://www.mozilla.org/en-US/MPL/2.0/): доступ к MPL исходникам и уведомление;
-  larger work может распространяться на иных условиях с сохранением требований к MPL файлам.
-- [Apache 2.0 §4](https://www.apache.org/licenses/LICENSE-2.0): лицензия, notices, обозначение
-  изменений; MIT/BSD — сохранение copyright и текста условий; OFL — текст и copyright шрифта.
-- desugar — GPL-2.0 with Classpath Exception; исключение допускает связывание независимых
-  модулей на других условиях, но не отменяет условий на саму библиотеку.
+[DISTRIBUTION-LICENSE](../DISTRIBUTION-LICENSE) задаёт scope и содержит полный текст GPL v3.
+Тот же документ доступен офлайн в настройках → Лицензии, вместе с MIT и third-party notices.
+NewPipeExtractor v0.26.5 — GPL-3.0-or-later, nanojson fork — Apache-2.0, Rhino — MPL-2.0;
+точные компоненты и условия: THIRD_PARTY_NOTICES.md и COMPONENT-LICENSES.md.
 
-Предлагаемый путь A (сохранить NewPipe): владелец явно разрешает распространение всего
-комбинированного APK по GPL-3.0-compatible условиям (конкретно GPL-3.0-or-later), сохраняя
-MIT grant на собственные исходники и исходные уведомления зависимостей. MIT совместима с GPL;
-переписывать авторский MIT LICENSE ради этого не обязательно. Это предложение, не уже выданное
-разрешение. После решения нужно:
-1. Заменить статус этого документа на утверждённый, добавить утверждённый `DISTRIBUTION-LICENSE`
-   с текстом GPL v3 и scope APK; сохранить MIT LICENSE и third-party notices.
-2. Добавить ссылку/описание GPL условий APK в README, релизные заметки и offline Licences;
-   исходный GPL текст уже присутствует в assets/legal/001.txt.
-3. Проверить полноту финального source kit. Техническая пересборка desugar подтверждена
-   в DESUGAR-REVIEW.md; она не заменяет решение о лицензии всего APK.
-4. Рядом с каждым APK публиковать точный source kit и notices; никакие ключи подписи не входят.
-5. Сформировать новый кандидат после лицензионного коммита: число коммитов изменит версию.
+По GPL §6(d) corresponding source того же коммита/версии публикуется рядом с APK тем же
+способом без дополнительной платы. Комплект включает историю для git-count версии,
+preferred sources, build scripts, notices и SOURCE-BUILD.md. Полнота desugar подтверждена
+в DESUGAR-REVIEW.md; доказательства и ограничения сохранены, повторная сборка не требуется.
+Личный ключ подписи и пароли не распространяются. Побайтовое воспроизведение signed APK
+не обещается. Чужие исходники сохраняют свои лицензии; MIT LICENSE Cramin не заменяется GPL.
 
-Путь B: отложить публикацию; отдельно разрешить удаление/замену NewPipe и связанного YouTube
-извлечения, проверить новый граф лицензий, повторить релевантные проверки. Замена — изменение
-продукта, не выполнена в этой подготовке. Закрытая MIT-only публикация текущего APK не предлагается.
+Первичные источники: [GPL v3](https://www.gnu.org/licenses/gpl-3.0.html),
+[NewPipe LICENSE](https://github.com/TeamNewPipe/NewPipeExtractor/blob/v0.26.5/LICENSE),
+[MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/),
+[desugar GPL v2/Classpath Exception](https://github.com/google/desugar_jdk_libs/blob/73170c345e6a762fc6a1f0301bb15218850023ef/LICENSE).
 
-Публичный release workflow создаёт draft с исходниками и уведомлениями. Публикация draft —
-отдельный шаг после проверки комплекта и утверждения пути. Один checkbox workflow не меняет
-лицензию и не является доказательством достаточности source kit.
+Владелец также решил отложить debug→release перенос до после первого релиза. Release
+устанавливается рядом с debug. Debug и его документы/прогресс сохраняются, если приложение
+не удалять и не очищать его данные. Автоматической миграции нет; перенос не проверен.
+Совместимые release обновляют тот же пакет с постоянной подписью и сохраняют данные.
+
+Утверждение этих условий не разрешает push/PR/main/tag/upload/publication. Эти внешние
+действия требуют отдельных разрешений по PUBLISH-PLAN.md. Release workflow создаёт draft
+и может создать публичный git tag; draft не является опубликованным release/discovery.

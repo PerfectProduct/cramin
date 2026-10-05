@@ -29,3 +29,5 @@ build/
 # Python validation caches
 __pycache__/
 /release-candidate/
+
+/dist/

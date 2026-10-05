@@ -1,12 +1,7 @@
-Первый публичный кандидат Cramin сохраняет принятые интерфейс, модели и промпты.
-Проверка обновлений выбирает стабильный v0.1.N с точным APK и checksum; debug не ищет
-публичный release. Workflow готовит draft с подписанным APK, notices и исходниками
-точного коммита. Добавлены инструкции установки, платной обработки и конфиденциальности.
+Cramin prepares cards from text, PDF, articles and YouTube and preserves documents, favourites and study progress. This change keeps the accepted UI, models and prompts and prepares the first public APK for distribution under GPL-3.0-or-later; Cramin's own sources retain their MIT grant and dependency notices remain intact.
 
-Публикация заблокирована до решения владельца об условиях APK с NewPipe GPL-3.0-or-later
-и проверки corresponding-source desugar configuration. MIT LICENSE исходников не изменён.
-См. docs/DISTRIBUTION.md и docs/SOURCE-BUILD.md. Draft PR не является этим решением.
+The source kit includes full history, pinned preferred sources, the verified desugar recipe/evidence and build instructions. A shared local/CI packager checks APK identity, version, signing certificate and offline licence assets and emits matching APK, source kit, notices, checksums and metadata.
 
-Локальные результаты и точный binary/source SHA — в выданном релизном комплекте.
-Проверить CI/JVM/lint и Android matrix API26/36 именно для текущего PR SHA; затем после
-разрешённого fast-forward main проверить release workflow и его финальные ассеты.
+Local candidate: {{RELEASE_VERSION}}, commit {{RELEASE_HEAD}}. Local validation includes release build/lint, exact APK smoke on API26/36, upgrade from the previous compatible signed release with synthetic documents/cards/progress/settings, and a build from the delivered source bundle. The accompanying REPORT.md records the actual results and limits.
+
+Debug data migration is deferred: release installs alongside debug. GitHub CI and published-release discovery still require real checks. This draft PR authorizes no merge, tag, asset upload or publication. Running release.yml later requires separate permission because gh release create --draft may create a public git tag.

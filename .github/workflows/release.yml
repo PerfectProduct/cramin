@@ -74,31 +74,12 @@ jobs:
       - name: Verify signature fingerprint
         run: python3 scripts/verify_release_signature.py app/build/outputs/apk/release/app-release.apk
 
-      - name: Package assets
-        id: assets
+      - name: Package one matching APK/source/notices set
         run: |
-          TAG=${{ steps.version.outputs.tag }}
-          mkdir -p dist
-          cp app/build/outputs/apk/release/app-release.apk "dist/cramin-$TAG.apk"
-          (cd dist && sha256sum "cramin-$TAG.apk" > "cramin-$TAG.apk.sha256")
-          cat "dist/cramin-$TAG.apk.sha256"
-          echo "apk=dist/cramin-$TAG.apk" >> "$GITHUB_OUTPUT"
-          echo "sha=dist/cramin-$TAG.apk.sha256" >> "$GITHUB_OUTPUT"
+          python3 scripts/package-release-kit.py --apk app/build/outputs/apk/release/app-release.apk --output dist
+          test "$(python3 -c 'import json; print(json.load(open("dist/ARTIFACTS.json"))["commit"])')" = "${{ github.sha }}"
 
-      - name: Package matching sources and notices
-        run: |
-          python3 scripts/package-source-kit.py --output dist
-          cp docs/RELEASE-NOTES.md dist/release-notes.md
-          cp docs/DISTRIBUTION.md dist/DISTRIBUTION.md
-          cp docs/THIRD_PARTY_NOTICES.md dist/THIRD_PARTY_NOTICES.md
-          (cd dist && zip -qr cramin-${{ steps.version.outputs.tag }}-notices.zip source-kit/legal DISTRIBUTION.md THIRD_PARTY_NOTICES.md source-kit/LICENSE)
-          (cd dist && sha256sum *.apk *.zip > SHA256SUMS)
-
-      - name: Release notes from reviewed document
-        run: |
-          sed "s/0.1.N/0.1.${{ steps.version.outputs.code }}/g" docs/RELEASE-NOTES.md > notes.md
-
-      - name: Create draft GitHub Release (publication requires review)
+      - name: Create draft and possibly public git tag (separate authorization required)
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ github.sha }}
@@ -109,10 +90,10 @@ jobs:
             --draft \
             --target "$RELEASE_SHA" \
             --title "Cramin ${{ steps.version.outputs.tag }}" \
-            --notes-file notes.md \
-            "${{ steps.assets.outputs.apk }}" "${{ steps.assets.outputs.sha }}" \
+            --notes-file dist/RELEASE-NOTES.md \
+            "dist/cramin-${{ steps.version.outputs.tag }}.apk" "dist/cramin-${{ steps.version.outputs.tag }}.apk.sha256" \
             "dist/cramin-${{ steps.version.outputs.tag }}-source-kit.zip" \
-            "dist/cramin-${{ steps.version.outputs.tag }}-notices.zip" "dist/SHA256SUMS"
+            "dist/cramin-${{ steps.version.outputs.tag }}-notices.zip" "dist/SHA256SUMS" "dist/ARTIFACTS.json" "dist/RELEASE-NOTES.md"
 
       - name: Preserve gate reports
         if: always()

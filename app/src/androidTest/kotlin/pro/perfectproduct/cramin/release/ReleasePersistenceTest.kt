@@ -6,6 +6,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -53,7 +54,12 @@ class ReleasePersistenceTest {
         if (mode == "seed") {
             assertTrue(c.db.documentDao().getAll().isEmpty())
             c.settingsStore.setOnboardingDone(true)
+            c.settingsStore.setDefaultTargetLang("he")
+            c.settingsStore.setTtsRate(1.25f)
+            c.settingsStore.setAutoplayIntervals(12345, 23456)
+            c.settingsStore.toggleAllCategory(4)
             val id = seedDocument()
+            c.settingsStore.setDocumentShuffle(id, true)
             val cards = c.db.cardDao().getByDocument(id)
             c.cardRepository.setStatus(cards.first().id, CardStatus.KNOWN)
             c.cardRepository.setStarred(cards.first().id, true)
@@ -64,12 +70,21 @@ class ReleasePersistenceTest {
         }
         val doc = c.db.documentDao().getAll().single { it.title == "Release persistence fixture" }
         assertEquals(DocStatus.READY, doc.status)
+        val settings = c.settingsStore.current()
+        assertTrue(settings.onboardingDone)
+        assertEquals("he", settings.defaultTargetLang)
+        assertEquals(1.25f, settings.ttsRate, 0f)
+        assertEquals(12345, settings.autoplayFrontMs)
+        assertEquals(23456, settings.autoplayBackMs)
+        assertTrue(c.settingsStore.documentShuffle(doc.id).first())
         val cards = c.db.cardDao().getByDocument(doc.id)
         assertEquals(2, cards.size)
         assertEquals(CardStatus.KNOWN, cards.first().status)
         assertTrue(cards.first().starred)
         val state = SessionState.fromJson(c.studyRepository.load("release-persistence")!!)!!
         assertEquals(1, state.position)
+        assertEquals(1, state.knownThisRound)
+        assertEquals(3, c.settingsStore.allCategoryMask.first())
         assertTrue(state.canUndo)
         assertEquals(cards.map { it.id }, state.order)
         assertEquals("The bank was closed.", c.db.sentenceDao().getByDocument(doc.id).single().text)

@@ -1,6 +1,6 @@
 # Third-party distribution inventory
 
-The root Cramin licence is unchanged. This is an inventory and preparation record, not approval to publish.
+The root Cramin MIT grant is unchanged. The owner approved GPL-3.0-or-later for the combined APK; original dependency terms are retained. External publication actions require separate authorization.
 
 `app/src/main/assets/legal/inventory.json` records 117 resolved coordinates across releaseRuntimeClasspath,
 debugRuntimeClasspath and coreLibraryDesugaring, their configurations and artifact SHA-256. It is a
@@ -49,14 +49,12 @@ R8 LICENSE and AUTHORS accompany it. External JDK/SDK/Bazel/Gradle/bootstrap bin
 are build inputs, not shipped Android runtime components or substitutes for preferred sources.
 The entire dependency graph has NOT been rebuilt; signed APK byte reproducibility is NOT claimed.
 
-## Publication gate / owner decision
+## Approved distribution
 
-With statically bundled GPL NewPipeExtractor, proposed distribution is the combined APK under
-GPL-3.0-compatible terms, with complete corresponding source and build instructions available next
-to every APK (GPL §6(d)), retaining the original permissive notices. MPL files remain available in
-source form with their original notices. This proposal does not automatically relicense Cramin's
-root sources. Owner must choose: (1) approve these combined-distribution terms and source delivery,
-or (2) postpone distribution / separately authorise replacing NewPipe. A source link alone and the
-old short licence list are insufficient. Before public distribution, verify completeness of the
-corresponding source kit and attach the kit to the exact binary version. The desugar check
-is documented independently; it does not approve the combined distribution terms. No public publication was performed in this work.
+The owner approved the combined APK under GPL-3.0-or-later, retaining MIT for Cramin's
+own sources and each dependency's original terms. DISTRIBUTION-LICENSE provides the
+scope and full GPL v3 text; the same text and Cramin MIT are available offline in Licences.
+Each APK is accompanied by its exact corresponding source kit and notices (GPL §6(d)).
+Desugar preferred sources and reconstruction are verified; historical buildbot attestation
+and whole signed APK byte reproducibility are not claimed. Debug migration is deferred.
+Actual GitHub CI/discovery and authorization for external writes remain separate gates.
