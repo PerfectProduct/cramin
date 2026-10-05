@@ -23,6 +23,16 @@ jobs:
           # versionCode = git rev-list --count HEAD: нужна полная история (SPEC §12.2).
           fetch-depth: 0
 
+      - name: Verify checkout identity
+        env:
+          EXPECTED_CHECKOUT_SHA: ${{ github.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_CHECKOUT_SHA"
+          echo "checkout_sha=$(git rev-parse HEAD)"
+          echo "pr_head_sha=$PR_HEAD_SHA"
+          echo "git_count=$(git rev-list --count HEAD)"
+
       - uses: actions/setup-java@v6
         with:
           distribution: temurin

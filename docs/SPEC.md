@@ -593,7 +593,7 @@ OkHttp GET (User-Agent обычного мобильного браузера, �
 - `*.jks`, `*.keystore`, `*.p12`, `local.properties`, `keystore.properties` — в `.gitignore`.
 - Workflows:
   - `ci.yml` — на push и PR: `assembleDebug testDebugUnitTest lintDebug`;
-  - `instrumented.yml` — на PR и `workflow_dispatch`: эмуляторы API 26/36 x86_64 (`reactivecircus/android-emulator-runner`), `connectedDebugAndroidTest`;
+  - `instrumented.yml` — на push `feat/v1`, PR и `workflow_dispatch`: эмуляторы API 26/36 x86_64 (`reactivecircus/android-emulator-runner`), `connectedDebugAndroidTest`; push позволяет запустить первую матрицу до регистрации workflows на main. CI/instrumented сверяют checkout SHA с SHA события и явно показывают PR head отдельно;
   - `release.yml` — `workflow_dispatch` на `main`: вычисляет версию, собирает `assembleRelease`, подписывает из секретов, сверяет отпечаток, считает SHA-256 и создаёт GitHub Release с тегом `v0.1.<N>` с APK, SHA-256, source kit, notices и ARTIFACTS.json; draft может создать публичный git tag. Права `contents: write` выдаются **только этой джобе**. Заметки выпуска — из docs/RELEASE-NOTES.md с вычисленной версией.
 - Первый релиз ставится на телефон с нуля. Все последующие обновляют его поверх и сохраняют базу.
 

@@ -28,12 +28,13 @@ gh pr create --repo PerfectProduct/cramin --head feat/v1 --base main --draft \
   --title "Prepare Cramin first public release under GPL-3.0-or-later" \
   --body-file "$CRAMIN_FINAL_KIT/PR-FIRST-RELEASE.md"
 gh run list --repo PerfectProduct/cramin --branch feat/v1
-gh pr view --repo PerfectProduct/cramin --json headRefOid,baseRefName,isDraft,statusCheckRollup
+gh pr view feat/v1 --repo PerfectProduct/cramin --json headRefOid,baseRefName,isDraft,statusCheckRollup
 # gh run watch <RUN_ID> --repo PerfectProduct/cramin --exit-status
 ```
 
 Ожидаются `ci.yml` (push и pull_request: assembleDebug, JVM, lintDebug) и
-`instrumented.yml` (pull_request: fake API, API26/36). Проверить push run на точном head SHA;
+`instrumented.yml` (push feat/v1 и pull_request: fake API, API26/36). Push запускает матрицу
+даже при первой регистрации workflows до появления YAML на main. Проверить push run на точном head SHA;
 PR run может собирать синтетический merge commit GitHub — зафиксировать его SHA и PR headRefOid.
 Не выдавать PR merge SHA за подписанный локальный APK. Live/external API tests исключены.
 Если workflow не запускается (например, политика fork/Actions permissions), это реальный
