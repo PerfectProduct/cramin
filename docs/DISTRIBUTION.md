@@ -26,7 +26,8 @@ MIT grant на собственные исходники и исходные у�
    с текстом GPL v3 и scope APK; сохранить MIT LICENSE и third-party notices.
 2. Добавить ссылку/описание GPL условий APK в README, релизные заметки и offline Licences;
    исходный GPL текст уже присутствует в assets/legal/001.txt.
-3. Проверить полноту source kit, закрыть desugar provenance/build gap в SOURCE-BUILD.md.
+3. Проверить полноту финального source kit. Техническая пересборка desugar подтверждена
+   в DESUGAR-REVIEW.md; она не заменяет решение о лицензии всего APK.
 4. Рядом с каждым APK публиковать точный source kit и notices; никакие ключи подписи не входят.
 5. Сформировать новый кандидат после лицензионного коммита: число коммитов изменит версию.
 

@@ -1,0 +1,11 @@
+{
+  "left": "configuration-rebuilt.jar",
+  "right": "desugar_jdk_libs_configuration_nio-2.1.5.jar",
+  "sha256Left": "a38b84e4435626f0b104fab88dd3fbf0502d13279a31e5376786fc5c00d886c5",
+  "sha256Right": "7db51661cd07d1fd5cf12769a75ba201910624bb3801c09363dd3cb28e31c51b",
+  "classes": 29,
+  "onlyLeft": [],
+  "onlyRight": [],
+  "differentEntries": [],
+  "machineJsonSemanticEqual": true
+}

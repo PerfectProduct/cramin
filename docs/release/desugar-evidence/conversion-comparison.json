@@ -1,0 +1,14 @@
+{
+  "classes": 29,
+  "sameEntrySet": true,
+  "differentEntries": [],
+  "command": [
+    "work/third_party/openjdk/jdk-11/linux/bin/java",
+    "-cp",
+    "work/third_party/dependencies/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar:work/third_party/dependencies/com/google/guava/guava/32.1.2-jre/guava-32.1.2-jre.jar:work/conversion-rebuild/helper",
+    "com.android.tools.r8.desugar.desugaredlibrary.customconversion.BytecodeTransforms",
+    "conversion",
+    "work/conversion-rebuild/raw.jar",
+    "work/conversion-rebuild/generated.jar"
+  ]
+}

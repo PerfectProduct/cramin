@@ -1,0 +1,12 @@
+[
+  {
+    "coordinate": "com.android.tools:desugar_jdk_libs_nio:2.1.5",
+    "url": "https://dl.google.com/dl/android/maven2/com/android/tools/desugar_jdk_libs_nio/2.1.5/desugar_jdk_libs_nio-2.1.5-sources.jar",
+    "status": 404
+  },
+  {
+    "coordinate": "com.android.tools:desugar_jdk_libs_configuration_nio:2.1.5",
+    "url": "https://dl.google.com/dl/android/maven2/com/android/tools/desugar_jdk_libs_configuration_nio/2.1.5/desugar_jdk_libs_configuration_nio-2.1.5-sources.jar",
+    "status": 404
+  }
+]

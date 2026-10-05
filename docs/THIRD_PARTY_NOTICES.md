@@ -19,7 +19,7 @@ readable offline in Settings → Licences. Binary META-INF duplicate exclusions 
 - PdfBox-Android 2.0.27.0, 45da92629dad5b3c9887eceefecc89a1423f5457: Apache-2.0 and NOTICE;
   bundled resource copyright headers retained. Liberation Sans TTF name table explicitly identifies
   SIL OFL-1.1, Google 2010 and Red Hat 2012 copyright. This font is a PDF resource, not the UI font.
-- desugar_jdk_libs_nio 2.1.5: GPL-2.0 with Classpath Exception; release-preparation source commit
+- desugar_jdk_libs_nio 2.1.5: GPL-2.0 with Classpath Exception; verified library source commit
   73170c345e6a762fc6a1f0301bb15218850023ef. Configuration artifact: BSD-3-Clause.
   https://github.com/google/desugar_jdk_libs/commit/73170c345e6a762fc6a1f0301bb15218850023ef
 - AndroidX/Kotlin/OkHttp/Okio/Readability4J/jspecify/jsr305/annotations: Apache-2.0;
@@ -38,10 +38,16 @@ desugar and Liberation Fonts (the latter is an upstream source reference, not a 
 font build). Final Cramin source archive is added from the exact final commit, excluding secrets and
 local files. Build instructions accompany the kit; dependencies are unmodified upstream binaries.
 
-Two desugar sources classifiers are not published (HTTP 404). Library release-preparation sources
-are archived instead. The configuration source/build tree is archived from R8 commit c331a820ddae7dea41f41a04375b784486d0f705, whose nio JSON identifies 2.1.5; its exact published binary-to-source
-reproduction has not been independently verified. The entire dependency graph has NOT been rebuilt
-from source, and byte-identical reproducibility is NOT claimed.
+Two desugar sources classifiers return HTTP 404; full preferred source trees are supplied
+instead. Independent rebuilding verified desugar library commit 73170c345e6a762fc6a1f0301bb15218850023ef
+and R8 c331a820ddae7dea41f41a04375b784486d0f705 against the exact published inputs:
+1459 library classes and all 33 configuration files (29 classes, machine JSON, two lint
+texts and LICENSE) match byte for byte. ZIP order/timestamps differ. See DESUGAR-REVIEW.md,
+pinned desugar-build.json, packaged evidence and the standalone rebuild recipe.
+The recipe's BytecodeTransforms adapter derives from R8's BSD-3-Clause generators;
+R8 LICENSE and AUTHORS accompany it. External JDK/SDK/Bazel/Gradle/bootstrap binaries
+are build inputs, not shipped Android runtime components or substitutes for preferred sources.
+The entire dependency graph has NOT been rebuilt; signed APK byte reproducibility is NOT claimed.
 
 ## Publication gate / owner decision
 
@@ -52,5 +58,5 @@ source form with their original notices. This proposal does not automatically re
 root sources. Owner must choose: (1) approve these combined-distribution terms and source delivery,
 or (2) postpone distribution / separately authorise replacing NewPipe. A source link alone and the
 old short licence list are insufficient. Before public distribution, verify completeness of the
-corresponding source kit, resolve the desugar configuration provenance/build gap and attach the
-kit to the exact binary version. No public publication was performed in this work.
+corresponding source kit and attach the kit to the exact binary version. The desugar check
+is documented independently; it does not approve the combined distribution terms. No public publication was performed in this work.

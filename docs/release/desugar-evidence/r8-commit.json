@@ -1,0 +1,57 @@
+)]}'
+{
+  "commit": "c331a820ddae7dea41f41a04375b784486d0f705",
+  "tree": "797c36a64c0703a576197af297a7cecb49537638",
+  "parents": [
+    "53442464960401bda64a51f0b02ae9b183d5b1bd"
+  ],
+  "author": {
+    "name": "Søren Gjesse",
+    "email": "sgjesse@google.com",
+    "time": "Mon Feb 24 12:35:00 2025 +0100"
+  },
+  "committer": {
+    "name": "Søren Gjesse",
+    "email": "sgjesse@google.com",
+    "time": "Mon Feb 24 04:36:49 2025 -0800"
+  },
+  "message": "Prepare for release of desugared library 2.1.5\n\nThis adds support for Stream.toList().\n\nBug: b/304335616\nChange-Id: Id32565a885e2cf9895ec921370793aa41ab49140",
+  "tree_diff": [
+    {
+      "type": "modify",
+      "old_id": "92666b6ae3864a68b4f08b47e8000e0cd9164032",
+      "old_mode": 33188,
+      "old_path": "src/library_desugar/jdk11/desugar_jdk_libs.json",
+      "new_id": "5057be680b72c1d48bac32cd9b6799a89b0230b3",
+      "new_mode": 33188,
+      "new_path": "src/library_desugar/jdk11/desugar_jdk_libs.json"
+    },
+    {
+      "type": "modify",
+      "old_id": "b39b8d4cfd8ebbff9d29566efa93ada046147762",
+      "old_mode": 33188,
+      "old_path": "src/library_desugar/jdk11/desugar_jdk_libs_minimal.json",
+      "new_id": "95da17932d8c5b9eec5cb70215c9b073b8a91139",
+      "new_mode": 33188,
+      "new_path": "src/library_desugar/jdk11/desugar_jdk_libs_minimal.json"
+    },
+    {
+      "type": "modify",
+      "old_id": "7214afc0e2a44266513bc819777f18ef021cc104",
+      "old_mode": 33188,
+      "old_path": "src/library_desugar/jdk11/desugar_jdk_libs_nio.json",
+      "new_id": "2252ca9be9bece1dbefbcf76858716d839879c69",
+      "new_mode": 33188,
+      "new_path": "src/library_desugar/jdk11/desugar_jdk_libs_nio.json"
+    },
+    {
+      "type": "modify",
+      "old_id": "65703fc4ac05854bd2d171b01b10faea0a09ebd3",
+      "old_mode": 33188,
+      "old_path": "third_party/openjdk/desugar_jdk_libs_11.tar.gz.sha1",
+      "new_id": "19492eefb899585a04cd7d2d1d0f7fe9266fd63c",
+      "new_mode": 33188,
+      "new_path": "third_party/openjdk/desugar_jdk_libs_11.tar.gz.sha1"
+    }
+  ]
+}

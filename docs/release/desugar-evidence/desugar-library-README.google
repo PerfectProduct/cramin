@@ -1,0 +1,21 @@
+Name: desugar_jdk_libs
+URL: https://github.com/google/desugar_jdk_libs
+Version: 73170c345e6a762fc6a1f0301bb15218850023ef
+Revision: N/A
+Date: 2025-02-14
+License: The GNU General Public License (GPL) (see LICENSE)
+
+Description:
+This project contains a small subset of OpenJDK libraries simplified for use on older runtimes.
+
+Artifacts
+
+  desugar_jdk_libs.jar
+  desugar_jdk_libs_chm_only.jar
+
+built with
+
+  bazel build //jdk11/src:d8_java_base_selected_with_addon.jar
+  bazel build //jdk11/src:java_base_chm_only
+
+respectively.

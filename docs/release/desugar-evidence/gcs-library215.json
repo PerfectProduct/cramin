@@ -1,0 +1,45 @@
+{
+  "kind": "storage#objects",
+  "items": [
+    {
+      "kind": "storage#object",
+      "id": "r8-releases/raw/desugar_jdk_libs_nio/2.1.5/desugar_jdk_libs_jdk11_nio.zip/1740474475535888",
+      "selfLink": "https://www.googleapis.com/storage/v1/b/r8-releases/o/raw%2Fdesugar_jdk_libs_nio%2F2.1.5%2Fdesugar_jdk_libs_jdk11_nio.zip",
+      "mediaLink": "https://storage.googleapis.com/download/storage/v1/b/r8-releases/o/raw%2Fdesugar_jdk_libs_nio%2F2.1.5%2Fdesugar_jdk_libs_jdk11_nio.zip?generation=1740474475535888&alt=media",
+      "name": "raw/desugar_jdk_libs_nio/2.1.5/desugar_jdk_libs_jdk11_nio.zip",
+      "bucket": "r8-releases",
+      "generation": "1740474475535888",
+      "metageneration": "1",
+      "contentType": "application/zip",
+      "storageClass": "STANDARD",
+      "size": "4560907",
+      "md5Hash": "pNA7bmSGxciw+kmdEY9oiw==",
+      "crc32c": "kn1G4w==",
+      "etag": "CJC869a83osDEAE=",
+      "timeCreated": "2025-02-25T09:07:55.562Z",
+      "updated": "2025-02-25T09:07:55.562Z",
+      "timeStorageClassUpdated": "2025-02-25T09:07:55.562Z",
+      "timeFinalized": "2025-02-25T09:07:55.562Z"
+    },
+    {
+      "kind": "storage#object",
+      "id": "r8-releases/raw/desugar_jdk_libs_nio/2.1.5/desugar_jdk_libs_nio.jar/1740474474318330",
+      "selfLink": "https://www.googleapis.com/storage/v1/b/r8-releases/o/raw%2Fdesugar_jdk_libs_nio%2F2.1.5%2Fdesugar_jdk_libs_nio.jar",
+      "mediaLink": "https://storage.googleapis.com/download/storage/v1/b/r8-releases/o/raw%2Fdesugar_jdk_libs_nio%2F2.1.5%2Fdesugar_jdk_libs_nio.jar?generation=1740474474318330&alt=media",
+      "name": "raw/desugar_jdk_libs_nio/2.1.5/desugar_jdk_libs_nio.jar",
+      "bucket": "r8-releases",
+      "generation": "1740474474318330",
+      "metageneration": "1",
+      "contentType": "application/java-archive",
+      "storageClass": "STANDARD",
+      "size": "3123878",
+      "md5Hash": "hDVPjhfsWIrmwVoNtNZ57w==",
+      "crc32c": "JeP+gA==",
+      "etag": "CPqToda83osDEAE=",
+      "timeCreated": "2025-02-25T09:07:54.345Z",
+      "updated": "2025-02-25T09:07:54.345Z",
+      "timeStorageClassUpdated": "2025-02-25T09:07:54.345Z",
+      "timeFinalized": "2025-02-25T09:07:54.345Z"
+    }
+  ]
+}

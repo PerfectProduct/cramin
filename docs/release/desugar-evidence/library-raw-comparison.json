@@ -1,0 +1,11 @@
+{
+  "left": "work/desugar_jdk_libs-73170c345e6a762fc6a1f0301bb15218850023ef/bazel-bin/jdk11/src/d8_java_base_selected_with_addon.jar",
+  "right": "downloads/upstream-desugar_jdk_libs_nio.jar",
+  "sha256Left": "e563ced43f4d6f8f3ab4601ea7ddd5ab0d86a8ea40774bf0e2f99b60c72aeb81",
+  "sha256Right": "a6d07723c1a5a8dd785f1b8cba88c072cce15be01be1ebc5d405c31bf607415c",
+  "onlyLeft": [],
+  "onlyRight": [],
+  "differentEntries": [],
+  "classes": 1461,
+  "entrySetEqual": true
+}

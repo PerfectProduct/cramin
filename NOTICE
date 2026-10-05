@@ -4,6 +4,8 @@ NewPipeExtractor v0.26.5: GPL-3.0-or-later, original copyright/licence retained.
 Rhino 1.8.1: MPL-2.0, original NOTICE retained.
 PdfBox-Android 2.0.27.0: Apache-2.0, original NOTICE retained.
 Desugar JDK libraries 2.1.5: GPL-2.0 with Classpath Exception; configuration BSD-3-Clause.
+Desugar rebuild adapter and generated configuration evidence: R8 BSD-3-Clause;
+  original R8 LICENSE and AUTHORS retained in scripts/desugar/ and the source kit.
 Liberation Sans PDF resource: SIL Open Font License 1.1, copyright retained.
 All exact resolved components, versions, source references and original notices:
   docs/COMPONENT-LICENSES.md

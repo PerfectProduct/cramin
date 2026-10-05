@@ -1,0 +1,11 @@
+{
+  "left": "work/library-rebuilt.jar",
+  "right": "downloads/desugar_jdk_libs_nio-2.1.5.jar",
+  "sha256Left": "223f5bb1114ca1731c068960dacb63dd54b56ccbf78abf55935b3cc7504bcbd2",
+  "sha256Right": "d8044befae095781b9a80bf1faa92edc30382d75d437476784c1bf991598a976",
+  "onlyLeft": [],
+  "onlyRight": [],
+  "differentEntries": [],
+  "classes": 1459,
+  "entrySetEqual": true
+}

@@ -1,0 +1,156 @@
+{
+  "schema": 1,
+  "libraryCommit": "73170c345e6a762fc6a1f0301bb15218850023ef",
+  "r8Commit": "c331a820ddae7dea41f41a04375b784486d0f705",
+  "inputs": [
+    {
+      "path": "bazel",
+      "destination": ".",
+      "file": "bazel.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/79c841a9e84d46bd76e645e687bc977355b25556",
+      "sha1": "79c841a9e84d46bd76e645e687bc977355b25556",
+      "sha256": "2643cf6c1a63116c3202109d3f7058a87d33d21c6d9545cb76ea4765963e70dc",
+      "role": "external-build-input"
+    },
+    {
+      "path": "openjdk/desugar_jdk_libs_11",
+      "destination": "openjdk",
+      "file": "openjdk-desugar_jdk_libs_11.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/e4c206c7bdfe1415cd2716a1d59d699a80bc63dd",
+      "sha1": "e4c206c7bdfe1415cd2716a1d59d699a80bc63dd",
+      "sha256": "0f53560ac4d410f200c77bfa0adb881ac2171c4b5324e8355d43a49ed18fe17b",
+      "role": "external-build-input"
+    },
+    {
+      "path": "openjdk/jdk-11/linux",
+      "destination": "openjdk/jdk-11",
+      "file": "openjdk-jdk-11-linux.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/b6f2e70af4adce81ddd3fd72778dcad442b01864",
+      "sha1": "b6f2e70af4adce81ddd3fd72778dcad442b01864",
+      "sha256": "23e20811cb908788bd466a9b2335cef5c7f12b3ce73867b2d53adf4381cbe3ec",
+      "role": "external-build-input"
+    },
+    {
+      "path": "android_jar/lib-v32",
+      "destination": "android_jar",
+      "file": "android_jar-lib-v32.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/82f69bfeceab5f11796d768e165f800ee7439bd8",
+      "sha1": "82f69bfeceab5f11796d768e165f800ee7439bd8",
+      "sha256": "fe7f63918e1c262e782c6192fe584287dc0a0310f8b6e65df59c0a91cdb6f2dd",
+      "role": "external-build-input"
+    },
+    {
+      "path": "android_jar/lib-v33",
+      "destination": "android_jar",
+      "file": "android_jar-lib-v33.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/53e8c839d3ec4de175784dddb64731c3a68f9579",
+      "sha1": "53e8c839d3ec4de175784dddb64731c3a68f9579",
+      "sha256": "68cfc922dc01711396b1e4dd234b291b04ba7943a5999fbf98920e46b83645a4",
+      "role": "external-build-input"
+    },
+    {
+      "path": "android_jar/lib-v34",
+      "destination": "android_jar",
+      "file": "android_jar-lib-v34.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/0b366542a5c6536e93da29e5f13bd320df6e2e34",
+      "sha1": "0b366542a5c6536e93da29e5f13bd320df6e2e34",
+      "sha256": "1061bff8eeb9fb219e3969b23be6ddcaec9d04fe22891af723304a9e552bb959",
+      "role": "external-build-input"
+    },
+    {
+      "path": "gradle",
+      "destination": ".",
+      "file": "r8-gradle.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/12007d0082ec36a4f60d849534ae11423862f9b3",
+      "sha1": "12007d0082ec36a4f60d849534ae11423862f9b3",
+      "sha256": "e821abb686d73115b3534fc4fa9cb26e10b1dab2fc2013fafdbbccf104df40e3",
+      "role": "external-build-input"
+    },
+    {
+      "path": "dependencies",
+      "destination": ".",
+      "file": "r8-dependencies.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/a457354d94fb3db2128409f54886adfe112225bc",
+      "sha1": "a457354d94fb3db2128409f54886adfe112225bc",
+      "sha256": "6b25ca9d3072fe98ced5b5503762accc03aa5f03206d6dd2bcb843d3bb9c5e0a",
+      "role": "external-build-input"
+    },
+    {
+      "path": "dependencies_plugin",
+      "destination": ".",
+      "file": "r8-dependencies_plugin.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/efdf4aba1836e4a884d1f6cf63218f2975caad91",
+      "sha1": "efdf4aba1836e4a884d1f6cf63218f2975caad91",
+      "sha256": "c175d5510a3a1f4d7ccbbe5ee9d4349b635aeccb54a54f77d27e5a0223e48388",
+      "role": "external-build-input"
+    },
+    {
+      "path": "api_database/api_database",
+      "destination": "api_database",
+      "file": "r8-api_database-api_database.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/65e3e25f7c5c1ecd5cf31084e5f0e0394c53800a",
+      "sha1": "65e3e25f7c5c1ecd5cf31084e5f0e0394c53800a",
+      "sha256": "55fb0f620200bbb68d6f515c1539bf0d2be5aac567acb6c8eae481ca1835314b",
+      "role": "external-build-input"
+    },
+    {
+      "path": "openjdk/jdk8/linux-x86",
+      "destination": "openjdk/jdk8",
+      "file": "r8-openjdk-jdk8-linux-x86.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/27bfc31a3ee6d304ce97dbc006d6af54de8c1099",
+      "sha1": "27bfc31a3ee6d304ce97dbc006d6af54de8c1099",
+      "sha256": "ca05b87b3b84edc5c13b56c224e21ba85831854033be92846b46662b28951532",
+      "role": "external-build-input"
+    },
+    {
+      "path": "openjdk/jdk-17/linux",
+      "destination": "openjdk/jdk-17",
+      "file": "r8-openjdk-jdk-17-linux.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/fa768e38f9c28e401174cecdd4e326b5fae120e1",
+      "sha1": "fa768e38f9c28e401174cecdd4e326b5fae120e1",
+      "sha256": "b4df2bd792850313f426b6fc00c804e19f770275c16d7804b84496417440ddb8",
+      "role": "external-build-input"
+    },
+    {
+      "path": "protoc",
+      "destination": ".",
+      "file": "r8-protoc.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/aa0e87a89da6cbbe443db5452725dcb643baa5db",
+      "sha1": "aa0e87a89da6cbbe443db5452725dcb643baa5db",
+      "sha256": "a8110e3ee8a3dca3ea27972f7a41896394ff9ec26268afbad7b422b49c8bea94",
+      "role": "external-build-input"
+    },
+    {
+      "path": "openjdk/custom_conversion",
+      "destination": "openjdk",
+      "file": "r8-openjdk-custom_conversion.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/06f011cdb1f21ce902e1b653c3784c28ddfe28ed",
+      "sha1": "06f011cdb1f21ce902e1b653c3784c28ddfe28ed",
+      "sha256": "d11d01adfb9852a3700dc9dfccf2414e06f4fe93407e138d74e0f0c7780e7615",
+      "role": "comparison-reference"
+    },
+    {
+      "path": "r8",
+      "destination": ".",
+      "file": "r8-bootstrap.tar.gz",
+      "url": "https://storage.googleapis.com/r8-deps/f1b15d193980a332ff95c17e3e18000d7c2a2f10",
+      "sha1": "f1b15d193980a332ff95c17e3e18000d7c2a2f10",
+      "sha256": "846b97ddb8471fcfc0a7270014788c715bef9b790726a6c94f6ec21ff207666c",
+      "role": "external-build-input"
+    }
+  ],
+  "components": [
+    {
+      "coordinate": "com.android.tools:desugar_jdk_libs_nio:2.1.5",
+      "sha256": "d8044befae095781b9a80bf1faa92edc30382d75d437476784c1bf991598a976",
+      "file": "desugar_jdk_libs_nio-2.1.5.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/desugar_jdk_libs_nio/2.1.5/desugar_jdk_libs_nio-2.1.5.jar"
+    },
+    {
+      "coordinate": "com.android.tools:desugar_jdk_libs_configuration_nio:2.1.5",
+      "sha256": "7db51661cd07d1fd5cf12769a75ba201910624bb3801c09363dd3cb28e31c51b",
+      "file": "desugar_jdk_libs_configuration_nio-2.1.5.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/desugar_jdk_libs_configuration_nio/2.1.5/desugar_jdk_libs_configuration_nio-2.1.5.jar"
+    }
+  ]
+}

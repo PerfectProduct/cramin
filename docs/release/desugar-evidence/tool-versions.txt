@@ -1,0 +1,16 @@
+release-candidate/desugar-review/work/third_party/openjdk/jdk8/linux-x86/bin/java -version
+openjdk version "1.8.0_152-android"
+OpenJDK Runtime Environment (build 1.8.0_152-android-4627429-1)
+OpenJDK 64-Bit Server VM (build 25.152-b1, mixed mode)
+release-candidate/desugar-review/work/third_party/openjdk/jdk-11/linux/bin/java -version
+openjdk version "11" 2018-09-25
+OpenJDK Runtime Environment 18.9 (build 11+28)
+OpenJDK 64-Bit Server VM 18.9 (build 11+28, mixed mode)
+release-candidate/desugar-review/work/third_party/openjdk/jdk-17/linux/bin/java -version
+openjdk version "17" 2021-09-14
+OpenJDK Runtime Environment (build 17+35-2724)
+OpenJDK 64-Bit Server VM (build 17+35-2724, mixed mode, sharing)
+release-candidate/desugar-review/work/third_party/protoc/linux-x86_64/bin/protoc --version
+libprotoc 3.19.3
+python3 --version
+Python 3.12.3

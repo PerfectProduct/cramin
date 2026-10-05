@@ -26,19 +26,31 @@
 nanojson, Rhino 1.8.1, PdfBox-Android 2.0.27.0, desugar и Liberation Fonts с build scripts.
 Сверяйте всё по `SHA256.json`. Upstream библиотеки используются без локальных модификаций.
 
-У двух desugar 2.1.5 компонентов source classifier не опубликован. Комплект включает
-release-preparation дерево google/desugar_jdk_libs 73170c345e6a762fc6a1f0301bb15218850023ef
-и R8 c331a820ddae7dea41f41a04375b784486d0f705 с human configuration nio 2.1.5,
-conversion sources и tools/archive_desugar_jdk_libs.py. В этом R8 архиве отсутствует
-названный в старом комплекте tools/archive_desugar_jdk_libs_configuration.py.
-Опубликованный configuration JAR содержит machine desugar.json, а не тот же human JSON;
-точное преобразование и provenance требуют отдельной проверки.
-Точная связь Maven-бинарника configuration с этим деревом и достаточность дополнительных
-upstream toolchains для его пересборки пока не подтверждены независимой сборкой.
-Это открытый пункт проверки corresponding source перед публичной выдачей; наличие архивов
-и совпадение номера версии сами по себе его не закрывают. Архив Liberation Fonts — reference
-исходников; идентичность сборки bundled TTF также не заявляется (OFL допускает распространение
-шрифта с уведомлением и не требует corresponding source).
+У двух desugar 2.1.5 компонентов source classifier не опубликован; preferred sources
+предоставлены полными архивами google/desugar_jdk_libs 73170c345e6a762fc6a1f0301bb15218850023ef
+и R8 c331a820ddae7dea41f41a04375b784486d0f705. Процедура и независимое сравнение
+описаны в `DESUGAR-REVIEW.md`; первичные метаданные и результаты в `desugar-evidence/`.
+Это проверка классов/конфигурации, а не совпадения одного номера версии.
+
+Для самостоятельной пересборки обеих зависимостей на Linux x86_64 нужны Python 3.12,
+zip/unzip и сеть к публичным upstream/Maven. Внутри распакованного kit:
+
+```bash
+python3 build-support/scripts/rebuild-desugar.py \
+  --source-kit "$PWD" --work /absolute/new-desugar-work
+```
+
+Скрипт берёт preferred sources из kit, проверяет pins, получает внешние build tools
+по SHA-256 из `manifests/desugar-build.json`, собирает библиотеку и conversion classes,
+собирает R8 converter из исходников, вызывает upstream configuration/lint packaging
+и сравнивает все файловые записи с официальными Maven JAR. Генераторы и адаптер
+с соответствующими BSD notices приложены; для сборки не нужен source classifier.
+Выходной каталог содержит команды, logs, comparison.json и результат. Это отдельная
+проверка desugar, она не запускает Cramin, телефон, платные API или публикацию.
+
+Архив Liberation Fonts — reference исходников; идентичность сборки bundled TTF
+не заявляется (OFL допускает распространение с уведомлением без corresponding source).
+Весь граф Android-зависимостей из исходников не пересобирался.
 
 Создание комплекта из чистого коммита:
 `python3 scripts/package-source-kit.py --output /absolute/new/dist`.
