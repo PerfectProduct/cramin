@@ -1,20 +1,23 @@
 package pro.perfectproduct.cramin.release
 
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import pro.perfectproduct.cramin.app.CraminApp
-import pro.perfectproduct.cramin.app.theme.CraminTheme
-import pro.perfectproduct.cramin.ui.settings.LicensesScreen
+import pro.perfectproduct.cramin.app.MainActivity
+import pro.perfectproduct.cramin.R
 
 /** Exercises the real packaged assets; no network, test container or paid API. */
 class ReleaseLicensesTest {
-    @get:Rule val compose = createComposeRule()
-    private val assets = ApplicationProvider.getApplicationContext<CraminApp>().assets
+    @get:Rule val compose = createEmptyComposeRule()
+    private val app = ApplicationProvider.getApplicationContext<CraminApp>()
+    private val assets = app.assets
     @Test fun packagedScopeAndOriginalNotices() {
         val index = JSONArray(assets.open("legal/index.json").bufferedReader().use { it.readText() })
         assertEquals("DISTRIBUTION-LICENSE.txt", index.getJSONObject(0).getString("file"))
@@ -29,8 +32,16 @@ class ReleaseLicensesTest {
         for (i in 0 until index.length()) assets.open("legal/"+index.getJSONObject(i).getString("file")).close()
     }
     @Test fun distributionScopeIsReadableOffline() {
-        compose.setContent { CraminTheme { LicensesScreen {} } }
-        compose.onNodeWithText("Cramin APK — GPL-3.0-or-later").performClick()
-        compose.onNodeWithText("Scope: эти условия относятся", substring = true).assertExists()
+        runBlocking { app.container.settingsStore.setOnboardingDone(true) }
+        ActivityScenario.launch(MainActivity::class.java).use {
+            compose.waitUntil(10000) {
+                compose.onAllNodesWithContentDescription(app.getString(R.string.library_settings)).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithContentDescription(app.getString(R.string.library_settings)).performClick()
+            compose.onNodeWithTag("settingsApp").performScrollTo().performClick()
+            compose.onNodeWithText(app.getString(R.string.settings_licenses)).performScrollTo().performClick()
+            compose.onNodeWithText("Cramin APK — GPL-3.0-or-later").performClick()
+            compose.onNodeWithText("Scope: эти условия относятся", substring = true).assertExists()
+        }
     }
 }
