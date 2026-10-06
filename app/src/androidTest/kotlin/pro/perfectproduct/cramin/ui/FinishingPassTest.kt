@@ -23,6 +23,8 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.*
 import org.junit.Assert.*
+import org.junit.rules.ExternalResource
+import org.junit.rules.RuleChain
 import pro.perfectproduct.cramin.R
 import pro.perfectproduct.cramin.app.*
 import pro.perfectproduct.cramin.app.theme.CraminTheme
@@ -38,7 +40,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 /** Only the four revised areas. System font/width are supplied by the emulator, including dialog windows. */
 class FinishingPassTest {
-    @get:Rule val compose = createComposeRule()
+    private val compose = createComposeRule()
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val dir = File(context.cacheDir, "finish-${System.nanoTime()}").apply { mkdirs() }
     private val keyChecks = AtomicInteger()
@@ -75,7 +77,10 @@ class FinishingPassTest {
                 .body("""{"data":{"limit_remaining":12.5}}""".toResponseBody()).build()
         }.build()
     }
-    @After fun close() { container.db.close() }
+    // Compose/Activity cleanup cancels ViewModel collectors before their Room database closes.
+    @get:Rule val resources: RuleChain = RuleChain.outerRule(object : ExternalResource() {
+        override fun after() { container.db.close() }
+    }).around(compose)
     private fun str(id: Int) = context.getString(id)
     private fun awaitTag(tag: String) = compose.waitUntil(5000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1 }
     private fun shot(name: String) {
@@ -121,6 +126,18 @@ class FinishingPassTest {
             release.complete(Unit)
             onboardingWriteGate.set(null)
         }
+    }
+
+    @Test fun databaseRemainsOpenUntilCompositionIsDisposed() {
+        runBlocking { container.db.documentDao().observeReadyCount().first() }
+        compose.setContent {
+            DisposableEffect(Unit) {
+                onDispose {
+                    assertTrue("Compose cleanup must precede closing the test database", container.db.isOpen)
+                }
+            }
+        }
+        compose.waitForIdle()
     }
 
     @Test fun affectedNavigationAndSelectionStayOffline() {
