@@ -5,6 +5,8 @@ One operation slot coalesces repeated taps and lifecycle callbacks. A cancelled 
 cleanup before another operation may start. If Retry arrives during terminal error publication,
 one request waits for completion; it is neither dropped nor run in parallel. UI uses localized failure categories; technical details
 remain in UpdateUi.Error.diagnostic and the safe debug Log sink.
+An early permission ActivityResult/ON_RESUME is also coalesced until preparation completes;
+this deferred callback only rechecks a permission gate, never a cancelled/submitted attempt.
 
 The pending record contains only the APK basename, SHA-256, intent and installer session ID.
 No endpoint, credentials or material are persisted here. Each load verifies the original hash.

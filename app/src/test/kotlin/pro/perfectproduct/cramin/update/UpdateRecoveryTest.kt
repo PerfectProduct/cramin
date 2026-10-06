@@ -131,8 +131,14 @@ class UpdateRecoveryTest {
         val m = manager(); m.install(apk); await(m) { it is UpdateUi.NeedsPermission }
         repeat(3) { m.resumePending(); delay(30) }; assertEquals(0, installer.installs)
         scopes.first().cancel()
-        val recreated = manager(); recreated.resumePending(); await(recreated) { it is UpdateUi.NeedsPermission }
-        installer.allowed = true; recreated.resumePending()
+        val recreated = manager()
+        // Deliver ActivityResult/ON_RESUME inline while the permission operation is finishing.
+        val permissionReturn = launch(Dispatchers.Unconfined) {
+            await(recreated) { it is UpdateUi.NeedsPermission }
+            installer.allowed = true
+            repeat(5) { recreated.resumePending() }
+        }
+        recreated.resumePending(); permissionReturn.join()
         await(recreated) { it is UpdateUi.Installing }
         withTimeout(5_000) { while (installer.installs != 1) delay(10) }
         repeat(5) { recreated.resumePending() }; delay(100); assertEquals(1, installer.installs)

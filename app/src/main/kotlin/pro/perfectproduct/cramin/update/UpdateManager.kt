@@ -38,6 +38,7 @@ class UpdateManager(
     private val operationLock = Any()
     private var operation: Job? = null
     private var queuedRetry = false
+    private var queuedPermissionResume = false
     private var retryAction: RetryAction = RetryAction.Check
 
     init {
@@ -69,8 +70,11 @@ class UpdateManager(
                 if (operation === task) {
                     operation = null
                     val shouldRetry = queuedRetry
+                    val shouldResume = queuedPermissionResume
                     queuedRetry = false
+                    queuedPermissionResume = false
                     if (shouldRetry && (_state.value is UpdateUi.Error || _state.value is UpdateUi.NeedsPermission)) retry()
+                    else if (shouldResume && _state.value is UpdateUi.NeedsPermission) resumePending()
                 }
             }
         }
@@ -84,8 +88,18 @@ class UpdateManager(
     }
 
     /** Only pre-submission/permission intent is automatic; cancellation/failure never is. */
-    fun resumePending() = launchOperation {
-        val entry = withContext(Dispatchers.IO) { pending?.loadEntry() } ?: return@launchOperation
+    fun resumePending(): Unit = synchronized(operationLock) {
+        if (operation?.isCompleted == false && _state.value is UpdateUi.NeedsPermission) {
+            // ActivityResult/ON_RESUME can arrive before permission preparation completes.
+            // Preserve one permission recheck rather than losing the grant or overlapping work.
+            queuedPermissionResume = true
+            return
+        }
+        launchOperation { resumePendingNow() }
+    }
+
+    private suspend fun resumePendingNow() {
+        val entry = withContext(Dispatchers.IO) { pending?.loadEntry() } ?: return
         when (entry.phase) {
             PendingUpdateStore.Phase.PREPARED, PendingUpdateStore.Phase.PERMISSION -> installPrepared(entry.apk)
             PendingUpdateStore.Phase.CANCELLED -> error(UpdateFailure.CANCELLED, "saved cancellation", RetryAction.Install)
@@ -201,6 +215,7 @@ class UpdateManager(
     fun cancel(): Unit = synchronized(operationLock) {
         if (_state.value is UpdateUi.Installing) return
         queuedRetry = false
+        queuedPermissionResume = false
         _state.value = UpdateUi.Idle
         operation?.cancel()
         pending?.clear()
