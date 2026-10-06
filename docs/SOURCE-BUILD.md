@@ -64,3 +64,14 @@ python3 build-support/scripts/rebuild-desugar.py \
 Единый release kit из чистого HEAD: `python3 scripts/package-release-kit.py --apk /absolute/signed.apk --output /absolute/dist`.
 Упаковщик проверяет пакет/версию/сертификат, встроенный git revision и legal assets APK, включает DISTRIBUTION-LICENSE,
 source kit, notices, release notes, ARTIFACTS.json и SHA256SUMS. `/dist/` исключён из git.
+
+## Стабильный preferred archive R8
+
+Gitiles `+archive` генерирует tar timestamps при выдаче снимка, поэтому SHA-256
+новой gzip/tar загрузки может отличаться для того же commit без изменения исходников.
+Проверенный полный R8 preferred archive сохранён в `release-sources/upstream/`
+с исходным SHA-256 из `config/source-kit/r8.json`; его LICENSE/build scripts включены.
+Без явного cache упаковщик берёт этот frozen input и по-прежнему строго проверяет
+закреплённый SHA. Остальные исходники загружаются как раньше. Ошибочный explicit cache
+или повреждённый frozen archive отвергается, а не принимается по совпадению версии.
+Принятый desugar recipe и доказательства используют те же preferred bytes/commit.

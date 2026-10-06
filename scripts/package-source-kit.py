@@ -49,8 +49,13 @@ def main():
         dest = stage / d['file']
         dest.parent.mkdir(parents=True, exist_ok=True)
         cached = args.cache / d['file'] if args.cache else None
+        # Some upstream archive endpoints regenerate tar mtimes for the same commit.
+        # Frozen preferred sources retain the reviewed byte hash; verification stays strict.
+        frozen = ROOT / 'release-sources' / d['file']
         if cached and cached.is_file():
             shutil.copyfile(cached, dest)
+        elif frozen.is_file():
+            shutil.copyfile(frozen, dest)
         else:
             urllib.request.urlretrieve(d['url'], dest)
         if sha(dest) != d['sha256']:
