@@ -112,7 +112,10 @@ class InstallResultReceiver : BroadcastReceiver() {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                 // Система просит подтверждение: показываем её диалог.
                 val confirm = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java) else @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_INTENT)
-                confirm?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)?.let { runCatching { context.startActivity(it) } }
+                // NEW_TASK alone may bring a confirmation for an abandoned session back to
+                // the foreground after process recovery. Each new session needs its own task.
+                confirm?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                    ?.let { runCatching { context.startActivity(it) } }
                 ApkInstaller.results.tryEmit(InstallResult.Pending(sessionId))
             }
             PackageInstaller.STATUS_SUCCESS -> {

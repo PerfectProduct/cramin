@@ -20,6 +20,9 @@ No endpoint, credentials or material are persisted here. Each load verifies the 
 The result receiver persists CANCELLED/FAILED before emitting the UI event, even if the previous
 process/manager is absent. Success clears the record. Session IDs reject late callbacks from an
 abandoned attempt. Result events do not replay stale cancellation into a fresh manager.
+Each native confirmation starts a separate task: NEW_TASK alone can bring an old confirmation
+for an abandoned session back to the foreground on Android26. MULTIPLE_TASK keeps the new
+session's Cancel/Install actions attached to that session without clearing another installer task.
 
 A restored SUBMITTED record is deliberately conservative: a new process cannot infer whether a
 system confirmation was shown or lost. It requires explicit retry rather than creating a duplicate.
