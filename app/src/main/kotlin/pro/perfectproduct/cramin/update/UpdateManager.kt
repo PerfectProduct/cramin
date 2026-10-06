@@ -37,6 +37,7 @@ class UpdateManager(
     val state: StateFlow<UpdateUi> = _state
     private val operationLock = Any()
     private var operation: Job? = null
+    private var queuedRetry = false
     private var retryAction: RetryAction = RetryAction.Check
 
     init {
@@ -61,7 +62,19 @@ class UpdateManager(
     /** A single operation slot covers check, download, permission recovery and submission. */
     private fun launchOperation(block: suspend () -> Unit): Unit = synchronized(operationLock) {
         if (operation?.isCompleted == false || _state.value is UpdateUi.Installing) return
-        operation = scope.launch(start = CoroutineStart.LAZY) { block() }.also { it.start() }
+        val task = scope.launch(start = CoroutineStart.LAZY) { block() }
+        operation = task
+        task.invokeOnCompletion {
+            synchronized(operationLock) {
+                if (operation === task) {
+                    operation = null
+                    val shouldRetry = queuedRetry
+                    queuedRetry = false
+                    if (shouldRetry && (_state.value is UpdateUi.Error || _state.value is UpdateUi.NeedsPermission)) retry()
+                }
+            }
+        }
+        task.start()
     }
 
     private fun error(kind: UpdateFailure, detail: String, action: RetryAction) {
@@ -99,20 +112,38 @@ class UpdateManager(
     private suspend fun downloadNow(release: ReleaseInfo) {
         _state.value = UpdateUi.Downloading(release, 0, release.apkSize)
         try {
-            val apk = downloader.download(release) { done, total -> _state.value = UpdateUi.Downloading(release, done, total) }
+            val downloadJob = currentCoroutineContext().job
+            val apk = downloader.download(release) { done, total ->
+                synchronized(operationLock) {
+                    if (downloadJob.isActive && operation === downloadJob) _state.value = UpdateUi.Downloading(release, done, total)
+                }
+            }
             currentCoroutineContext().ensureActive()
             withContext(Dispatchers.IO) { pending?.save(apk) }
             installPrepared(apk)
         } catch (e: CancellationException) { throw e }
         catch (e: DownloadException) {
+            currentCoroutineContext().ensureActive()
             error(if (e.checksumMismatch) UpdateFailure.INTEGRITY else UpdateFailure.DOWNLOAD,
                 e.message.orEmpty(), RetryAction.Download(release))
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             error(UpdateFailure.DOWNLOAD, e.javaClass.simpleName, RetryAction.Download(release))
         }
     }
 
-    fun retry() = launchOperation {
+    fun retry(): Unit = synchronized(operationLock) {
+        if (_state.value !is UpdateUi.Error && _state.value !is UpdateUi.NeedsPermission) return
+        if (operation?.isCompleted == false) {
+            // Error is visible slightly before the coroutine completes. Retain ONE early tap,
+            // and wait for cleanup instead of dropping it or overlapping another operation.
+            queuedRetry = true
+            return
+        }
+        launchOperation { retryNow() }
+    }
+
+    private suspend fun retryNow() {
         when (val action = retryAction) {
             RetryAction.Check -> checkNow()
             is RetryAction.Download -> downloadNow(action.release)
@@ -169,9 +200,10 @@ class UpdateManager(
 
     fun cancel(): Unit = synchronized(operationLock) {
         if (_state.value is UpdateUi.Installing) return
+        queuedRetry = false
+        _state.value = UpdateUi.Idle
         operation?.cancel()
         pending?.clear()
-        _state.value = UpdateUi.Idle
     }
 
     fun reset() = cancel()

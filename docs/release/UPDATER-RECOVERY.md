@@ -2,7 +2,8 @@
 
 Retry remembers the failed action in the current process: check, download, or install a verified APK.
 One operation slot coalesces repeated taps and lifecycle callbacks. A cancelled download finishes its
-cleanup before another operation may start. UI uses localized failure categories; technical details
+cleanup before another operation may start. If Retry arrives during terminal error publication,
+one request waits for completion; it is neither dropped nor run in parallel. UI uses localized failure categories; technical details
 remain in UpdateUi.Error.diagnostic and the safe debug Log sink.
 
 The pending record contains only the APK basename, SHA-256, intent and installer session ID.

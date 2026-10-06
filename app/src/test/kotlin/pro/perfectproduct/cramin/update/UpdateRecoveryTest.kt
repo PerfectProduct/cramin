@@ -58,12 +58,17 @@ class UpdateRecoveryTest {
 
     @Test fun checkFailureRetriesCheckWithoutPendingAndCoalescesClicks() = runBlocking {
         val m = manager()
+        // Resume inline inside Error publication, BEFORE the failed operation completes.
+        // This reproduces the lost Retry reported by push CI without sleeps or blind reruns.
+        val immediateRetry = launch(Dispatchers.Unconfined) {
+            val e = await(m) { it is UpdateUi.Error } as UpdateUi.Error
+            assertEquals(UpdateFailure.CHECK, e.kind); assertEquals("HTTP 503", e.diagnostic)
+            assertNull(store.load())
+            server.enqueue(MockResponse.Builder().body(json()).headersDelay(150, TimeUnit.MILLISECONDS).build())
+            repeat(10) { m.retry() }
+        }
         server.enqueue(MockResponse(code = 503)); m.check()
-        val e = await(m) { it is UpdateUi.Error } as UpdateUi.Error
-        assertEquals(UpdateFailure.CHECK, e.kind); assertEquals("HTTP 503", e.diagnostic)
-        assertNull(store.load())
-        server.enqueue(MockResponse.Builder().body(json()).headersDelay(150, TimeUnit.MILLISECONDS).build())
-        repeat(10) { m.retry() }
+        immediateRetry.join()
         await(m) { it is UpdateUi.Available }
         assertEquals(2, server.requestCount); assertEquals(0, installer.installs)
     }
