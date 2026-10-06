@@ -9,17 +9,20 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import pro.perfectproduct.cramin.util.Log
 import java.io.File
 
 /** Результат установки, доставленный [InstallResultReceiver]. */
 sealed interface InstallResult {
-    data object Pending : InstallResult
-    data object Success : InstallResult
-    data class Failure(val message: String) : InstallResult
+    data class Pending(val sessionId: Int) : InstallResult
+    data class Success(val sessionId: Int) : InstallResult
+    data class Cancelled(val sessionId: Int) : InstallResult
+    data class Failure(val sessionId: Int, val status: Int) : InstallResult
 }
 
 /**
@@ -30,9 +33,10 @@ interface UpdateInstaller {
     fun canInstall(): Boolean
     fun validate(apk: File): Boolean
     suspend fun install(apk: File)
+    fun abandonSession(sessionId: Int) {}
 }
 
-class ApkInstaller(private val context: Context) : UpdateInstaller {
+class ApkInstaller(private val context: Context, private val pendingStore: PendingUpdateStore = PendingUpdateStore.forContext(context)) : UpdateInstaller {
 
     override fun canInstall(): Boolean = context.packageManager.canRequestPackageInstalls()
 
@@ -55,23 +59,34 @@ class ApkInstaller(private val context: Context) : UpdateInstaller {
 
     override suspend fun install(apk: File): Unit = withContext(Dispatchers.IO) {
         require(validate(apk)) { "invalid update package" }
-        results.value = InstallResult.Pending
+        currentCoroutineContext().ensureActive()
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             if (Build.VERSION.SDK_INT >= 31) setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
         }
         val sessionId = installer.createSession(params)
-        installer.openSession(sessionId).use { session ->
-            session.openWrite("cramin.apk", 0, apk.length()).use { out ->
-                apk.inputStream().use { it.copyTo(out) }
-                session.fsync(out)
+        try {
+            pendingStore.transition(PendingUpdateStore.Phase.SUBMITTED, sessionId)
+            installer.openSession(sessionId).use { session ->
+                session.openWrite("cramin.apk", 0, apk.length()).use { out ->
+                    apk.inputStream().use { it.copyTo(out) }
+                    session.fsync(out)
+                }
+                currentCoroutineContext().ensureActive()
+                val intent = Intent(context, InstallResultReceiver::class.java).setAction(ACTION_RESULT).putExtra(EXTRA_SESSION_ID, sessionId)
+                val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                val pending = PendingIntent.getBroadcast(context, sessionId, intent, flags)
+                session.commit(pending.intentSender)
             }
-            val intent = Intent(context, InstallResultReceiver::class.java).setAction(ACTION_RESULT)
-            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-            val pending = PendingIntent.getBroadcast(context, sessionId, intent, flags)
-            session.commit(pending.intentSender)
+        } catch (e: Exception) {
+            abandonSession(sessionId)
+            throw e
         }
         Log.i(TAG, "install session $sessionId committed")
+    }
+
+    override fun abandonSession(sessionId: Int) {
+        runCatching { context.packageManager.packageInstaller.abandonSession(sessionId) }
     }
 
     companion object {
@@ -79,8 +94,10 @@ class ApkInstaller(private val context: Context) : UpdateInstaller {
         const val ACTION_RESULT = "pro.perfectproduct.cramin.update.INSTALL_RESULT"
 
         /** Общий канал результата: ресивер объявлен в манифесте, а UI подписан через Flow. */
-        val results = MutableStateFlow<InstallResult?>(null)
-        val resultFlow: StateFlow<InstallResult?> get() = results
+        const val EXTRA_SESSION_ID = "pro.perfectproduct.cramin.update.SESSION_ID"
+        // No replay of a stale cancellation into a newly constructed manager.
+        val results = MutableSharedFlow<InstallResult>(extraBufferCapacity = 8)
+        val resultFlow: SharedFlow<InstallResult> get() = results
     }
 }
 
@@ -88,15 +105,26 @@ class ApkInstaller(private val context: Context) : UpdateInstaller {
 class InstallResultReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+        val sessionId = intent.getIntExtra(ApkInstaller.EXTRA_SESSION_ID, -1)
+        val store = PendingUpdateStore.forContext(context)
+        if (!store.matchesSession(sessionId)) return
         when (status) {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                 // Система просит подтверждение: показываем её диалог.
                 val confirm = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java) else @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_INTENT)
                 confirm?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)?.let { runCatching { context.startActivity(it) } }
-                ApkInstaller.results.value = InstallResult.Pending
+                ApkInstaller.results.tryEmit(InstallResult.Pending(sessionId))
             }
-            PackageInstaller.STATUS_SUCCESS -> ApkInstaller.results.value = InstallResult.Success
-            else -> ApkInstaller.results.value = InstallResult.Failure("status $status")
+            PackageInstaller.STATUS_SUCCESS -> {
+                if (store.completeSession(sessionId, success = true)) ApkInstaller.results.tryEmit(InstallResult.Success(sessionId))
+            }
+            else -> {
+                val cancelled = status == PackageInstaller.STATUS_FAILURE_ABORTED
+                // Persist BEFORE Activity resumes, including when its old process is gone.
+                if (store.completeSession(sessionId, success = false, cancelled = cancelled)) {
+                    ApkInstaller.results.tryEmit(if (cancelled) InstallResult.Cancelled(sessionId) else InstallResult.Failure(sessionId, status))
+                }
+            }
         }
         Log.i("Update", "install result status=$status")
     }

@@ -318,4 +318,10 @@
     <string name="doc_models_requested">Модели выполненных запросов</string>
     <string name="doc_models_missing">Нет сохранённых сведений о выполненных запросах</string>
     <string name="doc_models_snapshot">Модели в сохранённых параметрах обработки</string>
+    <string name="update_check_error">Не удалось проверить обновления. Проверьте интернет и нажмите «Повторить».</string>
+    <string name="update_download_error">Не удалось загрузить обновление. Проверьте интернет и нажмите «Повторить».</string>
+    <string name="update_install_error">Не удалось установить обновление. Нажмите «Повторить», чтобы попробовать снова.</string>
+    <string name="update_install_cancelled">Установка отменена. Для новой попытки нажмите «Повторить».</string>
+    <string name="update_install_interrupted">Установка была прервана. Для новой попытки нажмите «Повторить».</string>
+    <string name="update_installing">Ожидаю завершения установки…</string>
 </resources>

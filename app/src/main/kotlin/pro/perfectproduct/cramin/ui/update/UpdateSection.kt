@@ -26,8 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import pro.perfectproduct.cramin.R
 import pro.perfectproduct.cramin.app.LocalContainer
-import pro.perfectproduct.cramin.update.ApkInstaller
-import pro.perfectproduct.cramin.update.InstallResult
+import pro.perfectproduct.cramin.update.UpdateFailure
 import pro.perfectproduct.cramin.update.UpdateUi
 
 /** «Проверить обновления» и диалоги обновления (SPEC U8, §12.4). */
@@ -36,7 +35,6 @@ fun UpdateSection() {
     val container = LocalContainer.current
     val manager = container.updateManager
     val state by manager.state.collectAsState()
-    val installResult by ApkInstaller.resultFlow.collectAsState()
     val context = LocalContext.current
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { manager.resumePending() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -75,22 +73,20 @@ fun UpdateSection() {
             title = { Text(stringResource(R.string.update_install)) },
             text = { Text(stringResource(R.string.update_permission_body)) },
             confirmButton = { TextButton(onClick = { permission.launch(container.apkInstaller.unknownSourcesIntent()) }) { Text(stringResource(R.string.update_permission_open)) } },
-            dismissButton = { TextButton(onClick = { manager.install(s.apk) }) { Text(stringResource(R.string.action_retry)) } },
+            dismissButton = { TextButton(onClick = { manager.retry() }) { Text(stringResource(R.string.action_retry)) } },
         )
-        is UpdateUi.Installing -> {
-            val r = installResult
-            Text(
-                when (r) {
-                    is InstallResult.Failure -> stringResource(R.string.update_install_failed, r.message)
-                    else -> stringResource(R.string.update_checking)
-                },
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        is UpdateUi.Installing -> Text(stringResource(R.string.update_installing), style = MaterialTheme.typography.bodySmall)
         is UpdateUi.Error -> Column {
-            Text(if (s.checksum) stringResource(R.string.update_verify_failed) else stringResource(R.string.update_error, s.message),
-                color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = manager::resumePending) { Text(stringResource(R.string.action_retry)) }
+            val message = when (s.kind) {
+                UpdateFailure.CHECK -> R.string.update_check_error
+                UpdateFailure.DOWNLOAD -> R.string.update_download_error
+                UpdateFailure.INTEGRITY -> R.string.update_verify_failed
+                UpdateFailure.INSTALL -> R.string.update_install_error
+                UpdateFailure.CANCELLED -> R.string.update_install_cancelled
+                UpdateFailure.INTERRUPTED -> R.string.update_install_interrupted
+            }
+            Text(stringResource(message), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = manager::retry) { Text(stringResource(R.string.action_retry)) }
         }
     }
 }

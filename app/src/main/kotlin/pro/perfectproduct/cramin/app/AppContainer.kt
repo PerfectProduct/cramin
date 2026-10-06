@@ -156,8 +156,7 @@ open class AppContainer(
             downloader = pro.perfectproduct.cramin.update.ApkDownloader(httpClient, appContext.cacheDir),
             installer = apkInstaller,
             scope = appScope,
-            pending = pro.perfectproduct.cramin.update.PendingUpdateStore(
-                java.io.File(appContext.filesDir, "pending-update.json"), java.io.File(appContext.cacheDir, "updates")),
+            pending = pro.perfectproduct.cramin.update.PendingUpdateStore.forContext(appContext),
         )
     }
 

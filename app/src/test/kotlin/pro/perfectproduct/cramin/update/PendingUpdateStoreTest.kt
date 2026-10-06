@@ -20,6 +20,23 @@ class PendingUpdateStoreTest {
         apk.delete()
         assertNull(PendingUpdateStore(record, dir).load())
     }
+    @Test fun legacyRecordRequiresExplicitActionAndLateCallbackCannotClearNewAttempt() {
+        val dir = tmp.newFolder("updates")
+        val record = tmp.root.resolve("pending.json")
+        val apk = dir.resolve("sample.apk").apply { writeText("synthetic") }
+        record.writeText("""{"name":"sample.apk","sha256":"${pro.perfectproduct.cramin.util.Hashing.sha256Hex(apk)}"}""")
+        val store = PendingUpdateStore(record, dir)
+        assertEquals(PendingUpdateStore.Phase.RETRY, store.loadEntry()?.phase)
+        store.transition(PendingUpdateStore.Phase.SUBMITTED, 1)
+        val receiverStore = PendingUpdateStore(record, dir)
+        assertTrue(receiverStore.completeSession(1, success = false, cancelled = true))
+        assertEquals(PendingUpdateStore.Phase.CANCELLED, store.loadEntry()?.phase)
+        store.transition(PendingUpdateStore.Phase.SUBMITTED, 2)
+        assertFalse(receiverStore.completeSession(1, success = true))
+        assertEquals(2, store.loadEntry()?.sessionId)
+        assertTrue(receiverStore.completeSession(2, success = true))
+        assertNull(store.load())
+    }
     @Test fun rejectsPathTraversal() {
         val dir = tmp.newFolder("updates")
         val record = tmp.root.resolve("pending.json")
