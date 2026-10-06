@@ -18,10 +18,16 @@ No endpoint, credentials or material are persisted here. Each load verifies the 
 | SUBMITTED | Show interrupted attempt; never submit another session automatically | Invalidate old callback ID, abandon old session, validate and submit |
 | CANCELLED | Show cancellation; no submission | Validate and submit a new attempt |
 | FAILED / legacy RETRY | Show failure/interruption; no submission | Validate and submit a new attempt |
+| SUCCEEDED | Consume matching success identity, clear record and return Idle | Start a fresh check |
 
 The result receiver persists CANCELLED/FAILED before emitting the UI event, even if the previous
-process/manager is absent. Success clears the record. Session IDs reject late callbacks from an
-abandoned attempt. Result events do not replay stale cancellation into a fresh manager.
+process/manager is absent. Success persists SUCCEEDED until its matching consumer (including process
+recovery) clears it; load() does not expose it as an installable APK. Session IDs reject late callbacks
+from an abandoned attempt. Result events do not replay stale cancellation into a fresh manager.
+Receiver approval is not enough for a queued event: the manager applies only a matching session ID
+AND terminal phase. operationLock -> store lock covers identity check, success cleanup and synchronous
+UI/retry-action application together, without suspension. Receiver-persisted CANCELLED/FAILED is never
+rewritten by the collector. A delayed event for A cannot clear or change B, even if B's APK is corrupt.
 Each native confirmation starts a separate task: NEW_TASK alone can bring an old confirmation
 for an abandoned session back to the foreground on Android26. MULTIPLE_TASK keeps the new
 session's Cancel/Install actions attached to that session without clearing another installer task.

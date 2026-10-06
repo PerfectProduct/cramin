@@ -43,21 +43,26 @@ class UpdateManager(
 
     init {
         scope.launch {
-            results.collect { result ->
-                when (result) {
-                    is InstallResult.Success -> { pending?.clear(); _state.value = UpdateUi.Idle }
-                    is InstallResult.Cancelled -> {
-                        pausePrepared(PendingUpdateStore.Phase.CANCELLED)
-                        error(UpdateFailure.CANCELLED, "installer cancelled", RetryAction.Install)
-                    }
-                    is InstallResult.Failure -> {
-                        pausePrepared(PendingUpdateStore.Phase.FAILED)
-                        error(UpdateFailure.INSTALL, "installer status ${result.status}", RetryAction.Install)
-                    }
-                    is InstallResult.Pending -> Unit
-                }
-            }
+            results.collect { result -> applyInstallResult(result) }
         }
+    }
+
+    /** A receiver-approved event can still be stale by the time this IO collector sees it. */
+    private fun applyInstallResult(result: InstallResult): Unit = synchronized(operationLock) {
+        val store = pending ?: return
+        when (result) {
+            is InstallResult.Success -> store.applyTerminalResult(result.sessionId, PendingUpdateStore.Phase.SUCCEEDED) {
+                _state.value = UpdateUi.Idle
+            }
+            is InstallResult.Cancelled -> store.applyTerminalResult(result.sessionId, PendingUpdateStore.Phase.CANCELLED) {
+                error(UpdateFailure.CANCELLED, "installer cancelled", RetryAction.Install)
+            }
+            is InstallResult.Failure -> store.applyTerminalResult(result.sessionId, PendingUpdateStore.Phase.FAILED) {
+                error(UpdateFailure.INSTALL, "installer status ${result.status}", RetryAction.Install)
+            }
+            is InstallResult.Pending -> Unit
+        }
+        Unit
     }
 
     /** A single operation slot covers check, download, permission recovery and submission. */
@@ -104,6 +109,7 @@ class UpdateManager(
             PendingUpdateStore.Phase.PREPARED, PendingUpdateStore.Phase.PERMISSION -> installPrepared(entry.apk)
             PendingUpdateStore.Phase.CANCELLED -> error(UpdateFailure.CANCELLED, "saved cancellation", RetryAction.Install)
             PendingUpdateStore.Phase.FAILED -> error(UpdateFailure.INSTALL, "saved installer failure", RetryAction.Install)
+            PendingUpdateStore.Phase.SUCCEEDED -> entry.sessionId?.let { applyInstallResult(InstallResult.Success(it)) }
             PendingUpdateStore.Phase.SUBMITTED, PendingUpdateStore.Phase.RETRY -> {
                 // A new process must not create a duplicate of the existing installer session.
                 // Leave it available for explicit retry (which abandons the previous session).

@@ -44,4 +44,25 @@ class PendingUpdateStoreTest {
         assertNull(PendingUpdateStore(record, dir).load())
         assertFalse(record.exists())
     }
+    @Test fun successfulIdentitySurvivesRecreationAndIsConsumedOnlyForItsSession() {
+        val dir = tmp.newFolder("updates")
+        val record = tmp.root.resolve("pending.json")
+        val apk = dir.resolve("sample.apk").apply { writeText("synthetic") }
+        val store = PendingUpdateStore(record, dir)
+        store.save(apk); store.transition(PendingUpdateStore.Phase.SUBMITTED, 1)
+        assertTrue(store.completeSession(1, success = true))
+        val restored = PendingUpdateStore(record, dir)
+        assertEquals(PendingUpdateStore.Phase.SUCCEEDED, restored.loadEntry()?.phase)
+        assertNull(restored.load()) // success is not an installable pending APK
+        assertFalse(restored.applyTerminalResult(2, PendingUpdateStore.Phase.SUCCEEDED) { fail("wrong identity") })
+        var applied = false
+        assertTrue(restored.applyTerminalResult(1, PendingUpdateStore.Phase.SUCCEEDED) {
+            assertNull(restored.loadEntry()) // cleared before UI can request another update
+            applied = true
+        })
+        assertTrue(applied); assertFalse(record.exists())
+        store.save(apk); store.transition(PendingUpdateStore.Phase.SUBMITTED, 2)
+        assertFalse(restored.applyTerminalResult(1, PendingUpdateStore.Phase.SUCCEEDED) { fail("stale success") })
+        assertEquals(2, store.loadEntry()?.sessionId)
+    }
 }

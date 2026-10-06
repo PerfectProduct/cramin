@@ -48,15 +48,30 @@ PR run может собирать синтетический merge commit GitHu
 Если main не предок feat/v1, согласовать способ интеграции и собрать новый локальный комплект.
 
 ```bash
-git fetch origin --tags
-git merge-base --is-ancestor origin/main feat/v1
-git switch main # если локальной main нет: git switch -c main origin/main
-git merge --ff-only origin/main
-git merge --ff-only feat/v1
+bash <<'CRAMIN_INTEGRATE'
+set -euo pipefail
+cd /home/dev/cramin
+git fetch --no-tags origin
+test -z "$(git status --porcelain)"
+test "$(git rev-parse main)" = 3e93eb4f0a067b47d1075a7708c1dcd28758862a
+test "$(git rev-parse origin/main)" = 3e93eb4f0a067b47d1075a7708c1dcd28758862a
+test "$(git rev-parse feat/v1)" = '{{RELEASE_HEAD}}'
+test "$(git rev-parse origin/feat/v1)" = '{{RELEASE_HEAD}}'
+test "0.1.$(git rev-list --count origin/feat/v1)" = '{{RELEASE_VERSION}}'
+git merge-base --is-ancestor origin/main origin/feat/v1
+git switch main
+git merge --ff-only origin/feat/v1
+test "$(git rev-parse HEAD)" = '{{RELEASE_HEAD}}'
 git push origin main
 gh workflow run instrumented.yml --repo PerfectProduct/cramin --ref main
-# Дождаться ci и instrumented на точном SHA main; проверить набор секретов/SDK.
+CRAMIN_INTEGRATE
 ```
+
+Это самостоятельный неинтерактивный Bash с остановкой при любой ошибке; не копировать отдельные
+строки в интерактивную оболочку. Все предварительные guards выполняются до switch/merge/push/dispatch.
+Проверка после merge дополнительно останавливает push/dispatch при неожиданном результате.
+Main исходного принятого релиза48 указан явно; при ином main требуется новое согласование.
+Команды подготовлены, не выполнялись.
 
 ## Этап 3 — отдельное разрешение tag + draft release + upload
 
