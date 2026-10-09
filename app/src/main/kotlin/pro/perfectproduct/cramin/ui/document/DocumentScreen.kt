@@ -144,6 +144,7 @@ fun DocumentScreen(
                     Text(statusLabel(doc.status), Modifier.padding(horizontal = 20.dp))
                     val requestModels by vm.requestModels.collectAsState()
                     DocumentCosts(doc, requestModels)
+                    DocumentDiagnosticExport(vm, doc.status == DocStatus.READY)
                     val summary by androidx.compose.runtime.produceState("", doc.id, doc.updatedAt, doc.status) { value = vm.diagnostics() }
                     androidx.compose.foundation.text.selection.SelectionContainer {
                         Text(summary, Modifier.padding(20.dp), style = MaterialTheme.typography.bodySmall)

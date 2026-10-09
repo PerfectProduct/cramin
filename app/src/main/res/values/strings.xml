@@ -218,6 +218,12 @@
     <string name="err_pdf_invalid">Не удалось прочитать PDF. Проверьте файл или выберите другой.</string>
     <string name="err_pdf_encrypted">PDF защищён. Выберите копию без защиты.</string>
     <string name="diagnostic_copy">Скопировать диагностику</string>
+    <string name="diagnostic_export">Экспорт для диагностики</string>
+    <string name="diagnostic_export_warning">Архив содержит текст этого документа и сохранённые ответы модели. Передавайте его только тому, кому доверяете.</string>
+    <string name="diagnostic_export_writing">Сохраняем архив…</string>
+    <string name="diagnostic_export_saved">Архив сохранён</string>
+    <string name="diagnostic_export_cancelled">Сохранение отменено</string>
+    <string name="diagnostic_export_failed">Не удалось сохранить архив. Удалите неполный ZIP, если он остался, и повторите.</string>
     <string name="diagnostic_previous">Историческое событие: %1$s · %2$s</string>
     <string name="diagnostic_unknown_stage">Стадия старой ошибки не сохранена</string>
     <string name="diagnostic_config">Конфигурация обработки</string>
