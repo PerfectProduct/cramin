@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Статья по ссылке (SPEC §7.1): OkHttp GET с User-Agent мобильного браузера, таймаут 30 с,
- * редиректы включены → Readability4J → абзацы и заголовок. Меньше 200 символов — ошибка.
+ * редиректы включены; Markdown/plain text сохраняются, HTML → Readability4J. Меньше 200 символов — ошибка.
  */
 class ArticleExtractor(http: OkHttpClient) : SourceExtractor {
     private val http = http.newBuilder()
@@ -31,7 +31,7 @@ class ArticleExtractor(http: OkHttpClient) : SourceExtractor {
 
     override suspend fun extract(document: DocumentEntity, files: DocumentFiles): Extracted = withContext(Dispatchers.IO) {
         val url = UrlClassifier.normalize(document.sourceRef)
-        val html = try {
+        val result = try {
             val request = Request.Builder().url(url)
                 .header("User-Agent", MOBILE_USER_AGENT)
                 .header("Accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8")
@@ -39,14 +39,22 @@ class ArticleExtractor(http: OkHttpClient) : SourceExtractor {
                 .build()
             http.newCall(request).useCancellable { resp ->
                 if (!resp.isSuccessful) throw PipelineException(ErrorCode.ARTICLE_EXTRACT, "HTTP ${resp.code}")
-                resp.body.string()
+                val body = resp.body
+                val mediaType = body.contentType()
+                // ResponseBody.string() honors the declared charset/BOM, falling back to UTF-8.
+                val text = body.string()
+                if (mediaType?.type == "text" && mediaType.subtype in setOf("markdown", "plain")) {
+                    if (text.length < MIN_CHARS) throw PipelineException(ErrorCode.ARTICLE_EXTRACT, "extracted ${text.length} chars")
+                    Extracted.Text(text = text, title = null, langHint = null)
+                } else {
+                    parse(url, text)
+                }
             }
         } catch (e: IOException) {
             throw PipelineException(ErrorCode.NETWORK, e.javaClass.simpleName, e)
         } catch (e: IllegalArgumentException) {
             throw PipelineException(ErrorCode.ARTICLE_EXTRACT, "bad url", e)
         }
-        val result = parse(url, html)
         Log.i(TAG, "doc=${document.id} article: ${result.text.length} chars, paragraphs=${result.text.count { it == '\n' } / 2 + 1}")
         result
     }
