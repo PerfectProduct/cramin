@@ -176,7 +176,7 @@ Output only JSON matching the schema.
 - `maxCompletionTokens` берётся из каталога OpenRouter для модели (`top_provider.max_completion_tokens`) либо из роли;
 - `tokensPerWord` задаётся в конфиге (по умолчанию en 1.4, ru 2.6, he 2.6).
 
-Если документ помещается в одну секцию, он переводится целиком одним вызовом. Границы секций проходят только по абзацам; если абзац длиннее секции — по предложениям.
+Дополнительный предел — 32 предложения на запрос TRANSLATE: один лимит слов допускал сотни коротких предложений и смещение соответствий. Если документ помещается по обоим пределам, он переводится целиком одним вызовом. Границы секций проходят по абзацам; если абзац превышает предел слов или предложений — по предложениям. Старый pending job с большим диапазоном делится на подвызовы без перенумерации и изменения диапазона job.
 
 **Последовательность.** Секции переводятся **последовательно**. Каждая получает бриф (summary, domain, register), глоссарий и **контекст продолжения**: последние 3 предложения предыдущей секции с их переводом, помеченные как уже переведённые.
 
@@ -192,6 +192,11 @@ Translate naturally and faithfully, as a skilled human translator would, not wor
 You may merge up to 3 adjacent sentences into one translated segment when natural TARGET style
 requires it; otherwise keep one segment per sentence. Segments must cover every sentence id exactly once,
 in order, without gaps or overlaps. Do not add or omit content.
+The ids in SENTENCES are global: never renumber them or return CONTEXT sentences.
+For each segment copy sourceIds from SOURCE_IDS for exactly from..to, in source order.
+Each t must translate ONLY those source sentences; copying sourceIds is not a substitute for translating them.
+Preserve numeric literals (including numbered headings/list labels), URLs and inline backtick code
+verbatim and in source order. Do not change number formatting, spell digits out, or add new anchors.
 Output only JSON matching the schema.
 ```
 
@@ -207,6 +212,7 @@ GLOSSARY:
 CONTEXT (already translated):
 [118] ... => ...
 [119] ... => ...
+SOURCE_IDS: {"120":"s120:<SHA-256 UTF-8 исходного Sentence.text>","121":"s121:<SHA-256>"}
 SENTENCES:
 [120] ...
 [121] ...
@@ -219,19 +225,23 @@ SENTENCES:
 ```json
 {"type":"object","additionalProperties":false,"required":["seg"],
  "properties":{"seg":{"type":"array","items":{"type":"object","additionalProperties":false,
-   "required":["from","to","t"],
-   "properties":{"from":{"type":"integer"},"to":{"type":"integer"},"t":{"type":"string"}}}}}}
+   "required":["from","to","t","sourceIds"],
+   "properties":{"from":{"type":"integer"},"to":{"type":"integer"},"t":{"type":"string"},
+     "sourceIds":{"type":"array","minItems":1,"maxItems":3,"items":{"type":"string"}}}}}}}
 ```
 
 **Валидация:**
 - Сегменты покрывают все id секции подряд, без дыр и пересечений; `to - from ≤ 2`; `t` непустой.
-- Дыры дозапрашиваются одним вызовом с тем же промптом, только по пропущенным предложениям и с контекстом вокруг.
+- До принятия ответа проверяются исходный порядок сегментов, принадлежность всех from..to текущему запросу, sourceIds ровно для этих Sentence и упорядоченная последовательность неизменяемых якорей. Якоря: отдельные числовые литералы (включая номера заголовков/списков; без изменения формата и написания цифр словами), HTTP(S) URL без конечной пунктуации, inline-код в одинарных backticks. Числа внутри URL/кода не считаются отдельно. Несоответствие завершает TRANSLATING с INVALID_RESPONSE до записи сегментов job и EXTRACT, без дополнительных semantic paid retries.
+- Дыры дозапрашиваются по одному разу для каждого непрерывного пропущенного диапазона с контекстом вокруг; повторные дыры завершают стадию ошибкой. Дозапрос не может включать уже покрытые или context id. `length` у дозапроса делит только диапазон дыр.
 - При `finish_reason == "length"` секция делится пополам по абзацам, обе половины переводятся заново.
-- Результат пишется в `Segment` (§13).
+- Результат пишется в `Segment` (§13) и StoredTranslation с integrityVersion=1/sourceIds. При восстановлении DONE проверяются сохранённые доказательства, покрытие и совпадение с Room Segment. Старые записи читаются без миграции: отсутствие новых полей — UNKNOWN, а не доказательство ошибки. Для старой записи явный чужой номер сохранённого Markdown-заголовка обнаруживается и блокирует продолжение; отсутствие форматирования не считается ошибкой нового протокола.
+
+Проверки механические: верное эхо id/hash и якорей не доказывает семантическую эквивалентность. Чужой перевод без якорей или с теми же якорями может пройти. Ограничение 32 снижает риск дрейфа, но его влияние на качество/стоимость без нового измерения неизвестно. Существующие READY-документы не перепроверяются и не переобрабатываются автоматически. Явное восстановление только консолидации также проверяет доступный DONE proof и явные чужие legacy-заголовки до построения READY, без вызова TRANSLATE и восстановления отсутствующих доказательств через API.
 
 ### 6.6. Стадия 3: извлечение единиц (роль `extract`)
 
-**Нарезка.** Чанки по ~`extract.chunkWords` слов (по умолчанию 700) целыми сегментами перевода. Чанки обрабатываются **параллельно**, `Semaphore(extract.concurrency)`, по умолчанию 3.
+**Нарезка.** Чанки по ~`extract.chunkWords` слов (по умолчанию 350 для новых processing snapshots) целыми сегментами перевода. Чанки обрабатываются **параллельно**, `Semaphore(extract.concurrency)`, по умолчанию 3. Сохранённый snapshot и диапазоны уже созданных jobs не перепланируются при смене текущего конфига; snapshot с размером700 продолжает использовать700. Меньший размер снижает давление на output budget, но не гарантирует отсутствие усечённых ответов, экономию или ускорение.
 
 **Системный промпт:**
 
@@ -352,7 +362,7 @@ Every occurrence id must appear exactly once. Output only JSON.
 ```json
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-01",
+  "updatedAt": "2026-10-09",
   "roles": {
     "brief":       {"model": "<id>", "temperature": 0.2, "maxTokens": 6000},
     "translate":   {"model": "<id>", "temperature": 0.3, "maxTokens": null},
@@ -363,7 +373,7 @@ Every occurrence id must appear exactly once. Output only JSON.
   "pipeline": {
     "brief.maxInputWords": 60000,
     "translate.maxSectionWords": 4000,
-    "extract.chunkWords": 700,
+    "extract.chunkWords": 350,
     "extract.concurrency": 3,
     "tokensPerWord": {"en": 1.4, "ru": 2.6, "he": 2.6}
   }
@@ -748,7 +758,7 @@ retry; копирование только allowlist, без сообщений 
 стадии старых ошибок не угадываются. Простой онбординг сохранён, модели выбираются в настройках
 (AUD-016, принятое в этом проходе упрощение).
 
-Совместимость старого snapshot моделей: роли сохраняются; отсутствующие исторические pipeline-параметры неизвестны. Продолжение использует стандартные PipelineParams с явным уведомлением. Новые текущие настройки применяются только через «Обработать заново». Учтённая стоимость в UI — нижняя граница расходов, не полный счёт провайдера.
+Совместимость старого snapshot моделей: роли сохраняются; отсутствующие исторические pipeline-параметры неизвестны. Продолжение сохраняет прежний fallback `extractChunkWords=700` (в том числе при отсутствии поля в snapshot v1), а не новый default350, с явным уведомлением для legacy roles-only snapshot. Это fallback, не восстановленное историческое значение. Новые текущие настройки применяются только через «Обработать заново» или при первой обработке нового документа. Удалённый config из main имеет приоритет над embedded: локальный embedded350 не перекрывает remote700 у установленного приложения. Учтённая стоимость в UI — нижняя граница расходов, не полный счёт провайдера.
 
 ### Уточнение BRIEF и диагностики (DL-048, 2026-10-03)
 

@@ -42,6 +42,26 @@ class ModelConfigTest {
     }
 
     @Test
+    fun extract350AppliesToNewSnapshotsButRemote700StillWins() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val bundled = ModelsConfigFile.parse(context.assets.open("models.json").bufferedReader().use { it.readText() })
+        assertEquals(350, bundled.pipeline?.extractChunkWords)
+        assertEquals(350, PipelineParams().extractChunkWords)
+        assertEquals(350, ModelConfigResolver.mergePipeline(null, null).extractChunkWords)
+
+        val local = ModelConfigResolver.resolve(null, null, bundled, null)
+        assertEquals(350, ProcessingSnapshot.capture(local, null).config.pipeline.extractChunkWords)
+        val oldRemote = bundled.copy(pipeline = requireNotNull(bundled.pipeline).copy(extractChunkWords = 700))
+        val remote = ModelConfigResolver.resolve(null, oldRemote, bundled, null)
+        assertEquals(700, ProcessingSnapshot.capture(remote, null).config.pipeline.extractChunkWords)
+        // A later resolution cannot mutate either captured configuration.
+        assertEquals(350, local.pipeline.extractChunkWords)
+        assertEquals(local.pipeline.copy(extractChunkWords = 700), remote.pipeline)
+        assertEquals(local.roles.mapValues { it.value.copy(source = ConfigSource.EMBEDDED) },
+            remote.roles.mapValues { it.value.copy(source = ConfigSource.EMBEDDED) })
+    }
+
+    @Test
     fun unknownSchemaVersionIsIgnored() {
         assertNull(ModelsConfigFile.parseOrNull("""{"schemaVersion": 2, "roles": {}}"""))
         assertNull(ModelsConfigFile.parseOrNull("not json"))

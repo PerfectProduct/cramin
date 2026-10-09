@@ -38,6 +38,22 @@ data class TextParagraph(val paragraphIdx: Int, val segments: List<TextSegment>)
 enum class TextViewMode { PAIRS, SOURCE_ONLY, TARGET_ONLY }
 
 class DocumentViewModel(private val container: AppContainer, val documentId: Long) : ViewModel() {
+    val diagnosticExport = pro.perfectproduct.cramin.diagnostics.DiagnosticExportAction(viewModelScope) { uri ->
+        val resolver = container.appContext.contentResolver
+        try {
+            pro.perfectproduct.cramin.diagnostics.DocumentDiagnosticExporter(container.db, container.appContext.filesDir,
+                pro.perfectproduct.cramin.diagnostics.ExportAppInfo(pro.perfectproduct.cramin.BuildConfig.APPLICATION_ID,
+                    pro.perfectproduct.cramin.BuildConfig.VERSION_NAME, pro.perfectproduct.cramin.BuildConfig.VERSION_CODE))
+                .save(documentId, { resolver.openOutputStream(uri, "wt") }, {
+                    android.provider.DocumentsContract.deleteDocument(resolver, uri)
+                })
+        } catch (e: Exception) {
+            if (e !is kotlinx.coroutines.CancellationException)
+                pro.perfectproduct.cramin.util.Log.w("DiagnosticExport", "doc=$documentId save=${e.javaClass.simpleName}")
+            throw e
+        }
+    }
+
     val document: StateFlow<DocumentWithCounts?> = container.documentRepository.observeDocumentWithCounts(documentId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 

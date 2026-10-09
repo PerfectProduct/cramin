@@ -84,7 +84,7 @@ enum class ConfigSource { OVERRIDE, REMOTE, EMBEDDED }
 data class PipelineParams(
     val briefMaxInputWords: Int = 60_000,
     val translateMaxSectionWords: Int = 4_000,
-    val extractChunkWords: Int = 700,
+    val extractChunkWords: Int = 350,
     val extractConcurrency: Int = 3,
     val tokensPerWord: Map<String, Double> = mapOf("en" to 1.4, "ru" to 2.6, "he" to 2.6),
 ) {

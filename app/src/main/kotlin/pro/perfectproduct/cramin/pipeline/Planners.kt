@@ -11,6 +11,8 @@ object SectionPlanner {
     /** Нижняя граница, чтобы кривой конфиг не породил секции в одно слово. */
     const val MIN_SECTION_WORDS = 50
     const val COMPLETION_SHARE = 0.7
+    // A word budget alone permits hundreds of short sentences in one request.
+    const val MAX_SECTION_SENTENCES = 32
 
     /** `sectionWords = min(maxSectionWords, floor(maxCompletionTokens × 0.7 / tokensPerWord))`. */
     fun sectionWords(maxSectionWords: Int, maxCompletionTokens: Int, tokensPerWord: Double): Int {
@@ -33,8 +35,8 @@ object SectionPlanner {
                 paraWords += sentences[j].words
                 j++
             }
-            if (paraWords <= sectionWords) {
-                if (sectionStart >= 0 && sectionWordsSoFar + paraWords > sectionWords) {
+            if (paraWords <= sectionWords && j - i <= MAX_SECTION_SENTENCES) {
+                if (sectionStart >= 0 && (sectionWordsSoFar + paraWords > sectionWords || j - sectionStart > MAX_SECTION_SENTENCES)) {
                     sections += sentences[sectionStart].idx..sentences[i - 1].idx
                     sectionStart = -1
                     sectionWordsSoFar = 0
@@ -52,7 +54,7 @@ object SectionPlanner {
                 while (k < j) {
                     val start = k
                     var words = 0
-                    while (k < j && (k == start || words + sentences[k].words <= sectionWords)) {
+                    while (k < j && k - start < MAX_SECTION_SENTENCES && (k == start || words + sentences[k].words <= sectionWords)) {
                         words += sentences[k].words
                         k++
                     }

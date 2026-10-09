@@ -231,6 +231,17 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
         val ctx = Ctx(doc, snapshot.config, snapshot, lang, target,
             stored.map { SentenceDraft(it.idx, it.paragraphIdx, it.text) }, stored.associate { it.idx to it.id },
             Progress(doc.audioSeconds > 0), onProgress)
+        // Cache-only recovery also must not build READY from a detectably corrupt translation.
+        // This is a local check, never a request to regenerate missing legacy evidence.
+        try {
+            for (job in db.jobDao().getByKind(doc.id, JobKind.TRANSLATE).filter { it.status == JobStatus.DONE })
+                verifyTranslationCache(ctx, job, job.rangeStart!!..job.rangeEnd!!)
+            TranslationIntegrity.check(ctx.sentences, db.segmentDao().getByDocument(doc.id).map {
+                TranslatedSegment(it.firstSentenceIdx, it.lastSentenceIdx, it.translation)
+            }, requireProof = false)
+        } catch (e: LlmException.InvalidResponse) {
+            throw PipelineException(ErrorCode.INVALID_RESPONSE, "translation cache integrity", e, FailureStage.TRANSLATING)
+        }
         return consolidateAndBuildStage(ctx).also { onProgress(DocStatus.READY, 1f) }
     }
 
@@ -388,8 +399,11 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             Log.i(TAG, "doc=$id translate plan: sections=${plan.size} sectionWords=$sectionWords")
         }
         for ((n, job) in jobs.withIndex()) {
-            if (job.status == JobStatus.DONE) continue
             val range = job.rangeStart!!..job.rangeEnd!! // диапазоны заданы при планировании
+            if (job.status == JobStatus.DONE) {
+                verifyTranslationCache(ctx, job, range)
+                continue
+            }
             val context = continuationContext(id, range.first)
             val segments = translateRange(ctx, job, range, context, maxCompletion)
             db.withTransaction {
@@ -398,10 +412,31 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                     val segId = db.segmentDao().insert(SegmentEntity(documentId = id, firstSentenceIdx = s.from, lastSentenceIdx = s.to, translation = s.t))
                     db.sentenceDao().assignSegment(id, s.from, s.to, segId)
                 }
-                markJob(db.jobDao().getById(job.id) ?: job, JobStatus.DONE, LlmJson.strict.encodeToString(StoredTranslation(segments)), null)
+                markJob(db.jobDao().getById(job.id) ?: job, JobStatus.DONE,
+                    LlmJson.strict.encodeToString(StoredTranslation(segments, TranslationIntegrity.VERSION)), null)
             }
             ctx.onProgress(DocStatus.TRANSLATING, ctx.progress.within(DocStatus.TRANSLATING, (n + 1f) / jobs.size))
         }
+    }
+
+    /** Validate DONE evidence before it is consumed by EXTRACT; never silently regenerate old cache. */
+    private suspend fun verifyTranslationCache(ctx: Ctx, job: JobEntity, range: IntRange) {
+        val stored = job.responseJson?.let { LlmJson.parse<StoredTranslation>(it) }
+        if (stored?.integrityVersion != null && stored.integrityVersion != TranslationIntegrity.VERSION)
+            throw LlmException.InvalidResponse("translation integrity: unsupported cache version")
+        val actual = db.segmentDao().getByDocument(ctx.doc.id)
+            .filter { it.firstSentenceIdx >= range.first && it.lastSentenceIdx <= range.last }
+            .map { TranslatedSegment(it.firstSentenceIdx, it.lastSentenceIdx, it.translation) }
+        if (stored != null && stored.seg.map { it.copy(sourceIds = null) } != actual)
+            throw LlmException.InvalidResponse("translation integrity: cache differs from segments")
+        val segments = stored?.seg ?: actual
+        val validation = TranslationValidator.validate(range, segments)
+        if (!validation.isComplete || validation.rejected != 0)
+            throw LlmException.InvalidResponse("translation integrity: cache coverage")
+        val evidence = TranslationIntegrity.check(ctx.sentences.filter { it.idx in range }, segments,
+            requireProof = stored?.integrityVersion == TranslationIntegrity.VERSION)
+        if (evidence == TranslationIntegrity.Evidence.UNKNOWN)
+            Log.i(TAG, "job=${job.id} translation integrity UNKNOWN (legacy cache)")
     }
 
     /** Последние сегменты предыдущей секции, покрывающие ≥ 3 предложений, как контекст продолжения. */
@@ -423,20 +458,24 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
 
     private class TruncatedResponse : Exception()
 
-    private suspend fun translateRange(ctx: Ctx, job: JobEntity, range: IntRange, context: List<ContextLine>, maxCompletion: Int): List<TranslatedSegment> {
-        return try { translateRangeAttempt(ctx, job, range, context, maxCompletion) }
+    private suspend fun translateRange(ctx: Ctx, job: JobEntity, range: IntRange, context: List<ContextLine>, maxCompletion: Int, allowFill: Boolean = true): List<TranslatedSegment> {
+        return try {
+            // Also bound pending jobs planned by older versions, without rewriting their ranges/cache.
+            if (range.count() > SectionPlanner.MAX_SECTION_SENTENCES) throw TruncatedResponse()
+            translateRangeAttempt(ctx, job, range, context, maxCompletion, allowFill)
+        }
         catch (_: TruncatedResponse) {
             val halves = SectionPlanner.splitHalf(ctx.sentences, range)
                 ?: throw LlmException.InvalidResponse("length on a single sentence")
-            val first = translateRange(ctx, job, halves.first, context, maxCompletion)
+            val first = translateRange(ctx, job, halves.first, context, maxCompletion, allowFill)
             val nextContext = first.takeLast(CONTEXT_SENTENCES).map { segment ->
                 ContextLine(segment.from, segment.to, (segment.from..segment.to).mapNotNull { ctx.sentence(it) }.joinToString(" "), segment.t)
             }
-            first + translateRange(ctx, job, halves.second, nextContext, maxCompletion)
+            first + translateRange(ctx, job, halves.second, nextContext, maxCompletion, allowFill)
         }
     }
 
-    private suspend fun translateRangeAttempt(ctx: Ctx, job: JobEntity, range: IntRange, context: List<ContextLine>, maxCompletion: Int): List<TranslatedSegment> {
+    private suspend fun translateRangeAttempt(ctx: Ctx, job: JobEntity, range: IntRange, context: List<ContextLine>, maxCompletion: Int, allowFill: Boolean): List<TranslatedSegment> {
         val role = ctx.config.role(ModelRole.TRANSLATE)
         val sentences = ctx.sentences.filter { it.idx in range }
         val glossary = glossaryFor(ctx, ctx.text(range))
@@ -446,32 +485,27 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             Schemas.TRANSLATE_NAME, Schemas.TRANSLATE, role.temperature, maxCompletion, role.reasoning,
         )
         val response = callRaw(job, request)
-        if (response.truncated) {
-            // finish_reason == length: делим пополам по абзацам и переводим обе половины заново (SPEC §6.5).
-            val halves = SectionPlanner.splitHalf(ctx.sentences, range)
-                ?: throw LlmException.InvalidResponse("length on a single sentence")
-            Log.i(TAG, "doc=${ctx.doc.id} section ${range.first}-${range.last} truncated; split")
-            val first = translateRange(ctx, job, halves.first, context, maxCompletion)
-            val secondContext = first.takeLast(CONTEXT_SENTENCES).map { s -> ContextLine(s.from, s.to, (s.from..s.to).mapNotNull { ctx.sentence(it) }.joinToString(" "), s.t) }
-            val second = translateRange(ctx, job, halves.second, secondContext, maxCompletion)
-            return first + second
-        }
         val parsed = parseOrRetry<TranslateResponse>(job, request, response)
+        TranslationIntegrity.check(sentences, parsed.first.seg, requireProof = true)
         var validation = TranslationValidator.validate(range, parsed.first.seg)
         var accepted = validation.accepted
         if (!validation.isComplete) {
-            // Дыры дозапрашиваются одним вызовом: только пропущенные предложения с контекстом вокруг.
+            if (!allowFill) throw LlmException.InvalidResponse("translation holes remain after fill")
+            // One fill per contiguous hole run. Never offer a non-contiguous range for merging.
             Log.i(TAG, "doc=${ctx.doc.id} section ${range.first}-${range.last}: ${validation.missing.size} holes, ${validation.rejected} rejected")
             val missing = validation.missing.toSet()
-            val holeSentences = sentences.filter { it.idx in missing }
             val holeContext = accepted.filter { s -> missing.any { m -> m in (s.from - 2)..(s.to + 2) } }
                 .map { s -> ContextLine(s.from, s.to, (s.from..s.to).mapNotNull { ctx.sentence(it) }.joinToString(" "), s.t) }
-            val fillRequest = request.copy(user = Messages.translate(ctx.lang, ctx.targetLang, ctx.brief, glossary, context + holeContext, holeSentences))
-            val fillResponse = callRaw(job, fillRequest)
-            val fillParsed = parseOrRetry<TranslateResponse>(job, fillRequest, fillResponse).first
-            val covered = accepted.flatMap { (it.from..it.to).toList() }.toSet()
-            val fill = TranslationValidator.validate(range, fillParsed.seg, covered)
-            accepted = TranslationValidator.merge(accepted, fill.accepted)
+            val runs = ArrayList<IntRange>()
+            for (idx in validation.missing) {
+                val last = runs.lastOrNull()
+                if (last != null && idx == last.last + 1) runs[runs.lastIndex] = last.first..idx
+                else runs += idx..idx
+            }
+            for (hole in runs) {
+                val fill = translateRange(ctx, job, hole, context + holeContext, maxCompletion, allowFill = false)
+                accepted = TranslationValidator.merge(accepted, fill)
+            }
             validation = TranslationValidator.validate(range, accepted)
             if (!validation.isComplete) throw LlmException.InvalidResponse("holes remain: ${validation.missing.size}")
         }

@@ -47,7 +47,7 @@ data class Brief(
 data class TranslateResponse(val seg: List<TranslatedSegment> = emptyList())
 
 @Serializable
-data class TranslatedSegment(val from: Int, val to: Int, val t: String)
+data class TranslatedSegment(val from: Int, val to: Int, val t: String, val sourceIds: List<String>? = null)
 
 @Serializable
 data class ExtractResponse(val u: List<ExtractedUnit> = emptyList())
@@ -81,7 +81,7 @@ data class ConsolidateOccurrenceInput(val id: Int, val g: String, val s: String)
 
 /** Сохранённый результат стадии перевода одной секции (Job.responseJson). */
 @Serializable
-data class StoredTranslation(val seg: List<TranslatedSegment>)
+data class StoredTranslation(val seg: List<TranslatedSegment>, val integrityVersion: Int? = null)
 
 /** Сохранённый результат стадии извлечения одного чанка (Job.responseJson): сырые единицы всех подвызовов. */
 @Serializable
