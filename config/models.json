@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-30",
+  "updatedAt": "2026-10-09",
   "roles": {
     "brief": {
       "model": "openai/gpt-5.6-luna",
@@ -49,7 +49,7 @@
   "pipeline": {
     "brief.maxInputWords": 60000,
     "translate.maxSectionWords": 4000,
-    "extract.chunkWords": 700,
+    "extract.chunkWords": 350,
     "extract.concurrency": 3,
     "tokensPerWord": {
       "en": 1.4,
