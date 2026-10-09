@@ -19,6 +19,7 @@ import pro.perfectproduct.cramin.llm.TranslateResponse
 import pro.perfectproduct.cramin.llm.TranslatedSegment
 import pro.perfectproduct.cramin.pipeline.Messages
 import pro.perfectproduct.cramin.pipeline.SentenceDraft
+import pro.perfectproduct.cramin.pipeline.TranslationIntegrity
 
 /**
  * Детерминированный фейк LLM для тестов (SPEC §14.1). Ответы вычисляются из текста запроса:
@@ -90,20 +91,30 @@ class FakeLlmClient(
 
     private fun translate(user: String): String {
         val sentences = Messages.parseSentences(user)
+        val ids = Messages.parseHeader(user, "SOURCE_IDS")?.let { Json.parseToJsonElement(it).jsonObject }
         val segs = ArrayList<TranslatedSegment>()
         var i = 0
         while (i < sentences.size) {
             val s = sentences[i]
             val next = sentences.getOrNull(i + 1)
             if (s.idx % mergeEvery == 1 && next != null && next.idx == s.idx + 1) {
-                segs += TranslatedSegment(s.idx, next.idx, fakeTranslate(s.text) + " " + fakeTranslate(next.text))
+                segs += TranslatedSegment(s.idx, next.idx, translationWithAnchors(s.text) + " " + translationWithAnchors(next.text),
+                    ids?.let { listOf(it.getValue(s.idx.toString()).jsonPrimitive.content, it.getValue(next.idx.toString()).jsonPrimitive.content) })
                 i += 2
             } else {
-                segs += TranslatedSegment(s.idx, s.idx, fakeTranslate(s.text))
+                segs += TranslatedSegment(s.idx, s.idx, translationWithAnchors(s.text),
+                    ids?.let { listOf(it.getValue(s.idx.toString()).jsonPrimitive.content) })
                 i++
             }
         }
         return json.encodeToString(TranslateResponse(segs))
+    }
+
+    private fun translationWithAnchors(text: String): String {
+        val anchors = TranslationIntegrity.anchors(text)
+        var plain = text
+        anchors.forEach { plain = plain.replace(it, " ") }
+        return (listOf(fakeTranslate(plain)) + anchors).joinToString(" ")
     }
 
     private fun extract(user: String): String {

@@ -31,6 +31,11 @@ Translate naturally and faithfully, as a skilled human translator would, not wor
 You may merge up to 3 adjacent sentences into one translated segment when natural TARGET style
 requires it; otherwise keep one segment per sentence. Segments must cover every sentence id exactly once,
 in order, without gaps or overlaps. Do not add or omit content.
+The ids in SENTENCES are global: never renumber them or return CONTEXT sentences.
+For each segment copy sourceIds from SOURCE_IDS for exactly from..to, in source order.
+Each t must translate ONLY those source sentences; copying sourceIds is not a substitute for translating them.
+Preserve numeric literals (including numbered headings/list labels), URLs and inline backtick code
+verbatim and in source order. Do not change number formatting, spell digits out, or add new anchors.
 Output only JSON matching the schema.
 """.trim()
 

@@ -39,6 +39,10 @@ class MessagesAndFakeTest {
             CONTEXT (already translated):
             [118] Prev. => Пред.
             [119-120] A. B. => А. Б.
+            SOURCE_IDS: ${kotlinx.serialization.json.buildJsonObject {
+                put("121", kotlinx.serialization.json.JsonPrimitive(TranslationIntegrity.sourceId(SentenceDraft(121, 0, "Next one."))))
+                put("122", kotlinx.serialization.json.JsonPrimitive(TranslationIntegrity.sourceId(SentenceDraft(122, 0, "Last\none."))))
+            }}
             SENTENCES:
             [121] Next one.
             [122] Last one.

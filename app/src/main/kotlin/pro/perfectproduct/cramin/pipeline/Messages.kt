@@ -1,6 +1,8 @@
 package pro.perfectproduct.cramin.pipeline
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import pro.perfectproduct.cramin.llm.Brief
 import pro.perfectproduct.cramin.llm.ConsolidateItemInput
 import pro.perfectproduct.cramin.llm.GlossaryEntry
@@ -48,6 +50,9 @@ object Messages {
                 append(idLabel(c.from, c.to)).append(' ').append(oneLine(c.source)).append(" => ").append(oneLine(c.translation)).append('\n')
             }
         }
+        append("SOURCE_IDS: ").append(buildJsonObject {
+            sentences.forEach { put(it.idx.toString(), TranslationIntegrity.sourceId(it)) }
+        }).append('\n')
         append("SENTENCES:\n")
         for (s in sentences) append('[').append(s.idx).append("] ").append(oneLine(s.text)).append('\n')
     }.trimEnd()

@@ -26,8 +26,9 @@ object Schemas {
         """
         {"type":"object","additionalProperties":false,"required":["seg"],
          "properties":{"seg":{"type":"array","items":{"type":"object","additionalProperties":false,
-           "required":["from","to","t"],
-           "properties":{"from":{"type":"integer"},"to":{"type":"integer"},"t":{"type":"string"}}}}}}
+           "required":["from","to","t","sourceIds"],
+           "properties":{"from":{"type":"integer"},"to":{"type":"integer"},"t":{"type":"string"},
+             "sourceIds":{"type":"array","minItems":1,"maxItems":3,"items":{"type":"string"}}}}}}}
         """,
     )
 
