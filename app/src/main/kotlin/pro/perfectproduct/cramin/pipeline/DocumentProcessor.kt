@@ -28,6 +28,7 @@ import pro.perfectproduct.cramin.llm.Brief
 import pro.perfectproduct.cramin.llm.CatalogView
 import pro.perfectproduct.cramin.llm.ConsolidateResponse
 import pro.perfectproduct.cramin.llm.ProcessingSnapshot
+import pro.perfectproduct.cramin.llm.EffectiveRole
 import pro.perfectproduct.cramin.llm.EffectiveConfig
 import pro.perfectproduct.cramin.llm.ExtractResponse
 import pro.perfectproduct.cramin.llm.ExtractedUnit
@@ -76,6 +77,8 @@ class ProcessorDeps(
     val usage: UsageRepository,
     val clock: Clock,
     val checkpoint: (String) -> Unit = {},
+    val legacyTopicRole: suspend () -> EffectiveRole? = { null },
+    val sttReady: suspend () -> Boolean = { true },
 )
 
 /**
@@ -104,7 +107,8 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             val classifier = TopicClassifier(deps)
             val saved = doc.topicSnapshotJson
             val topic = if (saved != null) Json.decodeFromString<TopicSnapshot>(saved)
-                else classifier.snapshot(documentId, deps.configProvider(), deps.catalogProvider())
+                else classifier.snapshot(documentId, doc.modelsSnapshotJson?.let { ProcessingSnapshot.decode(it).config }
+                    ?: deps.configProvider(), deps.catalogProvider())
             val repository = pro.perfectproduct.cramin.data.repo.CardRepository(db, deps.clock)
             val cards = db.cardDao().getByDocument(documentId).filter { it.category == null }
             val items = repository.cardsByIds(cards.map { it.id }).map { c ->
@@ -271,6 +275,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                     langHint = extracted.langHint ?: langHint
                 }
                 is Extracted.Audio -> {
+                    if (!deps.sttReady()) throw PipelineException(ErrorCode.STT_ACCESS_REQUIRED, "Для распознавания аудио нужен отдельный доступ OpenRouter. ChatGPT plan не поддерживает STT; платная подмена не выполняется.")
                     title = extracted.title
                     langHint = extracted.langHint ?: langHint
                     if (langHint == targetLang) throw PipelineException(ErrorCode.SAME_LANGUAGE,
@@ -483,6 +488,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             ModelRole.TRANSLATE, role.model, Prompts.TRANSLATE,
             Messages.translate(ctx.lang, ctx.targetLang, ctx.brief, glossary, context, sentences),
             Schemas.TRANSLATE_NAME, Schemas.TRANSLATE, role.temperature, maxCompletion, role.reasoning,
+            provider = role.provider,
         )
         val response = callRaw(job, request)
         val parsed = parseOrRetry<TranslateResponse>(job, request, response)
@@ -564,6 +570,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             ModelRole.EXTRACT, role.model, Prompts.EXTRACT,
             Messages.extract(ctx.lang, ctx.targetLang, glossaryFor(ctx, ctx.text(range)), pairs),
             Schemas.EXTRACT_NAME, Schemas.EXTRACT, role.temperature, role.maxTokens, role.reasoning,
+            provider = role.provider,
         )
         val response = callRaw(job, request)
         if (response.truncated) {
@@ -632,7 +639,11 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             ctx.topic = ctx.doc.topicSnapshotJson?.let { Json.decodeFromString<TopicSnapshot>(it) }
             if (ctx.doc.pipelineVersion >= 2 && ctx.topic == null) throw ConsolidationCacheUnfinished()
         } else {
-            val config = if (ModelRole.TOPIC in ctx.config.roles) ctx.config else deps.configProvider()
+            val config = if (ModelRole.TOPIC in ctx.config.roles) ctx.config else {
+                val fallback = deps.legacyTopicRole() ?: deps.configProvider().role(ModelRole.TOPIC)
+                if (fallback.provider != ctx.config.provider) throw LlmException.InvalidResponse("legacy topic provider mismatch")
+                ctx.config.copy(roles = ctx.config.roles + (ModelRole.TOPIC to fallback))
+            }
             ctx.topic = classifier.snapshot(id, config, ctx.catalog)
         }
         val senses = HashMap<String, List<SenseDraft>>()
@@ -735,7 +746,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             val role = ctx.config.role(ModelRole.CONSOLIDATE)
             var request = LlmRequest(ModelRole.CONSOLIDATE, role.model, Prompts.CONSOLIDATE,
                 Messages.consolidate(ctx.lang, ctx.targetLang, built.items), Schemas.CONSOLIDATE_NAME,
-                Schemas.CONSOLIDATE, role.temperature, role.maxTokens, role.reasoning)
+                Schemas.CONSOLIDATE, role.temperature, role.maxTokens, role.reasoning, provider = role.provider)
             val integrated = ctx.topic?.takeIf { it.role.model == role.model }
             if (integrated != null) request = request.copy(
                 system = request.system + "\n" + pro.perfectproduct.cramin.llm.TopicCategories.integratedPrompt,
@@ -884,6 +895,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
                 saved != null -> pro.perfectproduct.cramin.llm.ConfigOrigin.NEW_SNAPSHOT
                 else -> pro.perfectproduct.cramin.llm.ConfigOrigin.UNKNOWN },
             onFailureDiagnostic = { event ->
+                event.responseEvidence?.let { deps.files.recordResponseEvidence(job.documentId, job.id, it) }
                 val doc = db.documentDao().getById(job.documentId)
                 if (doc != null) {
                     val stage = when (request.role) {
@@ -901,6 +913,7 @@ class DocumentProcessor(private val deps: ProcessorDeps) {
             })
         if (trace?.active == true) { trace.step = ConsolidationStep.REQUEST; trace.invocations.incrementAndGet() }
         val response = deps.llm.complete(frozenRequest)
+        response.terminalMetadata?.let { deps.files.recordResponseEvidence(job.documentId, job.id, it) }
         if (trace?.active == true) { trace.responses.incrementAndGet(); trace.step = ConsolidationStep.SAVE_RESPONSE }
         db.withTransaction {
         val fresh = db.jobDao().getById(job.id) ?: job

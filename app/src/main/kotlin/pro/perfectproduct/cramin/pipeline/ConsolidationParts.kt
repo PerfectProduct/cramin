@@ -35,7 +35,7 @@ internal data class ConsolidationBudget(val inputBytes: Int, val output: Int, va
             val output = request.maxTokens ?: minOf(4000, model?.maxCompletionTokens?.takeIf { it > 0 } ?: 4000)
             if (output <= 0 || output >= context || model?.maxCompletionTokens?.let { it > 0 && output > it } == true)
                 throw ConsolidationLimit()
-            val bytes = ChatRequestBody.build(request.copy(maxTokens = output), model?.supportedParameters?.toSet(), true)
+            val bytes = ChatRequestBody.forSizing(request.copy(maxTokens = output), model?.supportedParameters?.toSet(), true)
                 .toString().toByteArray(Charsets.UTF_8).size
             return ConsolidationBudget(bytes, output, context, model?.contextLength?.let { it > 0 } == true)
         }

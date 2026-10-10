@@ -46,6 +46,7 @@ import pro.perfectproduct.cramin.BuildConfig
 import pro.perfectproduct.cramin.R
 import pro.perfectproduct.cramin.app.craminViewModel
 import pro.perfectproduct.cramin.data.db.Direction
+import pro.perfectproduct.cramin.llm.TextProvider
 import pro.perfectproduct.cramin.llm.ConfigSource
 import pro.perfectproduct.cramin.llm.ModelRole
 import pro.perfectproduct.cramin.ui.components.*
@@ -94,7 +95,7 @@ fun SettingsScreen(
                     NavigationRow(stringResource(R.string.settings_audio), stringResource(R.string.settings_audio_summary), Modifier.testTag("settingsAudio")) { page = "audio" }
                     NavigationRow(stringResource(R.string.settings_defaults), stringResource(R.string.settings_defaults_summary), Modifier.testTag("settingsDefaults")) { page = "defaults" }
                     SectionTitle(stringResource(R.string.settings_processing))
-                    NavigationRow(stringResource(R.string.settings_openrouter), stringResource(R.string.settings_processing_summary), Modifier.testTag("settingsProcessing")) { page = "processing" }
+                    NavigationRow("Провайдер и модели", "OpenRouter или ChatGPT plan", Modifier.testTag("settingsProcessing")) { page = "processing" }
                     SectionTitle(stringResource(R.string.settings_application))
                     NavigationRow(stringResource(R.string.settings_app_summary), BuildConfig.VERSION_NAME, Modifier.testTag("settingsApp")) { page = "app" }
                 }
@@ -105,14 +106,58 @@ fun SettingsScreen(
                 "audio" -> settings?.let { StudySection(vm, it, false) }
                 "defaults" -> settings?.let { StudySection(vm, it, true) }
                 "processing" -> {
-                    SectionTitle(stringResource(R.string.settings_openrouter)); KeySection(vm)
-                    SectionTitle(stringResource(R.string.settings_models)); ModelsSection(vm, onPickModel)
+                    SectionTitle("Текстовая обработка")
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        for (provider in TextProvider.entries) FilterChip(
+                            selected = settings?.textProvider == provider,
+                            onClick = { vm.setProvider(provider) },
+                            label = { Text(if (provider == TextProvider.OPENROUTER) "OpenRouter" else "ChatGPT plan") },
+                            modifier = Modifier.testTag("provider-${provider.name}"))
+                    }
+                    if (settings?.textProvider == TextProvider.CHATGPT_PLAN) ChatGptSection(vm, settings?.chatGptModel)
+                    else {
+                        SectionTitle(stringResource(R.string.settings_openrouter)); KeySection(vm)
+                        SectionTitle(stringResource(R.string.settings_models)); ModelsSection(vm, onPickModel)
+                    }
                     SectionTitle(stringResource(R.string.settings_stats)); StatsSection(vm)
                 }
                 "app" -> AboutSection(onLicenses)
             }
         }
     }
+}
+
+@Composable
+private fun ChatGptSection(vm: SettingsViewModel, selected: String?) {
+    val status by vm.chatStatus.collectAsState()
+    val busy by vm.chatBusy.collectAsState()
+    val models by vm.chatModels.collectAsState()
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+    Text(status, Modifier.padding(vertical = 12.dp).testTag("chatGptStatus"))
+    Button(enabled = !busy, onClick = { vm.connectChatGpt { url ->
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE))
+    } }, modifier = Modifier.testTag("chatGptConnect")) { Text("Continue with ChatGPT") }
+    if (busy) TextButton(onClick = vm::cancelChatGptLogin) { Text("Отменить вход") }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = { vm.refreshChatGpt() }, enabled = !busy, modifier = Modifier.testTag("chatGptCatalog")) { Text("Обновить каталог") }
+        TextButton(onClick = { vm.disconnectChatGpt() }, enabled = !busy, modifier = Modifier.testTag("chatGptDisconnect")) { Text("Отключить") }
+    }
+    TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://chatgpt.com/settings/usage"))) }) { Text("Лимиты и использование в ChatGPT") }
+    SectionTitle("Одна модель для всех текстовых стадий")
+    androidx.compose.foundation.layout.Box {
+        OutlinedButton(onClick = { expanded = true }, enabled = !busy && models.isNotEmpty(), modifier = Modifier.testTag("chatGptModel")) {
+            Text(models.firstOrNull { it.slug == selected }?.let { "${it.displayName} · ${it.slug}" }
+                ?: selected?.let { "$it · недоступна в каталоге" } ?: "Выбрать модель")
+        }
+        androidx.compose.material3.DropdownMenu(expanded, { expanded = false }) {
+            for (model in models) androidx.compose.material3.DropdownMenuItem(
+                text = { Text("${model.displayName} · ${model.slug}") },
+                onClick = { vm.setChatGptModel(model.slug); expanded = false }, modifier = Modifier.testTag("chatGptModel-${model.slug}"))
+        }
+    }
+    Text("Запросы расходуют лимиты плана или доступные кредиты ChatGPT. Стоимость в USD неизвестна. Изменение провайдера и модели применяется к новым материалам; начатые сохраняют свой выбор.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 12.dp))
+    Text("Распознавание аудио требует отдельного доступа OpenRouter. ChatGPT plan не поддерживает STT. Автоматического платного перехода к другому провайдеру нет.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
 }
 
 @Composable
@@ -241,7 +286,8 @@ private fun StudySection(vm: SettingsViewModel, s: pro.perfectproduct.cramin.dat
 private fun StatsSection(vm: SettingsViewModel) {
     val usage by vm.usage.collectAsState()
     usage?.let { u ->
-        Text(stringResource(R.string.settings_stats_body, u.documents, "%,d".format(u.promptTokens), "%,d".format(u.completionTokens), formatUsd(u.costUsd)), style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.settings_stats_body, u.documents, "%,d".format(u.promptTokens), "%,d".format(u.completionTokens), (u.costUsd?.let { formatUsd(it) } ?: "неизвестна")), style = MaterialTheme.typography.bodyMedium)
+        Text("Учтены только переданные провайдерами токены. При отсутствии usage расход неизвестен.", style = MaterialTheme.typography.bodySmall)
     }
 }
 

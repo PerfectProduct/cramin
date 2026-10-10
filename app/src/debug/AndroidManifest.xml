@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Preserve the update fragment used by ordinary debug builds. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <application android:name="pro.perfectproduct.cramin.chatgpt.PrototypeDebugApp"
+        tools:replace="android:name">
+        <receiver android:name="pro.perfectproduct.cramin.update.InstallResultReceiver"
+            android:exported="false" />
+        <activity android:name="pro.perfectproduct.cramin.chatgpt.ChatGptPrototypeActivity"
+            android:process=":chatgptPrototype"
+            android:launchMode="singleTask"
+            android:exported="true" android:label="ChatGPT access prototype">
+        </activity>
+    </application>
+</manifest>

@@ -32,6 +32,7 @@ enum class ErrorCode {
     CONSOLIDATION_CACHE_INVALID,
     CONSOLIDATION_LIMIT,
     UNKNOWN,
+    CHATGPT_AUTH, CHATGPT_MODEL, CHATGPT_LIMIT, CHATGPT_UNAVAILABLE, STT_ACCESS_REQUIRED,
     ;
 
     companion object {
@@ -43,6 +44,12 @@ enum class ErrorCode {
 class PipelineException(val code: ErrorCode, message: String, cause: Throwable? = null, val stage: FailureStage? = null, val retryAfterMs: Long? = null) : Exception(message, cause) {
     companion object {
         fun from(t: Throwable): PipelineException = when (t) {
+            is LlmException.ChatGpt -> PipelineException(when(t.kind) {
+                pro.perfectproduct.cramin.llm.ChatGptFailure.SIGN_IN -> ErrorCode.CHATGPT_AUTH
+                pro.perfectproduct.cramin.llm.ChatGptFailure.MODEL -> ErrorCode.CHATGPT_MODEL
+                pro.perfectproduct.cramin.llm.ChatGptFailure.LIMIT -> ErrorCode.CHATGPT_LIMIT
+                pro.perfectproduct.cramin.llm.ChatGptFailure.UNAVAILABLE -> ErrorCode.CHATGPT_UNAVAILABLE
+            }, t.javaClass.simpleName, t)
             is PipelineException -> t
             is ConsolidationCacheMissing -> PipelineException(ErrorCode.CONSOLIDATION_CACHE_MISSING, "cache missing", t)
             is ConsolidationCacheUnfinished -> PipelineException(ErrorCode.CONSOLIDATION_CACHE_UNFINISHED, "cache unfinished", t)

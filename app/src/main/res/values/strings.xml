@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="err_chatgpt_auth">Войдите в ChatGPT в настройках и разрешите использование плана.</string>
+    <string name="err_chatgpt_model">Модель ChatGPT недоступна. Обновите каталог и выберите модель в настройках.</string>
+    <string name="err_chatgpt_limit">Достигнут лимит ChatGPT для приложения. Проверьте Usage в настройках ChatGPT и повторите позже.</string>
+    <string name="err_chatgpt_unavailable">ChatGPT временно недоступен или доступ ограничен. Проверьте подключение и повторите позже.</string>
+    <string name="provider_not_ready">Настройте выбранный провайдер обработки в настройках.</string>
     <!-- app_name задаётся типом сборки: «Cramin» / «Cramin (debug)» (SPEC §12.1). -->
     <string name="brand">Cramin</string>
 
@@ -161,7 +166,7 @@
     <string name="settings_tts_missing">Голоса для %1$s нет — установите его в настройках синтеза речи Android</string>
     <string name="settings_autoplay">Интервалы автопроигрывания</string>
     <string name="settings_stats">Статистика</string>
-    <string name="settings_stats_body">Документов: %1$d · токены: %2$s / %3$s · учтено: $%4$s (нижняя граница расходов)</string>
+    <string name="settings_stats_body">Документов: %1$d · учтённые токены: %2$s / %3$s · стоимость USD: %4$s</string>
     <string name="settings_version">Версия %1$s (%2$d)</string>
     <string name="settings_repo">Репозиторий на GitHub</string>
     <string name="settings_licenses">Лицензии открытых библиотек</string>
@@ -330,4 +335,5 @@
     <string name="update_install_cancelled">Установка отменена. Для новой попытки нажмите «Повторить».</string>
     <string name="update_install_interrupted">Установка была прервана. Для новой попытки нажмите «Повторить».</string>
     <string name="update_installing">Ожидаю завершения установки…</string>
+    <string name="err_stt_access_required">Для распознавания аудио нужен ключ OpenRouter. ChatGPT plan не поддерживает STT. Подключите OpenRouter в настройках.</string>
 </resources>

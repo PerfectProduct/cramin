@@ -11,6 +11,9 @@ import androidx.work.WorkerParameters
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import pro.perfectproduct.cramin.chatgpt.*
+import pro.perfectproduct.cramin.llm.*
 import okhttp3.OkHttpClient
 import pro.perfectproduct.cramin.BuildConfig
 import pro.perfectproduct.cramin.data.db.CraminDatabase
@@ -90,17 +93,39 @@ open class AppContainer(
             .build()
     }
 
+    val chatGpt: ChatGptSessionManager by lazy { ChatGptSessionManager(appContext) }
     open val llmClient: LlmClient by lazy {
-        OpenRouterClient(
+        ProviderLlmClient(OpenRouterClient(
             httpClient,
             keyProvider = { secretStore.getApiKey() },
             paramSupport = { model -> modelCatalog.cached()?.find(model)?.supportedParameters?.toSet() },
-        )
+        ), chatGpt)
     }
     val keyChecker: KeyChecker by lazy { KeyChecker(httpClient) }
     val modelCatalog: ModelCatalog by lazy { ModelCatalog(httpClient, File(appContext.filesDir, "cache/${ModelCatalog.CACHE_FILE_NAME}"), clock) }
     val modelConfigRepository: ModelConfigRepository by lazy {
         ModelConfigRepository(httpClient, settingsStore, modelCatalog, embeddedJsonProvider = { readEmbeddedModelsJson() }, clock = clock)
+    }
+
+    suspend fun textProviderReady(): Boolean = when (settingsStore.current().textProvider) {
+        TextProvider.OPENROUTER -> secretStore.hasApiKey.first()
+        TextProvider.CHATGPT_PLAN -> try {
+            val slug = settingsStore.current().chatGptModel
+            slug != null && chatGpt.catalog().any { it.slug == slug }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (_: Exception) { false }
+    }
+
+    suspend fun processingConfig(): EffectiveConfig {
+        val settings = settingsStore.current()
+        return when (settings.textProvider) {
+            TextProvider.OPENROUTER -> modelConfigRepository.refreshAndResolve().let { it.copy(pipeline = it.pipeline.copy(extractChunkWords = 350)) }
+            TextProvider.CHATGPT_PLAN -> {
+                val slug = settings.chatGptModel ?: throw LlmException.ChatGpt(ChatGptFailure.MODEL)
+                if (chatGpt.catalog().none { it.slug == slug }) throw LlmException.ChatGpt(ChatGptFailure.MODEL)
+                ChatGptConfig.resolve(slug, modelConfigRepository.embedded)
+            }
+        }
     }
 
     // --- Пайплайн ------------------------------------------------------------------------------
@@ -135,12 +160,16 @@ open class AppContainer(
         extractors = extractors,
         transcriber = transcriber,
         audioSegmenter = audioSegmenter,
-        configProvider = { modelConfigRepository.refreshAndResolve() },
+        configProvider = { processingConfig() },
         catalogProvider = { modelCatalog.cached() },
         stoplists = stoplists,
         segmenter = segmenter,
         usage = usageRepository,
         clock = clock,
+        sttReady = { secretStore.hasApiKey.first() },
+        legacyTopicRole = { modelConfigRepository.embedded.roles["topic"]?.let { role ->
+            EffectiveRole(ModelRole.TOPIC, role.model, role.temperature, role.maxTokens, ConfigSource.EMBEDDED, role.reasoning)
+        } },
     )
 
     fun newProcessor(): DocumentProcessor = DocumentProcessor(processorDeps())

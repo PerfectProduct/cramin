@@ -54,7 +54,8 @@ class TopicClassifier(private val deps: ProcessorDeps) {
         suspend fun visit(group: List<TopicItem>) {
             if (group.isEmpty()) return
             if (!allowNetwork) throw ConsolidationCacheUnfinished()
-            val request = TopicCategories.request(snapshot.role, snapshot.context, group, snapshot.model)
+            val request = TopicCategories.request(snapshot.role, snapshot.context, group, snapshot.model).copy(
+                onFailureDiagnostic = { event -> event.responseEvidence?.let { deps.files.recordResponseEvidence(documentId, jobId, it) } })
             val signature = Hashing.sha256Hex(request.user.toByteArray())
             suspend fun split() {
                 // Split between lemmas to keep a lexical group intact.
@@ -71,6 +72,7 @@ class TopicClassifier(private val deps: ProcessorDeps) {
                 val trace = kotlinx.coroutines.currentCoroutineContext()[ConsolidationTrace]
                 trace?.takeIf { it.active }?.let { it.step = ConsolidationStep.REQUEST; it.invocations.incrementAndGet() }
                 val response = deps.llm.complete(request)
+                response.terminalMetadata?.let { deps.files.recordResponseEvidence(documentId, jobId, it) }
                 trace?.takeIf { it.active }?.let { it.responses.incrementAndGet(); it.step = ConsolidationStep.SAVE_RESPONSE }
                 val used = requireNotNull(db.jobDao().getById(jobId))
                 db.jobDao().update(used.copy(finishReason = response.finishReason,

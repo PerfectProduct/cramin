@@ -1,5 +1,9 @@
 package pro.perfectproduct.cramin.ui.settings
 
+import pro.perfectproduct.cramin.chatgpt.*
+import pro.perfectproduct.cramin.llm.TextProvider
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +43,58 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     val keyUi: StateFlow<KeyUi> = _keyUi
     private val _refreshing = MutableStateFlow(false)
     val refreshing: StateFlow<Boolean> = _refreshing
+
+    private val _chatStatus = MutableStateFlow("Проверка подключения…")
+    val chatStatus: StateFlow<String> = _chatStatus
+    private val _chatBusy = MutableStateFlow(false)
+    val chatBusy: StateFlow<Boolean> = _chatBusy
+    private val _chatModels = MutableStateFlow<List<AccountModel>>(emptyList())
+    val chatModels: StateFlow<List<AccountModel>> = _chatModels
+    private val login = ChatGptLogin(container.appContext)
+    private var loginJob: Job? = null
+
+    init { refreshChatGpt() }
+    fun setProvider(value: TextProvider) = viewModelScope.launch { container.settingsStore.setTextProvider(value) }
+    fun setChatGptModel(slug: String) = viewModelScope.launch {
+        if (_chatModels.value.any { it.slug == slug }) container.settingsStore.setChatGptModel(slug)
+    }
+    fun refreshChatGpt() = viewModelScope.launch {
+        if (_chatBusy.value) return@launch
+        _chatBusy.value = true
+        try {
+            _chatStatus.value = container.chatGpt.checkConnection()
+            container.chatGpt.connectionChanged()
+            _chatModels.value = container.chatGpt.catalog(force = true)
+            _chatStatus.value += " Каталог: ${_chatModels.value.size} моделей."
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { _chatStatus.value = chatGptConnectionError(e); _chatModels.value = emptyList() }
+        finally { _chatBusy.value = false }
+    }
+    fun connectChatGpt(openBrowser: (String) -> Unit) {
+        if (_chatBusy.value) return
+        _chatBusy.value = true
+        loginJob = viewModelScope.launch {
+            try {
+                _chatStatus.value = "Завершите вход в системном браузере."
+                login.run(openBrowser)
+                container.chatGpt.connectionChanged()
+                _chatModels.value = container.chatGpt.catalog(force = true)
+                _chatStatus.value = container.chatGpt.checkConnection()
+            } catch (e: CancellationException) { _chatStatus.value = "Вход отменён."; throw e }
+            catch (e: Exception) { _chatStatus.value = chatGptConnectionError(e) }
+            finally { _chatBusy.value = false }
+        }
+    }
+    fun cancelChatGptLogin() { login.close(); loginJob?.cancel() }
+    fun disconnectChatGpt() = viewModelScope.launch {
+        if (_chatBusy.value) return@launch
+        _chatBusy.value = true
+        try { _chatStatus.value = container.chatGpt.disconnect(); _chatModels.value = emptyList() }
+        catch (e: CancellationException) { throw e }
+        catch (e: Exception) { _chatStatus.value = chatGptConnectionError(e) }
+        finally { _chatBusy.value = false }
+    }
+    override fun onCleared() { login.close(); super.onCleared() }
 
     /** Сохраняет ключ и проверяет его через GET /api/v1/key (SPEC §9.7). Ключ не логируется. */
     fun saveAndCheckKey(key: String) = viewModelScope.launch {

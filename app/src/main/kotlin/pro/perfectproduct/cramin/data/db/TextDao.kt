@@ -82,7 +82,7 @@ interface JobDao {
     @Query(
         """
         SELECT COALESCE(SUM(promptTokens), 0) AS promptTokens, COALESCE(SUM(completionTokens), 0) AS completionTokens,
-            SUM(costUsd) AS costUsd FROM Job WHERE documentId = :documentId
+            CASE WHEN COUNT(CASE WHEN promptTokens > 0 OR completionTokens > 0 THEN 1 END) = COUNT(CASE WHEN promptTokens > 0 OR completionTokens > 0 THEN costUsd END) THEN SUM(costUsd) ELSE NULL END AS costUsd FROM Job WHERE documentId = :documentId
         """,
     )
     suspend fun sumUsage(documentId: Long): JobUsage

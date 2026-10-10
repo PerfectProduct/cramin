@@ -85,12 +85,13 @@ GENERAL — «Общие». Значение выполняет преимуще
         return LlmRequest(ModelRole.TOPIC, role.model, prompt, buildJsonObject {
             put("document", Json.encodeToJsonElement(context)); put("items", Json.encodeToJsonElement(items))
         }.toString(), "card_topic_categories", schema, role.temperature, output, role.reasoning,
-            supportedParameters = model?.supportedParameters?.toSet(), parametersFrozen = true, strictTopic = true)
+            supportedParameters = model?.supportedParameters?.toSet(), parametersFrozen = true, strictTopic = true,
+            provider = role.provider)
     }
     fun fits(request: LlmRequest, model: CatalogModel?): Boolean {
         val output = requireNotNull(request.maxTokens)
         return output <= (model?.maxCompletionTokens ?: 8192) &&
-            ChatRequestBody.build(request, request.supportedParameters, true).toString().toByteArray().size.toLong() + output + 1024 <= (model?.contextLength ?: 32768)
+            ChatRequestBody.forSizing(request, request.supportedParameters, true).toString().toByteArray().size.toLong() + output + 1024 <= (model?.contextLength ?: 32768)
     }
     fun validate(response: LlmResponse, expected: List<String>): Map<String, TopicCategory> {
         if (response.finishReason != "stop") throw LlmException.InvalidResponse("topic unfinished")

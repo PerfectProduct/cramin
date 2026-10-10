@@ -88,7 +88,8 @@ fun CreateScreen(shared: SharedInput?, onClose: () -> Unit, onOpenSettings: () -
                 if (Build.VERSION.SDK_INT >= 33 && !state.notificationsAsked) { vm.markNotificationsAsked(); permission.launch(Manifest.permission.POST_NOTIFICATIONS) }
                 when(mode) { CreateMode.TEXT -> vm.submitText(pastedText, pastedTitle); CreateMode.URL -> vm.submitUrl(urlText); CreateMode.PDF -> vm.submitPdf() }
             }, Modifier.testTag(submitTag), state.hasKey && !state.busy && (mode != CreateMode.PDF || state.pdfName != null))
-            pro.perfectproduct.cramin.ui.components.StatusText(stringResource(R.string.create_cost_short))
+            pro.perfectproduct.cramin.ui.components.StatusText(if (state.textProvider == pro.perfectproduct.cramin.llm.TextProvider.CHATGPT_PLAN)
+                "ChatGPT plan · ${state.textModel ?: "модель не выбрана"} · расход лимита или доступных кредитов" else stringResource(R.string.create_cost_short))
         }
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -112,7 +113,7 @@ fun CreateScreen(shared: SharedInput?, onClose: () -> Unit, onOpenSettings: () -
             LangSelector(state.targetLang, vm::setTargetLang, Modifier.testTag("targetLang"))
             if (!state.hasKey) {
                 Column(Modifier.testTag("noKeyBanner")) {
-                    pro.perfectproduct.cramin.ui.components.StatusText(stringResource(R.string.create_no_key), error = true)
+                    pro.perfectproduct.cramin.ui.components.StatusText(stringResource(R.string.provider_not_ready), error = true)
                     TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.action_open_settings)) }
                 }
             }

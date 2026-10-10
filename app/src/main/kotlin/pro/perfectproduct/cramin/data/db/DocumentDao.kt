@@ -17,7 +17,7 @@ data class DocumentWithCounts(
 data class UsageTotals(
     val promptTokens: Long,
     val completionTokens: Long,
-    val costUsd: Double,
+    val costUsd: Double?,
     val documents: Int,
 )
 
@@ -123,7 +123,7 @@ interface DocumentDao {
     @Query(
         """
         SELECT COALESCE(SUM(promptTokens), 0) AS promptTokens, COALESCE(SUM(completionTokens), 0) AS completionTokens,
-            COALESCE(SUM(costUsd), 0.0) AS costUsd, COUNT(*) AS documents FROM Document
+            CASE WHEN COUNT(*) = COUNT(costUsd) THEN SUM(costUsd) ELSE NULL END AS costUsd, COUNT(*) AS documents FROM Document
         """,
     )
     fun observeUsageTotals(): Flow<UsageTotals>
