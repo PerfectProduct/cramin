@@ -4,6 +4,11 @@ import kotlinx.serialization.json.*
 
 /** Single serializer shared by transport and conservative BRIEF sizing. */
 object ChatRequestBody {
+    /** Size accounting uses the exact serializer for the snapshot's provider. */
+    fun forSizing(r: LlmRequest, supported: Set<String>?, requireParameters: Boolean): JsonObject =
+        if (r.provider == TextProvider.CHATGPT_PLAN) pro.perfectproduct.cramin.chatgpt.ResponsesLlmClient.buildBody(r)
+        else build(r, supported, requireParameters)
+
     fun build(r: LlmRequest, supported: Set<String>?, requireParameters: Boolean): JsonObject = buildJsonObject {
         put("model", r.model)
         put(

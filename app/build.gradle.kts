@@ -107,7 +107,7 @@ android {
     sourceSets {
         // Всё, что связано с обновлением (SPEC §12.4), объявлено в отдельном фрагменте манифеста,
         // который подключается к обоим типам сборки. Будущий Play-flavor подменит его пустым.
-        getByName("debug").manifest.srcFile("src/update/AndroidManifest.xml")
+        getByName("debug").manifest.srcFile("src/debug/AndroidManifest.xml")
         getByName("release").manifest.srcFile("src/update/AndroidManifest.xml")
         // Фейки и фикстуры общие для JVM- и инструментированных тестов.
         getByName("test").kotlin.directories += "src/sharedTest/kotlin"

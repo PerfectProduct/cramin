@@ -40,6 +40,12 @@ class DocumentFiles(private val filesRoot: File) {
         } finally { temporary.delete() }
     }
 
+    /** Per-attempt terminal evidence has no source/output text, credentials or raw headers. */
+    fun recordResponseEvidence(documentId: Long, jobId: Long, evidence: kotlinx.serialization.json.JsonObject) {
+        val directory = File(dir(documentId), "response-evidence").apply { mkdirs() }
+        atomicWrite(File(directory, "$jobId-${java.util.UUID.randomUUID()}.json"), evidence.toString())
+    }
+
     /** Вставленный пользователем текст (SourceType.TEXT). */
     fun inputText(documentId: Long): File = File(dir(documentId), "input.txt")
 

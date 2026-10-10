@@ -41,7 +41,7 @@ class DocumentRepository(
     suspend fun get(id: Long): DocumentEntity? = documents.getById(id)
 
     /** Создаёт документ в статусе QUEUED и сохраняет входные данные в файлы. Обработку ставит в очередь вызывающий. */
-    suspend fun create(request: NewDocument): Long {
+    suspend fun create(request: NewDocument, modelsSnapshotJson: String? = null, pipelineVersion: Int = 0): Long {
         val now = clock.now()
         val (type, ref, title, sourceLang) = when (request) {
             is NewDocument.Url -> Quad(SourceType.URL, request.url, request.url.removePrefix("https://").removePrefix("http://"), "")
@@ -62,9 +62,9 @@ class DocumentRepository(
                 errorCode = null,
                 errorMessage = null,
                 direction = null,
-                pipelineVersion = 0,
+                pipelineVersion = pipelineVersion,
                 briefJson = null,
-                modelsSnapshotJson = null,
+                modelsSnapshotJson = modelsSnapshotJson,
                 promptTokens = 0,
                 completionTokens = 0,
                 costUsd = null,

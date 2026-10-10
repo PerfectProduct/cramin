@@ -29,6 +29,8 @@ data class Settings(
     val remoteModelsEtag: String? = null,
     val remoteModelsUpdatedAt: Long = 0L,
     val notificationsAsked: Boolean = false,
+    val textProvider: pro.perfectproduct.cramin.llm.TextProvider = pro.perfectproduct.cramin.llm.TextProvider.OPENROUTER,
+    val chatGptModel: String? = null,
 )
 
 class SettingsStore(private val dataStore: DataStore<Preferences>) {
@@ -47,6 +49,9 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
             remoteModelsEtag = p[Keys.REMOTE_MODELS_ETAG],
             remoteModelsUpdatedAt = p[Keys.REMOTE_MODELS_UPDATED_AT] ?: 0L,
             notificationsAsked = p[Keys.NOTIFICATIONS_ASKED] ?: false,
+            textProvider = p[Keys.TEXT_PROVIDER]?.let { runCatching { pro.perfectproduct.cramin.llm.TextProvider.valueOf(it) }.getOrNull() }
+                ?: pro.perfectproduct.cramin.llm.TextProvider.OPENROUTER,
+            chatGptModel = p[Keys.CHATGPT_MODEL],
         )
     }
 
@@ -78,6 +83,10 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         it[Keys.AUTOPLAY_BACK_MS] = backMs
     }
     suspend fun setNotificationsAsked(asked: Boolean) = edit { it[Keys.NOTIFICATIONS_ASKED] = asked }
+    suspend fun setTextProvider(provider: pro.perfectproduct.cramin.llm.TextProvider) = edit { it[Keys.TEXT_PROVIDER] = provider.name }
+    suspend fun setChatGptModel(slug: String?) = edit {
+        if (slug == null) it.remove(Keys.CHATGPT_MODEL) else it[Keys.CHATGPT_MODEL] = slug
+    }
 
     suspend fun setModelOverridesJson(json: String?) = edit {
         if (json == null) it.remove(Keys.MODEL_OVERRIDES_JSON) else it[Keys.MODEL_OVERRIDES_JSON] = json
@@ -103,6 +112,8 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
     }
 
     private object Keys {
+        val TEXT_PROVIDER = stringPreferencesKey("text_provider")
+        val CHATGPT_MODEL = stringPreferencesKey("chatgpt_model")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val DEFAULT_TARGET_LANG = stringPreferencesKey("default_target_lang")
         val DEFAULT_DIRECTION = stringPreferencesKey("default_direction")

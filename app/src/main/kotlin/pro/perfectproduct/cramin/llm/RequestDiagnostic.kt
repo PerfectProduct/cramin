@@ -41,6 +41,7 @@ data class RequestDiagnostic(
     val jobIndex: Int? = null,
     val partPath: String? = null,
     val observation: String = "LEGACY_UNKNOWN",
+    val responseEvidence: JsonObject? = null,
 
 ) {
     fun copyText(): String = "attemptId scope: ONE_HTTP_ATTEMPT; processing correlation absent in legacy records\n" + codec.encodeToJsonElement(serializer(), this).jsonObject.entries.joinToString("\n") {
@@ -83,7 +84,8 @@ data class RequestDiagnostic(
                 logicalRequestId = request.logicalRequestId, jobIndex = request.jobIndex,
                 partPath = request.partPath?.takeIf { it.matches(Regex("[LR]{0,6}")) },
                 buildVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})", configOrigin = request.configOrigin,
-                requestedModel = safeModel(text(body["model"])), systemChars = request.system.length, userChars = request.user.length,
+                requestedModel = if (request.provider == TextProvider.CHATGPT_PLAN) text(body["model"])?.takeIf { it.matches(Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,127}")) }
+                    else safeModel(text(body["model"])), systemChars = request.system.length, userChars = request.user.length,
                 inputUtf8Bytes = (request.system + request.user).toByteArray(Charsets.UTF_8).size,
                 serializedBytes = bytes, estimatedInputTokens = bytes,
                 maxTokens = (body["max_tokens"] as? JsonPrimitive)?.longOrNull?.toString() ?: "NOT_SENT",

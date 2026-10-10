@@ -104,6 +104,7 @@ data class EffectiveRole(
     /** Откуда взята модель: «своя» / «конфиг репозитория» / «встроенный» (SPEC §9.7). */
     val source: ConfigSource,
     val reasoning: JsonObject? = null,
+    val provider: TextProvider = TextProvider.OPENROUTER,
 )
 
 @Serializable
@@ -112,6 +113,7 @@ data class EffectiveConfig(
     val pipeline: PipelineParams,
     /** Предупреждения для экрана настроек: отклонённые модели, игнорированный удалённый конфиг. */
     val warnings: List<String>,
+    val provider: TextProvider = TextProvider.OPENROUTER,
 ) {
     fun role(role: ModelRole): EffectiveRole = roles[role] ?: error("role ${role.key} is not configured")
 

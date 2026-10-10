@@ -15,6 +15,7 @@ data class ProcessingSnapshot(
     val catalog: List<CatalogModel> = emptyList(),
     val legacyParametersUnknown: Boolean = false,
     val legacyCapabilitiesResolved: Boolean = false,
+    val provider: TextProvider = TextProvider.OPENROUTER,
 ) : CatalogView {
     override fun find(modelId: String): CatalogModel? = catalog.firstOrNull { it.id == modelId }
     /** Fill only historically absent metadata, once; never replace saved role settings/models. */
@@ -32,6 +33,7 @@ data class ProcessingSnapshot(
         private const val HISTORICAL_EXTRACT_CHUNK_WORDS = 700
         fun capture(config: EffectiveConfig, catalog: CatalogView?): ProcessingSnapshot = ProcessingSnapshot(
             config = config,
+            provider = config.provider,
             catalog = config.roles.values.mapNotNull { catalog?.find(it.model) }.distinctBy { it.id },
         )
         fun decode(text: String): ProcessingSnapshot {

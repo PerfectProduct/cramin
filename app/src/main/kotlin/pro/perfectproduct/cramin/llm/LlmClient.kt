@@ -2,6 +2,9 @@ package pro.perfectproduct.cramin.llm
 
 import kotlinx.serialization.json.JsonObject
 
+@kotlinx.serialization.Serializable
+enum class TextProvider { OPENROUTER, CHATGPT_PLAN }
+
 /** Роли моделей (SPEC §6.12). */
 enum class ModelRole(val key: String) {
     BRIEF("brief"),
@@ -41,6 +44,7 @@ data class LlmRequest(
     val jobIndex: Int? = null,
     val partPath: String? = null,
     val onFailureDiagnostic: (suspend (RequestDiagnostic) -> Unit)? = null,
+    val provider: TextProvider = TextProvider.OPENROUTER,
 )
 
 data class LlmUsage(
@@ -67,6 +71,8 @@ data class LlmResponse(
     val finishReason: String?,
     val usage: LlmUsage,
     val model: String,
+    /** Allowlisted terminal status/media/usage only; never response text or headers. */
+    val terminalMetadata: JsonObject? = null,
 ) {
     val truncated: Boolean get() = finishReason == "length"
 }
@@ -83,6 +89,7 @@ interface LlmClient {
 sealed class LlmException(message: String, cause: Throwable? = null) : Exception(message, cause) {
     var diagnostic: RequestDiagnostic? = null
         internal set
+    class ChatGpt(val kind: ChatGptFailure) : LlmException("chatgpt_${kind.name.lowercase()}")
     /** Сеть недоступна или оборвалась после всех ретраев. */
     class Network(message: String, cause: Throwable? = null) : LlmException(message, cause)
 
@@ -110,3 +117,5 @@ sealed class LlmException(message: String, cause: Throwable? = null) : Exception
     class BudgetExceeded(val spentUsd: Double, val budgetUsd: Double) :
         LlmException("live budget exceeded: spent $spentUsd of $budgetUsd USD")
 }
+
+enum class ChatGptFailure { SIGN_IN, MODEL, LIMIT, UNAVAILABLE }

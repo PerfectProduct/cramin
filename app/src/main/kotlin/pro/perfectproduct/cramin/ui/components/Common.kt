@@ -52,6 +52,11 @@ fun posLabel(pos: Pos): String = stringResource(
 enum class ErrorAction { RETRY, OPEN_SETTINGS, CHOOSE_SOURCE_LANG, CHOOSE_TARGET_LANG, CHECK_UPDATES }
 
 fun errorMessageRes(code: ErrorCode): Int = when (code) {
+    ErrorCode.STT_ACCESS_REQUIRED -> R.string.err_stt_access_required
+    ErrorCode.CHATGPT_AUTH -> R.string.err_chatgpt_auth
+    ErrorCode.CHATGPT_MODEL -> R.string.err_chatgpt_model
+    ErrorCode.CHATGPT_LIMIT -> R.string.err_chatgpt_limit
+    ErrorCode.CHATGPT_UNAVAILABLE -> R.string.err_chatgpt_unavailable
     ErrorCode.NO_KEY -> R.string.err_no_key
     ErrorCode.AUTH -> R.string.err_auth
     ErrorCode.PAYMENT -> R.string.err_payment
@@ -80,6 +85,7 @@ fun errorMessageRes(code: ErrorCode): Int = when (code) {
 }
 
 fun errorActions(code: ErrorCode): List<ErrorAction> = when (code) {
+    ErrorCode.STT_ACCESS_REQUIRED, ErrorCode.CHATGPT_AUTH, ErrorCode.CHATGPT_MODEL, ErrorCode.CHATGPT_LIMIT, ErrorCode.CHATGPT_UNAVAILABLE -> listOf(ErrorAction.OPEN_SETTINGS, ErrorAction.RETRY)
     ErrorCode.NO_KEY, ErrorCode.AUTH, ErrorCode.PAYMENT, ErrorCode.BAD_REQUEST -> listOf(ErrorAction.OPEN_SETTINGS, ErrorAction.RETRY)
     ErrorCode.LANG_UNDETECTED, ErrorCode.YOUTUBE_NO_LANG -> listOf(ErrorAction.CHOOSE_SOURCE_LANG)
     ErrorCode.SAME_LANGUAGE -> listOf(ErrorAction.CHOOSE_TARGET_LANG)

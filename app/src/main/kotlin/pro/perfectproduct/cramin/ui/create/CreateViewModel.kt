@@ -23,7 +23,9 @@ import java.io.File
 
 data class CreateState(
     val targetLang: Lang = Lang.RU,
-    val hasKey: Boolean = true,
+    val hasKey: Boolean = false,
+    val textProvider: pro.perfectproduct.cramin.llm.TextProvider = pro.perfectproduct.cramin.llm.TextProvider.OPENROUTER,
+    val textModel: String? = null,
     val notificationsAsked: Boolean = true,
     val pdfName: String? = null,
     val sourceLangNeeded: Boolean = false,
@@ -42,7 +44,11 @@ class CreateViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             val s = container.settingsStore.current()
             _state.update { it.copy(targetLang = Lang.fromCode(s.defaultTargetLang) ?: Lang.RU, notificationsAsked = s.notificationsAsked) }
-            container.secretStore.hasApiKey.collect { has -> _state.update { it.copy(hasKey = has) } }
+            kotlinx.coroutines.flow.combine(container.settingsStore.settings, container.secretStore.hasApiKey, container.chatGpt.changes) { s, key, version -> Triple(s,key,version) }.collect { (settings, _, _) ->
+                _state.update { it.copy(textProvider = settings.textProvider, textModel = settings.chatGptModel) }
+                val ready = container.textProviderReady()
+                _state.update { it.copy(hasKey = ready) }
+            }
         }
     }
 
@@ -113,14 +119,22 @@ class CreateViewModel(private val container: AppContainer) : ViewModel() {
     private fun create(request: NewDocument, after: () -> Unit = {}) = viewModelScope.launch {
         _state.update { it.copy(busy = true, error = null) }
         try {
-            if (!container.secretStore.hasApiKey.first()) {
-                _state.update { it.copy(busy = false, error = container.appContext.getString(R.string.create_no_key)) }
+            if (!container.textProviderReady()) {
+                _state.update { it.copy(busy = false, error = container.appContext.getString(R.string.provider_not_ready)) }
                 return@launch
             }
-            val id = withContext(Dispatchers.IO) { container.documentRepository.create(request) }
+            val config = container.processingConfig()
+            val snapshot = pro.perfectproduct.cramin.llm.ProcessingSnapshot.capture(config,
+                if (config.provider == pro.perfectproduct.cramin.llm.TextProvider.OPENROUTER) container.modelCatalog.cached() else null)
+            val id = withContext(Dispatchers.IO) {
+                container.documentRepository.create(request, snapshot.encode(), pro.perfectproduct.cramin.pipeline.DocumentProcessor.PIPELINE_VERSION)
+            }
             container.processScheduler.enqueue(id)
             after()
             _state.update { it.copy(busy = false, done = true) }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (e: pro.perfectproduct.cramin.llm.LlmException) {
+            _state.update { it.copy(busy = false, error = container.appContext.getString(pro.perfectproduct.cramin.ui.components.errorMessageRes(pro.perfectproduct.cramin.pipeline.PipelineException.from(e).code))) }
         } catch (e: Exception) {
             Log.w(TAG, "create failed: ${e.javaClass.simpleName}")
             _state.update { it.copy(busy = false, error = container.appContext.getString(R.string.err_storage)) }

@@ -19,8 +19,8 @@ object BriefRequestFactory {
         val selected = BriefInput.select(paragraphs, config.pipeline.briefMaxInputWords)
         fun request(input: String) = LlmRequest(ModelRole.BRIEF, role.model, Prompts.BRIEF,
             Messages.brief(lang, target, input), Schemas.BRIEF_NAME, Schemas.BRIEF,
-            role.temperature, output, role.reasoning)
-        fun fits(input: String): Boolean = ChatRequestBody.build(request(input), model?.supportedParameters?.toSet(), true)
+            role.temperature, output, role.reasoning, provider = role.provider)
+        fun fits(input: String): Boolean = ChatRequestBody.forSizing(request(input), model?.supportedParameters?.toSet(), true)
             .toString().toByteArray(Charsets.UTF_8).size.toLong() + output + PROTOCOL_MARGIN <= context.toLong()
         if (fits(selected)) return request(selected)
         if (!fits("")) throw LlmException.BadRequest(0, RequestRejection.LOCAL_BUDGET.name)
