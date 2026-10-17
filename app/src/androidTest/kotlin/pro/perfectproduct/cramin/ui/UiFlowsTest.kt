@@ -502,7 +502,8 @@ class UiFlowsTest {
         compose.onNodeWithTag("flashCard").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("cardBack")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("банк").assertIsDisplayed()
-        compose.onNodeWithText("The bank was closed.").assertIsDisplayed()
+        compose.onNodeWithText("Банк был закрыт.").assertIsDisplayed()
+        compose.onNodeWithText("The bank was closed.", useUnmergedTree = true).assertDoesNotExist()
     }
 
     private suspend fun cardId(docId: Long, lemma: String): Long = container.db.cardDao().getByDocument(docId).first { it.lemma == lemma }.id

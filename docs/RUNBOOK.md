@@ -250,3 +250,21 @@ SelectionRegressionTest, SettingsStoreTest. Android: AcceptedUiPolishTest
 (параметр `dark=false` для светлой темы, системные font_scale 1/2 и ширина ~412/320 dp).
 Первую выдачу чтения удерживает тестовый Flow; задержек в production нет.
 Контактные листы и оригиналы — отдельная папка Downloads для архитектора.
+
+## Симметричная debug, 2026-10-17
+
+APPROVED: одна функция поверх v0.1.61, без UI поздних этапов. Debug использует
+`pro.perfectproduct.cramin.symmetricdebug`, label «CramIn · симметрия»; release ID
+остаётся `pro.perfectproduct.cramin`. Это отдельная установка с собственной БД v5,
+не обновление debug110/Room8. Не переносить старую БД, не удалять данные телефона.
+
+Offline: `assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug -Plive=false`.
+Адресные Android-проверки: CardContextTest, LargeCardTest и связанные методы
+UiFlowsTest/AcceptedUiPolishTest. Фикстуры из test APK, без платного API и без
+готового набора в продукте. Реальные PNG и результаты текущего запуска обязательны;
+исторический PASS не подтверждает эту сборку. Проверить обе стороны EN/RU,
+направление, длинный пример, RTL, физические свайпы, отмену, звезду и autoplay.
+
+Если checkout содержит защищённую пустую `.git`, метаданные находятся в
+`.symmetric-git`; перед Git/Gradle задайте `GIT_DIR="$PWD/.symmetric-git"` и
+`GIT_WORK_TREE="$PWD"`. Переносимые исходники — bundle/patch итогового evidence.

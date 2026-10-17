@@ -14,6 +14,7 @@ import pro.perfectproduct.cramin.app.AppContainer
 import pro.perfectproduct.cramin.data.db.Direction
 import pro.perfectproduct.cramin.data.repo.DeckKey
 import pro.perfectproduct.cramin.data.repo.StudyCard
+import pro.perfectproduct.cramin.study.content
 import pro.perfectproduct.cramin.study.DeckBuilder
 import pro.perfectproduct.cramin.study.SessionEvent
 import pro.perfectproduct.cramin.study.SessionState
@@ -160,11 +161,12 @@ class StudyViewModel(private val container: AppContainer, val deckKeyRaw: String
     }
 
     fun dispatch(event: SessionEvent) = viewModelScope.launch {
-        val before = _state.value.session
-        machine?.dispatch(event)
-        val after = _state.value.session ?: return@launch
-        if (_state.value.autoSpeak && !after.autoplay && before != null && (before.position != after.position || before.isFlipped != after.isFlipped)) {
-            speakCurrent()
+        val m = machine ?: return@launch
+        val before = m.state.value
+        m.dispatch(event)
+        val after = m.state.value
+        if (_state.value.autoSpeak && !after.autoplay && (before.position != after.position || before.isFlipped != after.isFlipped)) {
+            speakCurrent(after)
         }
     }
 
@@ -197,15 +199,16 @@ class StudyViewModel(private val container: AppContainer, val deckKeyRaw: String
         }
     }
 
-    /** Озвучка текущей стороны: лицо — лемма/переводы, оборот — переводы без примеров (SPEC §9.6). */
+    /** Озвучка текущей стороны: лемма/огласованная форма или перевод, без примеров (SPEC §9.6). */
     fun speakCurrent() {
+        speakCurrent(machine?.state?.value ?: return)
+    }
+
+    private fun speakCurrent(session: SessionState) {
         val s = _state.value
-        val card = s.currentCard ?: return
-        val session = s.session ?: return
-        val frontIsSource = s.direction == Direction.SRC_FRONT
-        val showSource = frontIsSource != session.isFlipped
-        val (text, lang) = if (showSource) (card.lemmaVocalized ?: card.lemma) to card.lang else card.visibleSenses.joinToString("; ") { it.translation } to card.targetLang
-        if (lang in s.ttsLangs) container.tts.speak(text, lang, s.ttsRate)
+        val card = s.cards[session.currentCardId] ?: return
+        val face = card.content(s.direction, isFront = !session.isFlipped)
+        if (face.language in s.ttsLangs) container.tts.speak(face.speech, face.language, s.ttsRate)
     }
 
     fun speak(text: String, lang: Lang) {
@@ -220,12 +223,13 @@ class StudyViewModel(private val container: AppContainer, val deckKeyRaw: String
     private fun syncAutoplay(s: SessionState) {
         if (s.autoplay && autoplayJob?.isActive != true) {
             autoplayJob = viewModelScope.launch {
-                while (_state.value.session?.autoplay == true) {
-                    val current = _state.value.session ?: break
-                    if (_state.value.autoSpeak) speakCurrent()
+                val m = machine ?: return@launch
+                while (m === machine && m.state.value.autoplay) {
+                    val current = m.state.value
+                    if (_state.value.autoSpeak) speakCurrent(current)
                     delay((if (current.isFlipped) _state.value.backMs else _state.value.frontMs).toLong().coerceAtLeast(500L))
-                    if (_state.value.session?.autoplay != true) break
-                    machine?.dispatch(SessionEvent.Tick)
+                    if (m !== machine || !m.state.value.autoplay) break
+                    m.dispatch(SessionEvent.Tick)
                 }
             }
         } else if (!s.autoplay) {

@@ -47,14 +47,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import pro.perfectproduct.cramin.R
 import pro.perfectproduct.cramin.app.theme.study
 import pro.perfectproduct.cramin.data.db.Direction
 import pro.perfectproduct.cramin.data.repo.StudyCard
-import pro.perfectproduct.cramin.data.repo.StudyExample
+import pro.perfectproduct.cramin.study.StudySpan
+import pro.perfectproduct.cramin.study.content
 import pro.perfectproduct.cramin.ui.components.contentTextStyle
 import pro.perfectproduct.cramin.ui.components.posLabel
 import pro.perfectproduct.cramin.util.Lang
@@ -166,9 +166,9 @@ fun FlashCard(
 
 @Composable
 private fun CardFace(card: StudyCard, direction: Direction, isFront: Boolean, ttsLangs: Set<Lang>, onSpeak: (String, Lang) -> Unit, onStar: () -> Unit) {
-    val showSource = (direction == Direction.SRC_FRONT) == isFront
-    val speakLang = if (showSource) card.lang else card.targetLang
-    val speakText = if (showSource) (card.lemmaVocalized ?: card.lemma) else card.visibleSenses.joinToString("; ") { it.translation }
+    val face = card.content(direction, isFront)
+    val speakLang = face.language
+    val speakText = face.speech
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             if (speakLang in ttsLangs) {
@@ -185,80 +185,38 @@ private fun CardFace(card: StudyCard, direction: Direction, isFront: Boolean, tt
             }
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-            if (showSource && isFront) {
-                Column(Modifier.verticalScroll(rememberScrollState())) { SourceSide(card) }
-            } else if (!showSource && isFront) {
-                Text(
-                    card.visibleSenses.joinToString("; ") { it.translation },
-                    style = contentTextStyle(MaterialTheme.typography.headlineMedium),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier.testTag("cardFront").verticalScroll(rememberScrollState()),
-                )
-            } else {
-                BackSide(card, showSource)
+            // Each face owns its scroll position; the next card starts at the word again.
+            androidx.compose.runtime.key(card.id, face.showSource) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                        .testTag(if (isFront) "cardFront" else "cardBack"),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    face.vocalized?.let {
+                        Text(it, style = contentTextStyle(MaterialTheme.typography.bodyLarge), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text(face.word, style = contentTextStyle((if (face.showSource) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineSmall).copy(fontWeight = FontWeight.SemiBold)),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    if (face.showSource) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(posLabel(card.pos), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    face.context?.let { text ->
+                        Box(Modifier.fillMaxWidth().padding(top = 18.dp).clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerLow).padding(16.dp)) {
+                            Text(highlighted(text, face.span, MaterialTheme.colorScheme.primary),
+                                style = contentTextStyle(MaterialTheme.typography.bodyMedium), modifier = Modifier.testTag("cardContext"))
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-@Composable
-private fun SourceSide(card: StudyCard) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.testTag("cardFront")) {
-        if (card.lemmaVocalized != null) {
-            Text(card.lemmaVocalized, style = contentTextStyle(MaterialTheme.typography.bodyLarge), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Text(card.lemma, style = contentTextStyle(MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.SemiBold)), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(Modifier.height(8.dp))
-        Text(posLabel(card.pos), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-/** Оборот: одно значение и его пример; при TGT_FRONT — лемма и тот же пример. Прокручивается. */
-@Composable
-private fun BackSide(card: StudyCard, showSource: Boolean) {
-    val highlight = MaterialTheme.colorScheme.primary
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).testTag("cardBack"), horizontalAlignment = Alignment.CenterHorizontally) {
-        if (showSource) {
-            if (card.lemmaVocalized != null) Text(card.lemmaVocalized, style = contentTextStyle(MaterialTheme.typography.bodyMedium), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(card.lemma, style = contentTextStyle(MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold)))
-            Text(posLabel(card.pos), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(12.dp))
-        }
-        for (sense in card.visibleSenses) {
-            if (!showSource) {
-                Text(sense.translation, style = contentTextStyle(MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold)), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            }
-            sense.example?.let { ex -> ExampleBlock(ex, highlight) }
-            Spacer(Modifier.height(14.dp))
-        }
-    }
-}
-
-@Composable
-private fun ExampleBlock(ex: StudyExample, highlight: Color) {
-    Column(modifier = Modifier.fillMaxWidth().padding(top = 18.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainerLow).padding(16.dp)) {
-        Text(highlighted(ex.sentence, ex.start, ex.end, highlight), style = contentTextStyle(MaterialTheme.typography.bodyMedium))
-        if (!ex.translation.isNullOrBlank()) {
-            if (ex.sentence.isNotBlank()) androidx.compose.material3.HorizontalDivider(
-                modifier = Modifier.padding(vertical = 12.dp).testTag("exampleDivider"),
-                color = MaterialTheme.colorScheme.outlineVariant,
-            )
-            Text(
-                highlighted(ex.translation, ex.targetStart, ex.targetEnd, highlight),
-                style = contentTextStyle(MaterialTheme.typography.bodyMedium), color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-private fun highlighted(text: String, start: Int?, end: Int?, color: Color) = buildAnnotatedString {
-    if (start == null || end == null || start < 0 || end > text.length || start >= end) {
-        append(text)
-    } else {
-        append(text.substring(0, start))
-        withStyle(SpanStyle(color = color, fontWeight = FontWeight.Bold)) { append(text.substring(start, end)) }
-        append(text.substring(end))
-    }
+internal fun highlighted(text: String, span: StudySpan?, color: Color) = buildAnnotatedString {
+    append(text)
+    span?.let { addStyle(SpanStyle(color = color, fontWeight = FontWeight.Bold), it.start, it.end) }
 }
 
 private const val FLIP_MS = 300

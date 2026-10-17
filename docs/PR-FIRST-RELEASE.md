@@ -1,7 +1,22 @@
-Cramin prepares cards from text, PDF, articles and YouTube and preserves documents, favourites and study progress. This change keeps the accepted UI, models and prompts and prepares the first public APK for distribution under GPL-3.0-or-later; Cramin's own sources retain their MIT grant and dependency notices remain intact.
+Стороны карточки теперь содержат слово и выбранный пример одного языка; смена
+направления меняет их целиком. Сохраняются привычные колода, стиль, жесты, отмена,
+озвучка слова и автопоказ. Неверные сохранённые диапазоны не дают ложного выделения.
 
-The source kit includes full history, pinned preferred sources, the verified desugar recipe/evidence and build instructions. A shared local/CI packager checks APK identity, version, embedded git revision, signing certificate and offline licence assets and emits matching APK, source kit, notices, checksums and metadata.
+Основа — публичный v0.1.61/c96282ca4479879367612e77d9252bf7913cc00e. Переносятся
+только 13 файлов принятого изменения 280913c484c2b0b38e992a48de6e2f2d85476bf4;
+временные debug suffix/label не переносятся. Ещё три файла — актуальные release
+notes, этот PR-текст и план выпуска. Production-алгоритм, Room5, провайдер,
+генерация и release package не меняются. Поздние UI/уроки/готовый набор отсутствуют.
 
-Local candidate: {{RELEASE_VERSION}}, commit {{RELEASE_HEAD}}. Local validation includes release build/lint, exact APK smoke on API26/36, upgrade from the previous compatible signed release with synthetic documents/cards/progress/settings, and a build from the delivered source bundle. The accompanying REPORT.md records the actual results and limits.
+Владелец принял отдельный debug SHA256
+2d94d706392712fcf7c0db8eb1922990c2b168d670c580425a83d1c15ab9d90e.
+Его прежние 337 JVM, Android19/19 и lint0 errors относятся к принятому debug.
+Они не являются проверкой будущего release APK. Открыта адресная визуальная
+проверка полного StudyScreen при системном fontScale200%, включая RTL.
 
-Debug data migration is deferred: release installs alongside debug. GitHub CI and published-release discovery still require real checks. This draft PR authorizes no merge, tag, asset upload or publication. Running release.yml later requires separate permission because gh release create --draft may create a public git tag.
+Точный кандидат: {{RELEASE_HEAD}}, версия {{RELEASE_VERSION}}.
+До выпуска нужны CI точного final main, подпись/комплект точного APK, адресный
+визуальный контроль200% и обновление с v0.1.61 с сохранением данных.
+Этот текст не сообщает о прохождении ещё не выполненных release-проверок.
+Разрешения на push/PR, main fast-forward, release workflow/tag/draft/upload,
+локальные тестовые сборки/один AVD и публикацию выдаются отдельно.

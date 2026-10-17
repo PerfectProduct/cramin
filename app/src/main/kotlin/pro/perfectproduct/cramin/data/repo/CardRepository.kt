@@ -139,6 +139,8 @@ class CardRepository(
                                 translation = it.segmentTranslation,
                                 targetStart = it.occurrence.targetStart,
                                 targetEnd = it.occurrence.targetEnd,
+                                surface = it.occurrence.surface,
+                                targetSurface = it.occurrence.targetSurface,
                             )
                         },
                     )

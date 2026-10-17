@@ -145,19 +145,21 @@ class AcceptedUiPolishTest {
         shot("study-example")
     }
 
-    @Test fun exampleDividerAndLongScrolling() {
+    @Test fun monolingualExampleAndLongScrolling() {
         val short = StudyExample(0,"Я наглядно покажу, как всё это работает, какие проблемы RAG решает и зачем вообще надо.",31,39,"I’ll clearly show how it works, what problems RAG solves, and why it is needed at all.",25,30)
         var ex by mutableStateOf(short)
         var flipped by mutableStateOf(true)
         content {
             FlashCard(StudyCard(1,1,"работать","работать",null,Pos.VERB,Lang.RU,Lang.EN,CardStatus.NEW,false,0,listOf(StudySense(1,"work",ex))),Direction.SRC_FRONT,flipped,setOf(Lang.EN,Lang.RU),{flipped=!flipped},{},{},{_,_->},{},Modifier.padding(20.dp))
         }
-        compose.onNodeWithTag("exampleDivider",useUnmergedTree=true).assertExists()
+        compose.onNodeWithTag("exampleDivider",useUnmergedTree=true).assertDoesNotExist()
+        compose.onNodeWithText(short.sentence,useUnmergedTree=true).assertDoesNotExist()
+        compose.onNodeWithText(requireNotNull(short.translation),useUnmergedTree=true).assertIsDisplayed()
         shot("example-short")
         compose.runOnIdle { ex=short.copy(sentence=short.sentence+" "+"Reading a longer passage keeps the example in context. ".repeat(5),translation=short.translation+" "+"Длинный пример можно прокрутить и прочитать полностью. ".repeat(5)) }
-        compose.onNodeWithTag("exampleDivider",useUnmergedTree=true).performScrollTo()
+        compose.onNodeWithTag("cardContext",useUnmergedTree=true).performScrollTo()
         compose.onNodeWithTag("cardBack",useUnmergedTree=true).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.ScrollBy) { it(0f, 240f) }
-        compose.onNodeWithTag("exampleDivider",useUnmergedTree=true).assertIsDisplayed()
+        compose.onNodeWithTag("cardContext",useUnmergedTree=true).assertIsDisplayed()
         shot("example-long")
         compose.onNodeWithText(requireNotNull(ex.translation),substring=true,useUnmergedTree=true).performScrollTo().assertIsDisplayed()
         compose.runOnIdle { ex=short.copy(sentence="כך המילה מופיעה בתוך המשפט המקורי.",start=null,end=null,translation="Так слово выглядит в исходном предложении.",targetStart=null,targetEnd=null) }

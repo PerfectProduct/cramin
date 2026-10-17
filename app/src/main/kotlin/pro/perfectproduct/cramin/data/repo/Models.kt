@@ -26,6 +26,8 @@ data class StudyExample(
     val translation: String?,
     val targetStart: Int?,
     val targetEnd: Int?,
+    val surface: String? = null,
+    val targetSurface: String? = null,
 )
 
 data class StudySense(

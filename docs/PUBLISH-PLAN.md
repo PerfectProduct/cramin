@@ -1,130 +1,171 @@
-# Внешние действия: этапы разрешаются отдельно
+# План выпуска симметричных карточек
 
-Локальный комплект готовится из `feat/v1`, origin `git@github.com:PerfectProduct/cramin.git`.
-Точный кандидат: **{{RELEASE_HEAD}}**, версия **{{RELEASE_VERSION}}**. Эти placeholders в
-репозиторном шаблоне заменяются упаковщиком в выдаваемом плане. ARTIFACTS.json — источник
-точного SHA/версии; числа коммитов и теги нельзя угадывать или сохранять после новых коммитов.
-GPL-3.0-or-later путь утверждён; desugar подтверждён; debug migration отложена владельцем.
-Исторические отчёты 0.1.38/0.1.39 сохраняются; актуальные результаты — REPORT.md этого комплекта.
-GitHub CI/discovery ещё не считаются пройденными. Ниже только подготовленные команды.
+Локальный кандидат {{RELEASE_HEAD}}, версия {{RELEASE_VERSION}}.
+Ветка codex/release-symmetric-cards; база публичный v0.1.61,
+c96282ca4479879367612e77d9252bf7913cc00e. Точный H фиксируется во внешнем
+candidate.json после commit; этот файл не подставляет собственный SHA.
 
-## Этап 1 — требуется разрешение только push feat/v1 и draft PR
+Локальная подготовка включает только согласованные 13 путей принятой функции
+и три release-документа. Временные debug suffix/label исключены; release package
+pro.perfectproduct.cramin, стандартный debug package pro.perfectproduct.cramin.debug.
+Версия вычисляется по полной истории git; ожидается count62 после одного commit
+над count61. Изменение истории требует нового решения, а не ручного versionCode.
 
-PR title: **Prepare Cramin first public release under GPL-3.0-or-later**.
-Точный body — PR-FIRST-RELEASE.md рядом с этим планом; SHA/версия в нём уже подставлены.
-Выполнять из checkout /home/dev/cramin, а путь CRAMIN_FINAL_KIT задавать на final-local.
+Принятый отдельный symmetricdebug и его evidence сохранены. Его прежние
+337 JVM/Android19/19/lint0 errors не являются проверками этого release-кандидата.
+Нового release APK пока нет. Полный StudyScreen200%/RTL, exact release package/
+подпись/комплект и обновление public61 с сохранением данных ещё не проверены.
 
-```bash
-CRAMIN_FINAL_KIT=/home/dev/cramin/release-candidate/final-local/dist
-CRAMIN_EXPECTED_SHA=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["commit"])' "$CRAMIN_FINAL_KIT/ARTIFACTS.json")
-git switch feat/v1
-test -z "$(git status --porcelain)"
-test "$(git rev-parse HEAD)" = "$CRAMIN_EXPECTED_SHA"
-git fetch origin --tags
-git log --oneline origin/main..feat/v1
-# Если origin/main уже изменился, оценить PR diff; не merge/rebase без нового кандидата.
-git push origin feat/v1
-gh pr create --repo PerfectProduct/cramin --head feat/v1 --base main --draft \
-  --title "Prepare Cramin first public release under GPL-3.0-or-later" \
-  --body-file "$CRAMIN_FINAL_KIT/PR-FIRST-RELEASE.md"
-gh run list --repo PerfectProduct/cramin --branch feat/v1
-gh pr view feat/v1 --repo PerfectProduct/cramin --json headRefOid,baseRefName,isDraft,statusCheckRollup
-# gh run watch <RUN_ID> --repo PerfectProduct/cramin --exit-status
-```
+Ни одна команда B и далее ниже не выполнена. Это шаблоны будущих действий,
+каждое из которых требует отдельного разрешения. Буквы обозначают разделы
+этого файла: решение должно называть конкретные действия, не только букву.
+Текущий этап не разрешает push/PR/main/CI/tag/draft/upload/AVD/публикацию.
+Нельзя запускать файл целиком как script. Для каждого разрешённого shell-блока
+использовать set -euo pipefail, точные SHA и guards; при расхождении STOP.
+CRAMIN_RELEASE_SHA перед будущими действиями взять из внешнего candidate.json
+и проверить равенство git rev-parse HEAD. Здесь placeholders являются шаблонами.
 
-Ожидаются `ci.yml` (push и pull_request: assembleDebug, JVM, lintDebug) и
-`instrumented.yml` (push feat/v1 и pull_request: fake API, API26/36). Push запускает матрицу
-даже при первой регистрации workflows до появления YAML на main. Проверить push run на точном head SHA;
-PR run может собирать синтетический merge commit GitHub — зафиксировать его SHA и PR headRefOid.
-Не выдавать PR merge SHA за подписанный локальный APK. Live/external API tests исключены.
-Если workflow не запускается (например, политика fork/Actions permissions), это реальный
-внешний блокер; разобраться до следующего этапа. Workflow_dispatch доступен после YAML
-на default branch; существование локального YAML не доказывает CI.
-Первый этап не включает main, tags, release.yml или публикацию.
+Постоянный release сертификат — release-signing/cert-sha256.txt; ключ существующий,
+вне git или в CI secrets. Новый ключ не создавать, значения секретов не печатать.
+Ожидаемые signing schemes v2/v3. Точный CI APK и весь комплект проверяются вместе,
+после чего разрешение публикации рассматривается отдельно.
 
-## Этап 2 — отдельное разрешение обновить main
+Адресный200%/upgrade запуск — проект отдельного решения. Прошлое одноразовое
+разрешение AVD исчерпано. Новая оснастка/маркер и мониторинг должны быть проверены
+до новой попытки; аварийные Windows/WSL<1GiB/OOM/commit/thrashing/потеря мониторинга/
+D<12GiB/C<512MiB обязательны. Консервативные RAM start8/5.5,phase2/2 отдельно;
+их режим WARN по20с стабильным рядам требует нового явного решения. Дисковые
+start D32GiB/C1.125GiB плюс прогноз сохраняются. Без решения запуск запрещён.
+Полные ресурсные метрики/политика — внешний RELEASE-PREP-RESULT; thresholds
+не менялись. Без auto retry/чужих kills/WSL изменений/требований перезагрузки.
 
-Предлагается fast-forward, сохраняющий SHA/версию. Не применять squash/force-push.
-Если main не предок feat/v1, согласовать способ интеграции и собрать новый локальный комплект.
-
-```bash
-bash <<'CRAMIN_INTEGRATE'
+B. ОТДЕЛЬНО РАЗРЕШЁННЫЕ PUSH ВЕТКИ + DRAFT PR (ЗАПУСТЯТ CI)
+# Только из подготовленного checkout; CRAMIN_RELEASE_SHA взять из candidate.json.
 set -euo pipefail
-cd /home/dev/cramin
-git fetch --no-tags origin
+cd /tmp/cramin-release-symmetric-20261017
+: "${CRAMIN_RELEASE_SHA:?Set exact reviewed candidate H}"
+test "$(git rev-parse HEAD)" = "$CRAMIN_RELEASE_SHA"
 test -z "$(git status --porcelain)"
-test "$(git rev-parse main)" = 3e93eb4f0a067b47d1075a7708c1dcd28758862a
-test "$(git rev-parse origin/main)" = 3e93eb4f0a067b47d1075a7708c1dcd28758862a
-test "$(git rev-parse feat/v1)" = '{{RELEASE_HEAD}}'
-test "$(git rev-parse origin/feat/v1)" = '{{RELEASE_HEAD}}'
-test "0.1.$(git rev-list --count origin/feat/v1)" = '{{RELEASE_VERSION}}'
-git merge-base --is-ancestor origin/main origin/feat/v1
-git switch main
-git merge --ff-only origin/feat/v1
-test "$(git rev-parse HEAD)" = '{{RELEASE_HEAD}}'
-git push origin main
+test "$(git ls-remote origin refs/heads/main | cut -f1)" = c96282ca4479879367612e77d9252bf7913cc00e
+git push origin HEAD:refs/heads/codex/release-symmetric-cards
+python3 - "$CRAMIN_RELEASE_SHA" <<'RENDER_PR'
+import pathlib,sys
+text=pathlib.Path('docs/PR-FIRST-RELEASE.md').read_text()
+pathlib.Path('/mnt/d/CramIn-evidence/symmetric-cards/release-a-20261017/PR-BODY-RENDERED.txt').write_text(text.replace('{{RELEASE_HEAD}}',sys.argv[1]).replace('{{RELEASE_VERSION}}','0.1.62'))
+RENDER_PR
+gh pr create --repo PerfectProduct/cramin --base main --head codex/release-symmetric-cards --draft --title 'Симметричные стороны в привычной колоде' --body-file /mnt/d/CramIn-evidence/symmetric-cards/release-a-20261017/PR-BODY-RENDERED.txt
+gh pr view codex/release-symmetric-cards --repo PerfectProduct/cramin --json headRefOid,baseRefName,isDraft,statusCheckRollup
+gh run list --repo PerfectProduct/cramin --branch codex/release-symmetric-cards --limit 10
+# Проверить head SHA/checkout SHA/event каждого run. PR synthetic merge может дать63;
+# это не номер будущего APK main. Требуются ci и instrumented(API26/36) согласно
+# существующим workflow. Не расширять локальную матрицу. Номер PR/run берётся из API.
+
+C. ОТДЕЛЬНО РАЗРЕШЁННЫЙ FAST-FORWARD MAIN, БЕЗ MERGE-КОММИТА
+set -euo pipefail
+cd /tmp/cramin-release-symmetric-20261017
+: "${CRAMIN_RELEASE_SHA:?Set reviewed H after all PR checks}"
+git fetch origin main codex/release-symmetric-cards
+test -z "$(git status --porcelain)"
+test "$(git rev-parse HEAD)" = "$CRAMIN_RELEASE_SHA"
+test "$(git rev-parse origin/main)" = c96282ca4479879367612e77d9252bf7913cc00e
+test "$(git rev-parse origin/codex/release-symmetric-cards)" = "$CRAMIN_RELEASE_SHA"
+test "$(git rev-list --count "$CRAMIN_RELEASE_SHA")" = 62
+git merge-base --is-ancestor origin/main "$CRAMIN_RELEASE_SHA"
+# Обычный non-force push fast-forward ref; сервер отклонит несовместимый main.
+git push origin "$CRAMIN_RELEASE_SHA":refs/heads/main
+# Проверить main SHA==H через API, получить ci push(main) success.
+# При запрете такого push остановиться; не обходить protection и не gh pr merge
+# с дополнительным merge-коммитом. Перепланировать версию при ином способе merge.
+# Для instrumented exact main dispatch — только если это разрешено явно:
 gh workflow run instrumented.yml --repo PerfectProduct/cramin --ref main
-CRAMIN_INTEGRATE
-```
+# gh run watch <EXACT_MAIN_RUN_ID> --repo PerfectProduct/cramin --exit-status
 
-Это самостоятельный неинтерактивный Bash с остановкой при любой ошибке; не копировать отдельные
-строки в интерактивную оболочку. Все предварительные guards выполняются до switch/merge/push/dispatch.
-Проверка после merge дополнительно останавливает push/dispatch при неожиданном результате.
-Main исходного принятого релиза48 указан явно; при ином main требуется новое согласование.
-Команды подготовлены, не выполнялись.
-
-## Этап 3 — отдельное разрешение tag + draft release + upload
-
-[gh release create](https://cli.github.com/manual/gh_release_create) автоматически создаёт
-отсутствующий тег; `--target` выбирает commit. **`--draft` не делает создание git tag приватным**:
-команда может создать публичный тег. Разрешение на push/draft PR или только main не даёт
-разрешения на запуск release.yml. Нужно явно разрешить тег `v0.1.<code>`, создание draft и
-загрузку ассетов. Workflow сам вычислит versionCode из сохранённой полной истории.
-
-```bash
+D. ОТДЕЛЬНО РАЗРЕШЁННЫЕ RELEASE CI + TAG + DRAFT + ASSET UPLOAD
+# Сам release.yml создаёт draft и может создать ПУБЛИЧНЫЙ тег. Это внешняя запись.
+# До запуска проверить main==H/count62, отсутствие v0.1.62 (remote tags + releases),
+# успешные exact-main gates, действующие secrets и закреплённый cert, без вывода secrets.
 gh workflow run release.yml --repo PerfectProduct/cramin --ref main
-gh run list --repo PerfectProduct/cramin --workflow release.yml --branch main
+gh run list --repo PerfectProduct/cramin --workflow release.yml --branch main --limit 10
+# Выбрать новый workflow_dispatch run с head_sha==H, не старый v0.1.61.
 # gh run watch <RELEASE_RUN_ID> --repo PerfectProduct/cramin --exit-status
-```
+# Скачать в НОВЫЙ пустой каталог; tag взять из N, здесь62 только при неизменном плане.
+gh release download v0.1.62 --repo PerfectProduct/cramin --dir /mnt/d/CramIn-evidence/symmetric-cards/release-candidate-62-ci
+# В скачанном каталоге: sha256sum -c SHA256SUMS
+# python3 scripts/verify_release_signature.py <downloaded/cramin-v0.1.62.apk>
+# $ANDROID_HOME/build-tools/36.0.0/aapt2 dump badging <downloaded/cramin-v0.1.62.apk>
+# $ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose --print-certs <APK>
+# python3 scripts/audit-release-inputs.py --apk <downloaded/cramin-v0.1.62.apk>
+# Остальные точные связи и archive checks перечислены в RESULT.
+# Не выдавать опубликованный тег/draft за публичный релиз или пройденный smoke.
 
-Signing secrets: `ANDROID_KEYSTORE_BASE64` (существующий постоянный PKCS12),
-`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`. PKCS12 store/key passwords равны по
-правилу проекта. Не создавать новый ключ; не выводить значения. Проверить два защищённых
-бэкапа существующего ключа вне git. Встроенный github.token даёт GH_TOKEN в release job;
-OpenRouter API key не нужен ни сборке, ни fake tests. CI/instrumented не требуют signing secrets.
+E. ОТДЕЛЬНОЕ РАЗРЕШЕНИЕ НА ПОДГОТОВКУ TEST APK (БЕЗ ИЗМЕНЕНИЯ PRODUCTION)
+# Только после идентификации H. Не пересобирать product APK вместо CI артефакта.
+# Existing release testBuildType поддержан в app/build.gradle.kts. Использовать
+# существующий keystore через CRAMIN_KEYSTORE_PROPERTIES, не setup-secrets/new key.
+# В чистом checkout H, с безопасно настроенной подписью и полным git history:
+./gradlew :app:assembleReleaseAndroidTest -PandroidTestBuildType=release -Plive=false --no-daemon
+# Выход: app/build/outputs/apk/androidTest/release/app-release-androidTest.apk.
+# Проверить manifest targetPackage=pro.perfectproduct.cramin, test package,
+# runner, cert==постоянный release cert. Если AGP подписал иначе — STOP, не
+# переподписывать product APK. Test artifact может быть подписан существующим
+# ключом в защищённой среде по отдельному разрешению. Снять SHA test APK.
+# Production target для установки — только скачанный CI APK, до/после SHA неизменен.
 
-Технические зависимости отдельно: JDK21, Android SDK platform36/build-tools36.0.0, Gradle wrapper
-9.8.0, Linux x86_64 API26/36 images, доступ к Maven/JitPack/GitHub и source archive downloads.
-Для package-release-kit.py SDK должен быть доступен через ANDROID_HOME/ANDROID_SDK_ROOT.
-Python3.11+ нужен hashlib.file_digest; десугар-рецепт отдельно требует Python3.12/zip/unzip и
-pinned tools, но release workflow не пересобирает его повторно. Source kit включает рецепт и доказательства.
+F. ПРОЕКТ ОДНОЙ НОВОЙ AVD-СЕССИИ; СЕЙЧАС НЕ РАЗРЕШЁН И НЕ ВЫПОЛНЯЛСЯ
+# Сначала подготовить и проверить новый monitor-wrapper с отдельным маркером
+# и каталогом. НЕ запускать прежний run-once.py/не удалять ONE-ATTEMPT.json.
+# Wrapper обязан вести telemetry и отменять дочерние adb/instrument при STOP.
+# Ниже argv для запуска внутри wrapper, ПОСЛЕ нового решения архитектора:
+ANDROID_AVD_HOME=/tmp/cramin-symmetric-api34-avds /home/dev/Android/Sdk/emulator/emulator -avd cramin-symmetric-api34 -port 5580 -memory 2560 -cores 2 -gpu swangle -feature -Vulkan -no-window -no-audio -no-boot-anim -no-snapshot-load -no-snapshot-save -skin 720x1280
+# Работать только с emulator-5580, проверить API34/density320/720x1280.
+ADB=/home/dev/Android/Sdk/platform-tools/adb
+# Все следующие команды исполняются ТОЛЬКО под monitor wrapper.
+# Записать исходный font_scale, установить2.0, удостовериться в system и actual
+# Activity Resources.Configuration.fontScale==2.0/dumpsys activity configuration.
+# Устанавливать существующие accepted debug/test APK с проверенными SHA.
+$ADB -s emulator-5580 install -r /mnt/c/Users/impor/OneDrive/Документы/ChatGPT/CramIn/CramIn-symmetric-debug/cramin-0.1.62-symmetric-debug.apk
+$ADB -s emulator-5580 install -r -t /mnt/d/CramIn-evidence/symmetric-cards/app-symmetric-debug-androidTest.apk
+# Для themes dark=true/false по очереди (НЕ 19 тестов):
+$ADB -s emulator-5580 shell settings put system font_scale 2.0
+$ADB -s emulator-5580 shell am instrument -w -r -e dark true -e class 'pro.perfectproduct.cramin.ui.CardContextTest#approvedBookPairChangesWholeSidesWithSessionDirection,pro.perfectproduct.cramin.ui.CardContextTest#hebrewWithMarksAndPhysicalSwipesInReverseDirection,pro.perfectproduct.cramin.ui.CardContextTest#longSegmentScrollReachesEndWithoutFlipOrSort' pro.perfectproduct.cramin.symmetricdebug.test/androidx.test.runner.AndroidJUnitRunner
+# Повторить только эти3 адресные метода с -e dark false. Между темами сразу pull
+# из /sdcard/Android/data/pro.perfectproduct.cramin.symmetricdebug/files/symmetric-cards
+# в отдельные dark/light каталоги, чтобы shot names не перезаписались.
+# Фикстуры: реальный полный StudyScreen+Scaffold, его StudyViewModel/Room,
+# не isolated FlashCard/не LocalDensity override; app APK не изменяется.
+# Это экран production composable в test Activity, НЕ полный MainActivity workflow;
+# Library→StudyScreen проверяется дополнительно persistence smoke на release.
 
-Workflow собирает новый CI APK и единый kit из github.sha: APK/.sha256, source-kit.zip,
-notices.zip, ARTIFACTS.json, RELEASE-NOTES.md и SHA256SUMS. Он не обязан совпасть побайтово с
-локальным APK. Скачать draft assets, проверить все SHA/подпись/package/version/commit/source
-manifest/notices. При другом CI бинарнике провести smoke именно его на API26/36.
-Draft отсутствует в `/releases/latest`; это ещё не проверка discovery.
+# Когда готовы CI release APK и release-test APK, совместить upgrade в эту же
+# единственную разрешённую сессию; не ждать CI при работающем AVD.
+# До запуска сессии все файлы уже скачаны/проверены. Release package на AVD должен
+# отсутствовать; если он занят, STOP/план иной изолированной среды, без clear/uninstall.
+# OLD_APK — скачанный публичный v0.1.61, проверенный sha/пакет/подпись.
+# NEW_APK — exact CI v0.1.N; RELEASE_TEST_APK — test artifact H.
+$ADB -s emulator-5580 install "$OLD_APK"
+$ADB -s emulator-5580 install -t "$RELEASE_TEST_APK"
+$ADB -s emulator-5580 shell am instrument -w -r -e persistenceMode seed -e class 'pro.perfectproduct.cramin.release.ReleasePersistenceTest#persistenceAcrossInstall' pro.perfectproduct.cramin.test/androidx.test.runner.AndroidJUnitRunner
+# Seed работает на исходном signed v0.1.61. Метод/API/schema/resources не менялись;
+# совместимость нового harness с61 должна быть подтверждена native PASS, не Assume/skip.
+$ADB -s emulator-5580 shell am force-stop pro.perfectproduct.cramin
+$ADB -s emulator-5580 install -r "$NEW_APK"
+$ADB -s emulator-5580 shell am instrument -w -r -e persistenceMode verify -e class 'pro.perfectproduct.cramin.release.ReleasePersistenceTest#persistenceAcrossInstall' pro.perfectproduct.cramin.test/androidx.test.runner.AndroidJUnitRunner
+# Между seed и verify НЕТ uninstall/clear/переноса БД. Скачать installed base.apk,
+# SHA должен быть равен CI артефакту. Приложение не делать debuggable.
+$ADB -s emulator-5580 shell am instrument -w -r -e class pro.perfectproduct.cramin.release.ReleaseLicensesTest pro.perfectproduct.cramin.test/androidx.test.runner.AndroidJUnitRunner
+# Те же3 CardContext метода при200%, dark true/false адресно выполнить на release
+# через pro.perfectproduct.cramin.test/...; это проверка exact CI APK, а не full19.
+# PNG забрать из target release external-files/symmetric-cards по отдельным темам.
+# Scope selectors исключают AppSmokeTest (debug assertion) и LiveApi/ExternalSource.
+# Все native logs должны иметь ожидаемые counts, zero errors/failures/skips.
+# В конце восстановить исходный font_scale, штатно остановить только свой AVD
+# и собственные monitor processes; никаких auto retry/чужих kills/изменения WSL.
 
-## Этап 4 — отдельное разрешение публикации
-
-После успешного CI и проверки CI APK/kit, когда точный тег/target SHA/ассеты подтверждены:
-
-```bash
-gh release edit v0.1.N --repo PerfectProduct/cramin --draft=false
-# N взять из проверенного ARTIFACTS.json, не угадывать.
-gh release view v0.1.N --repo PerfectProduct/cramin --json tagName,isDraft,isPrerelease,assets
-curl --fail https://api.github.com/repos/PerfectProduct/cramin/releases/latest
-curl --fail https://raw.githubusercontent.com/PerfectProduct/cramin/main/config/models.json
-```
-
-Проверить анонимную доступность repo, source kit, notices и model config. На совместимом
-release с меньшим code нажать «Проверить обновления»: тот же tag/notes/APK/checksum; Android
-подтверждает установку; документы/карточки/прогресс/настройки сохраняются. Проверить отказ
-install permission, отмену, сетевую ошибку; debug публичный release не ищет. 404/latest означает
-отсутствие более новой версии; ошибочные имена/tag/checksum/package/cert/code отклоняются.
-Контракт обновления в этой подготовке не меняется; реально опубликованный discovery
-остаётся обязательной внешней проверкой.
-
-Release владельца устанавливается рядом с debug. Старые документы/занятия остаются в debug;
-его нельзя удалять или очищать ради перехода. Автоматического переноса нет и он не проверен.
-Решение о переносе уже принято: отложено до после первого релиза, не является блокером выпуска.
+G. ОТДЕЛЬНОЕ РАЗРЕШЕНИЕ НА ПУБЛИКАЦИЮ ПОСЛЕ ПРИЁМКИ ТОЧНОГО KIT/APK
+# Только после всех проверок RESULT, решения о200% и upgrade PASS, при том же SHA.
+gh release edit v0.1.62 --repo PerfectProduct/cramin --draft=false
+gh release view v0.1.62 --repo PerfectProduct/cramin --json tagName,isDraft,isPrerelease,assets
+gh api repos/PerfectProduct/cramin/releases/latest
+# Анонимно проверить latest/asset download/source kit/notices/config и discovery
+# обновления на совместимом release в изолированной среде, без действий на телефоне.
+# ARTIFACTS.published=false — свойство упаковки, не источник текущего GitHub-статуса.
